@@ -1,0 +1,20 @@
+# Godot 4.x
+.godot/
+
+# Godot export
+*.translation
+export_presets.cfg
+
+# Mono / .NET (if ever used)
+.mono/
+data_*/
+mono_crash.*.json
+
+# JetBrains IDE
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
