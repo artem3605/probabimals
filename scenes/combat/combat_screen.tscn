@@ -1,0 +1,124 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/combat/combat_screen.gd" id="1"]
+
+[node name="CombatScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.1, 0.16, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="HUD" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="CombatTitle" type="Label" parent="MarginContainer/VBoxContainer/HUD"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "COMBAT"
+
+[node name="ScoreLabel" type="Label" parent="MarginContainer/VBoxContainer/HUD"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.3, 1, 0.3, 1)
+text = "Score: 0"
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/HUD"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EndCombatButton" type="Button" parent="MarginContainer/VBoxContainer/HUD"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(140, 40)
+text = "End Combat"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CombatMachineField" type="VBoxContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="ResultOverlay" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.75)
+
+[node name="CenterContainer" type="CenterContainer" parent="ResultOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="ResultOverlay/CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(400, 250)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ResultOverlay/CenterContainer/PanelContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="ResultTitle" type="Label" parent="ResultOverlay/CenterContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "COMBAT OVER"
+horizontal_alignment = 1
+
+[node name="FinalScoreLabel" type="Label" parent="ResultOverlay/CenterContainer/PanelContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+text = "Final Score: 0"
+horizontal_alignment = 1
+
+[node name="MenuButton" type="Button" parent="ResultOverlay/CenterContainer/PanelContainer/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(200, 50)
+size_flags_horizontal = 4
+text = "Back to Menu"
+
+[connection signal="pressed" from="MarginContainer/VBoxContainer/HUD/EndCombatButton" to="." method="_on_end_combat_button_pressed"]
+[connection signal="pressed" from="ResultOverlay/CenterContainer/PanelContainer/VBoxContainer/MenuButton" to="." method="_on_menu_button_pressed"]

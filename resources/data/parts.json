@@ -1,0 +1,119 @@
+[
+  {
+    "id": "basic_frame",
+    "name": "Rusty Frame",
+    "description": "A basic slot machine body. Holds 3 reels and a lever.",
+    "category": "structural",
+    "type": "FRAME",
+    "cost": 15,
+    "params": {}
+  },
+  {
+    "id": "lucky_frame",
+    "name": "Lucky Frame",
+    "description": "A polished frame that brings good fortune.",
+    "category": "structural",
+    "type": "FRAME",
+    "cost": 20,
+    "params": {}
+  },
+  {
+    "id": "basic_reel_1",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "basic_reel_2",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "basic_reel_3",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "basic_reel_4",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "basic_reel_5",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "basic_reel_6",
+    "name": "Standard Reel",
+    "description": "A reel with the default symbol set.",
+    "category": "structural",
+    "type": "REEL",
+    "cost": 5,
+    "params": { "symbols": "default" }
+  },
+  {
+    "id": "iron_lever",
+    "name": "Iron Lever",
+    "description": "Grants 2 spins per combat.",
+    "category": "structural",
+    "type": "LEVER",
+    "cost": 8,
+    "params": { "spins": 2 }
+  },
+  {
+    "id": "golden_lever",
+    "name": "Golden Lever",
+    "description": "Grants 4 spins per combat.",
+    "category": "structural",
+    "type": "LEVER",
+    "cost": 14,
+    "params": { "spins": 4 }
+  },
+  {
+    "id": "cherry_magnet",
+    "name": "Cherry Magnet",
+    "description": "Adds extra Cherry weight to all reels.",
+    "category": "modifier",
+    "type": "ADD_SYMBOL",
+    "cost": 6,
+    "params": { "symbol": "cherry", "weight": 15 }
+  },
+  {
+    "id": "lucky_seven",
+    "name": "Lucky Seven Charm",
+    "description": "Doubles the weight of Seven on all reels.",
+    "category": "modifier",
+    "type": "CHANGE_WEIGHT",
+    "cost": 10,
+    "params": { "symbol": "seven", "multiplier": 2 }
+  },
+  {
+    "id": "score_amp",
+    "name": "Score Amplifier",
+    "description": "1.5x score multiplier for this machine.",
+    "category": "modifier",
+    "type": "SCORE_MULTIPLIER",
+    "cost": 12,
+    "params": { "multiplier": 1.5 }
+  }
+]

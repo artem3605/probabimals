@@ -1,0 +1,141 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/flea_market/flea_market_screen.gd" id="1"]
+
+[node name="FleaMarketScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.14, 0.12, 0.1, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="MainVBox" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TopBar" type="HBoxContainer" parent="MarginContainer/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/MainVBox/TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "FLEA MARKET"
+
+[node name="CoinLabel" type="Label" parent="MarginContainer/MainVBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+text = "Coins: 50"
+
+[node name="Spacer" type="Control" parent="MarginContainer/MainVBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CombatButton" type="Button" parent="MarginContainer/MainVBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(150, 40)
+text = "To Combat!"
+disabled = true
+
+[node name="ContentSplit" type="HSplitContainer" parent="MarginContainer/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 400
+
+[node name="ShopPanel" type="PanelContainer" parent="MarginContainer/MainVBox/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ShopVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ShopLabel" type="Label" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "SHOP"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ShopGrid" type="GridContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="FieldPanel" type="PanelContainer" parent="MarginContainer/MainVBox/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FieldVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FieldLabel" type="Label" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "MACHINES"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MachineField" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HandPanel" type="PanelContainer" parent="MarginContainer/MainVBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 110)
+
+[node name="HandVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/HandPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HandLabel" type="Label" parent="MarginContainer/MainVBox/HandPanel/HandVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "HAND (click to select, then click a machine slot)"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/HandPanel/HandVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+
+[node name="HandGrid" type="HBoxContainer" parent="MarginContainer/MainVBox/HandPanel/HandVBox/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[connection signal="pressed" from="MarginContainer/MainVBox/TopBar/CombatButton" to="." method="_on_combat_button_pressed"]
