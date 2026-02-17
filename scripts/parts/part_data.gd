@@ -8,6 +8,7 @@ extends Resource
 @export var type: String      # FRAME, REEL, LEVER, ADD_SYMBOL, CHANGE_WEIGHT, SCORE_MULTIPLIER
 @export var cost: int
 @export var params: Dictionary
+@export var icon_path: String
 
 
 static func from_dict(data: Dictionary) -> PartData:
@@ -19,4 +20,5 @@ static func from_dict(data: Dictionary) -> PartData:
 	part.type = data.get("type", "")
 	part.cost = data.get("cost", 0)
 	part.params = data.get("params", {})
+	part.icon_path = data.get("icon", "")
 	return part

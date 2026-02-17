@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scenes/flea_market/machine_slot.gd" id="1"]
 
 [node name="MachineSlot" type="PanelContainer"]
-custom_minimum_size = Vector2(250, 100)
+custom_minimum_size = Vector2(200, 160)
 script = ExtResource("1")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -19,19 +19,24 @@ theme_override_constants/separation = 4
 
 [node name="StatusLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "[ Empty Slot ]"
 horizontal_alignment = 1
 
+[node name="PartIcons" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 4
+
 [node name="PartsLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 10
 text = ""
 horizontal_alignment = 1
 
 [node name="HintLabel" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 text = "Click to place a Frame"
 horizontal_alignment = 1

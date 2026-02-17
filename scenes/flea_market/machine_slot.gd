@@ -2,9 +2,13 @@ extends PanelContainer
 
 signal clicked()
 
+const REEL_ICON_PATH := "res://assets/images/parts/standard_reel.png"
+const PART_ICON_SIZE := 24
+
 var machine: Machine = null
 
 @onready var status_label: Label = $MarginContainer/VBoxContainer/StatusLabel
+@onready var part_icons: HBoxContainer = $MarginContainer/VBoxContainer/PartIcons
 @onready var parts_label: Label = $MarginContainer/VBoxContainer/PartsLabel
 @onready var hint_label: Label = $MarginContainer/VBoxContainer/HintLabel
 
@@ -31,8 +35,11 @@ func update_display() -> void:
 	if not is_inside_tree():
 		return
 
+	_refresh_icons()
+
 	if machine == null:
 		status_label.text = "[ Empty Slot ]"
+		status_label.remove_theme_color_override("font_color")
 		parts_label.text = ""
 		hint_label.text = "Click to place a Frame"
 		hint_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
@@ -59,6 +66,40 @@ func update_display() -> void:
 		else:
 			hint_label.text = "Spins: %d | Click to add modifiers" % machine.get_total_spins()
 			hint_label.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5))
+
+
+func _refresh_icons() -> void:
+	for child in part_icons.get_children():
+		child.queue_free()
+
+	if machine == null:
+		return
+
+	if machine.frame and machine.frame.icon_path != "":
+		_add_icon(machine.frame.icon_path)
+
+	for i in range(machine.reels.size()):
+		_add_icon(REEL_ICON_PATH)
+
+	for lever in machine.levers:
+		if lever.icon_path != "":
+			_add_icon(lever.icon_path)
+
+	for mod in machine.modifiers:
+		if mod.icon_path != "":
+			_add_icon(mod.icon_path)
+
+
+func _add_icon(path: String) -> void:
+	var tex = load(path)
+	if tex == null:
+		return
+	var rect := TextureRect.new()
+	rect.texture = tex
+	rect.custom_minimum_size = Vector2(PART_ICON_SIZE, PART_ICON_SIZE)
+	rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	part_icons.add_child(rect)
 
 
 func _gui_input(event: InputEvent) -> void:

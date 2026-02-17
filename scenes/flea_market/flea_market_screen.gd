@@ -2,9 +2,9 @@ extends Control
 
 @onready var coin_label: Label = %CoinLabel
 @onready var combat_button: Button = %CombatButton
-@onready var shop_grid: GridContainer = %ShopGrid
-@onready var hand_grid: HBoxContainer = %HandGrid
-@onready var machine_field: VBoxContainer = %MachineField
+@onready var shop_row: HBoxContainer = %ShopRow
+@onready var hand_row: HBoxContainer = %HandRow
+@onready var machine_row: HBoxContainer = %MachineRow
 
 var selected_part: PartData = null
 var selected_card: Node = null
@@ -28,7 +28,7 @@ func _populate_shop() -> void:
 		var item := _shop_item_scene.instantiate()
 		item.setup(part)
 		item.purchased.connect(_on_part_purchased)
-		shop_grid.add_child(item)
+		shop_row.add_child(item)
 
 
 func _on_part_purchased(part: PartData) -> void:
@@ -41,13 +41,13 @@ func _add_part_to_hand(part: PartData) -> void:
 	var card := _part_card_scene.instantiate()
 	card.setup(part)
 	card.selected.connect(_on_hand_part_selected)
-	hand_grid.add_child(card)
+	hand_row.add_child(card)
 
 
 func _on_hand_part_selected(part: PartData, card: Node) -> void:
 	selected_part = part
 	selected_card = card
-	for child in hand_grid.get_children():
+	for child in hand_row.get_children():
 		if child.has_method("set_selected"):
 			child.set_selected(child == card)
 
@@ -83,7 +83,7 @@ func _remove_selected_from_hand() -> void:
 func _add_machine_slot() -> void:
 	var slot := _machine_slot_scene.instantiate()
 	slot.clicked.connect(_on_machine_slot_clicked.bind(slot))
-	machine_field.add_child(slot)
+	machine_row.add_child(slot)
 
 
 func _update_coins() -> void:
@@ -92,7 +92,7 @@ func _update_coins() -> void:
 
 func _on_coins_changed(_amount: int) -> void:
 	_update_coins()
-	for item in shop_grid.get_children():
+	for item in shop_row.get_children():
 		if item.has_method("update_affordability"):
 			item.update_affordability(GameManager.coins)
 

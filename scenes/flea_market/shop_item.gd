@@ -4,8 +4,8 @@ signal purchased(part: PartData)
 
 var part: PartData
 
+@onready var icon_rect: TextureRect = $MarginContainer/VBoxContainer/IconRect
 @onready var name_label: Label = $MarginContainer/VBoxContainer/NameLabel
-@onready var desc_label: Label = $MarginContainer/VBoxContainer/DescLabel
 @onready var cost_label: Label = $MarginContainer/VBoxContainer/CostLabel
 @onready var buy_button: Button = $MarginContainer/VBoxContainer/BuyButton
 
@@ -17,10 +17,17 @@ func setup(p: PartData) -> void:
 func _ready() -> void:
 	if part:
 		name_label.text = part.display_name
-		desc_label.text = part.description
 		cost_label.text = "%d coins" % part.cost
 		_update_category_color()
+		_load_icon()
 		update_affordability(GameManager.coins)
+
+
+func _load_icon() -> void:
+	if part and part.icon_path != "":
+		var tex = load(part.icon_path)
+		if tex:
+			icon_rect.texture = tex
 
 
 func _update_category_color() -> void:

@@ -6,6 +6,7 @@
     "category": "structural",
     "type": "FRAME",
     "cost": 15,
+    "icon": "res://assets/images/parts/basic_frame.png",
     "params": {}
   },
   {
@@ -15,6 +16,7 @@
     "category": "structural",
     "type": "FRAME",
     "cost": 20,
+    "icon": "res://assets/images/parts/lucky_frame.png",
     "params": {}
   },
   {
@@ -24,6 +26,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -33,6 +36,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -42,6 +46,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -51,6 +56,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -60,6 +66,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -69,6 +76,7 @@
     "category": "structural",
     "type": "REEL",
     "cost": 5,
+    "icon": "res://assets/images/parts/standard_reel.png",
     "params": { "symbols": "default" }
   },
   {
@@ -78,6 +86,7 @@
     "category": "structural",
     "type": "LEVER",
     "cost": 8,
+    "icon": "res://assets/images/parts/iron_lever.png",
     "params": { "spins": 2 }
   },
   {
@@ -87,6 +96,7 @@
     "category": "structural",
     "type": "LEVER",
     "cost": 14,
+    "icon": "res://assets/images/parts/golden_lever.png",
     "params": { "spins": 4 }
   },
   {
@@ -96,6 +106,7 @@
     "category": "modifier",
     "type": "ADD_SYMBOL",
     "cost": 6,
+    "icon": "res://assets/images/parts/cherry_magnet.png",
     "params": { "symbol": "cherry", "weight": 15 }
   },
   {
@@ -105,6 +116,7 @@
     "category": "modifier",
     "type": "CHANGE_WEIGHT",
     "cost": 10,
+    "icon": "res://assets/images/parts/lucky_seven.png",
     "params": { "symbol": "seven", "multiplier": 2 }
   },
   {
@@ -114,6 +126,7 @@
     "category": "modifier",
     "type": "SCORE_MULTIPLIER",
     "cost": 12,
+    "icon": "res://assets/images/parts/score_amp.png",
     "params": { "multiplier": 1.5 }
   }
 ]

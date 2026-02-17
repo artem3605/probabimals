@@ -1,6 +1,39 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/flea_market/flea_market_screen.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="ShopStyle"]
+bg_color = Color(0.18, 0.14, 0.10, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="BoardStyle"]
+bg_color = Color(0.12, 0.15, 0.12, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="HandStyle"]
+bg_color = Color(0.10, 0.10, 0.14, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
 
 [node name="FleaMarketScreen" type="Control"]
 anchors_preset = 15
@@ -17,7 +50,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.14, 0.12, 0.1, 1)
+color = Color(0.08, 0.07, 0.06, 1)
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -26,14 +59,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
 
 [node name="MainVBox" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="TopBar" type="HBoxContainer" parent="MarginContainer/MainVBox"]
 layout_mode = 2
@@ -41,7 +74,8 @@ theme_override_constants/separation = 20
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/MainVBox/TopBar"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.9, 0.8, 0.6, 1)
 text = "FLEA MARKET"
 
 [node name="CoinLabel" type="Label" parent="MarginContainer/MainVBox/TopBar"]
@@ -62,80 +96,87 @@ custom_minimum_size = Vector2(150, 40)
 text = "To Combat!"
 disabled = true
 
-[node name="ContentSplit" type="HSplitContainer" parent="MarginContainer/MainVBox"]
+[node name="ShopArea" type="PanelContainer" parent="MarginContainer/MainVBox"]
 layout_mode = 2
-size_flags_vertical = 3
-split_offset = 400
+custom_minimum_size = Vector2(0, 160)
+theme_override_styles/panel = SubResource("ShopStyle")
 
-[node name="ShopPanel" type="PanelContainer" parent="MarginContainer/MainVBox/ContentSplit"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ShopVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="ShopLabel" type="Label" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "SHOP"
-
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="ShopGrid" type="GridContainer" parent="MarginContainer/MainVBox/ContentSplit/ShopPanel/ShopVBox/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-columns = 2
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 8
-
-[node name="FieldPanel" type="PanelContainer" parent="MarginContainer/MainVBox/ContentSplit"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="FieldVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="FieldLabel" type="Label" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "MACHINES"
-
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="MachineField" type="VBoxContainer" parent="MarginContainer/MainVBox/ContentSplit/FieldPanel/FieldVBox/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 8
-
-[node name="HandPanel" type="PanelContainer" parent="MarginContainer/MainVBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 110)
-
-[node name="HandVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/HandPanel"]
+[node name="ShopVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/ShopArea"]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="HandLabel" type="Label" parent="MarginContainer/MainVBox/HandPanel/HandVBox"]
+[node name="ShopLabel" type="Label" parent="MarginContainer/MainVBox/ShopArea/ShopVBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "HAND (click to select, then click a machine slot)"
+theme_override_colors/font_color = Color(0.7, 0.6, 0.5, 1)
+text = "SHOP"
+horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/HandPanel/HandVBox"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/ShopArea/ShopVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 vertical_scroll_mode = 0
 
-[node name="HandGrid" type="HBoxContainer" parent="MarginContainer/MainVBox/HandPanel/HandVBox/ScrollContainer"]
+[node name="CenterRow" type="HBoxContainer" parent="MarginContainer/MainVBox/ShopArea/ShopVBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 12
+
+[node name="ShopRow" type="HBoxContainer" parent="MarginContainer/MainVBox/ShopArea/ShopVBox/ScrollContainer/CenterRow"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 10
+
+[node name="BoardArea" type="PanelContainer" parent="MarginContainer/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("BoardStyle")
+
+[node name="BoardVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/BoardArea"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BoardLabel" type="Label" parent="MarginContainer/MainVBox/BoardArea/BoardVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.7, 0.5, 1)
+text = "MACHINES"
+horizontal_alignment = 1
+
+[node name="CenterContainer" type="CenterContainer" parent="MarginContainer/MainVBox/BoardArea/BoardVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MachineRow" type="HBoxContainer" parent="MarginContainer/MainVBox/BoardArea/BoardVBox/CenterContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HandArea" type="PanelContainer" parent="MarginContainer/MainVBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 130)
+theme_override_styles/panel = SubResource("HandStyle")
+
+[node name="HandVBox" type="VBoxContainer" parent="MarginContainer/MainVBox/HandArea"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HandLabel" type="Label" parent="MarginContainer/MainVBox/HandArea/HandVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.5, 0.5, 0.65, 1)
+text = "HAND (click to select, then click a machine slot)"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/MainVBox/HandArea/HandVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+vertical_scroll_mode = 0
+
+[node name="HandRow" type="HBoxContainer" parent="MarginContainer/MainVBox/HandArea/HandVBox/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
 
 [connection signal="pressed" from="MarginContainer/MainVBox/TopBar/CombatButton" to="." method="_on_combat_button_pressed"]
