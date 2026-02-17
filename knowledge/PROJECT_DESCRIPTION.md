@@ -13,19 +13,22 @@ Each round consists of two phases:
 - The player visits a **flea market** filled with a wide variety of parts and components.
 - These parts can be assembled into **probabilistic machines** (e.g. slot machines).
 - The player chooses which parts to acquire and how to combine them, shaping the behavior and odds of their machines.
+- Parts are divided into **structural** (build the machine) and **modifier** (tune its behavior) categories.
 
 ### 2. Combat Phase — "The Spin"
 
 - The player activates their assembled machines (e.g. spins the slot machines).
-- Each machine can be activated a **limited number of times** per round, determined by its components.
+- Each machine can be activated a **limited number of times** per round, determined by its components (Levers).
 - The outcomes of all machines are **combined** according to game rules to produce a final score.
 - The score determines the result of the combat encounter.
 
 ## Key Concepts
 
 - **Parts/Components** — individual pieces found at the flea market; define the reels, paylines, activation limits, and special effects of a machine.
-- **Probabilistic Machines** — player-built devices that produce random outcomes; the slot machine is the primary archetype.
-- **Activation Limit** — the number of times a machine can be used in a single combat phase; governed by its parts.
+  - **Structural Parts** — Frame (machine body), Reel (spinning drum with symbols), Lever (activator that grants spins). Required to build a functional machine.
+  - **Modifier Parts** — Symbol Injector (adds symbol weight), Weight Shifter (changes probability), Score Multiplier (boosts points). Applied on top of a built machine to tune it.
+- **Probabilistic Machines** — player-built devices that produce random outcomes; the slot machine is the primary archetype. Assembled from a Frame + 3 Reels + at least 1 Lever.
+- **Activation Limit** — the number of times a machine can be used in a single combat phase; governed by its Lever parts.
 - **Score Combination** — the system by which individual machine results are aggregated into a final combat score.
 
 ## Design Pillars
