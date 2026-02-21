@@ -2,15 +2,15 @@
 
 ## Overview
 
-**Probabimals** — round-based strategy game centered around building probabilistic machines and leveraging their outcomes in combat.
+**Probabimals** — round-based dice strategy game inspired by Yahtzee and Balatro. Players collect and customize dice, then roll them in combat to score points through combinations.
 
-**Core Loop:** buy parts at the flea market → assemble probabilistic machines → spin them in combat for score.
+**Core Loop:** buy dice and parts at the flea market → customize dice faces → roll combos in combat to beat the target score.
 
 **Design Pillars:**
 
-1. **Meaningful randomness** — outcomes are probabilistic, but the player's choices in preparation heavily influence the odds.
-2. **Build crafting** — depth comes from discovering synergies between parts and optimizing machine configurations.
-3. **Round progression** — each round offers new parts and escalating challenges, encouraging adaptation.
+1. **Meaningful randomness** — outcomes are probabilistic, but the player's choices in dice selection and face customization heavily influence the odds.
+2. **Dice crafting** — depth comes from discovering synergies between dice, faces, and modifiers to build powerful scoring engines.
+3. **Round progression** — each round offers new dice and parts alongside escalating score targets, encouraging adaptation.
 
 ---
 
@@ -23,10 +23,10 @@
 
 ### Responsibility Areas
 
-- **Game Design** — core mechanics (probability systems, scoring, synergies), part/component design, balance and tuning, round progression.
-- **Programming** — game logic (assembly, spin resolution, score calculation), UI implementation, animations/VFX, data architecture, audio integration.
-- **Art & Visual Design** — UI/UX layouts and wireframes, sprite art (parts, machines, symbols), visual effects, fonts and color palette.
-- **Audio** — SFX (mechanical spins, clicks, jingles), ambient sounds, music.
+- **Game Design** — core mechanics (dice systems, combo scoring, synergies), dice/face/modifier design, balance and tuning, round progression.
+- **Programming** — game logic (dice rolling, rerolls, combo resolution, score calculation), UI implementation, animations/VFX, data architecture, audio integration.
+- **Art & Visual Design** — UI/UX layouts and wireframes, sprite art (dice, faces, modifiers, ui), visual effects, fonts and color palette.
+- **Audio** — SFX (dice rolls, clicks, jingles), ambient sounds, music.
 - **Project Management** — task tracking, milestone planning (BASIC4 → FULL44), playtesting coordination.
 - **QA & Playtesting** — bug reporting, balance testing, UX testing.
 
@@ -41,9 +41,9 @@
 **Why Godot:**
 
 - Free and open-source — no licensing fees or revenue share.
-- Best-in-class 2D engine — ideal for a UI-heavy game with slot machines, drag-and-drop assembly, and card-like part displays.
+- Best-in-class 2D engine — ideal for a UI-heavy game with dice displays, drag-and-drop customization, and card-like shop items.
 - Built-in visual editor — scenes, animations, particles, and UI layouts are created visually.
-- Signal system — native event-driven architecture, perfect for "reel stopped → calculate result → play animation" flows.
+- Signal system — native event-driven architecture, perfect for "dice rolled → evaluate combos → play animation" flows.
 - One-click export — builds for Windows, macOS, Linux (and optionally web/mobile).
 - Lightweight — ~40 MB engine, fast iteration cycle.
 
@@ -70,18 +70,17 @@ scenes/
 
 scripts/
   autoload/           # GameManager, DataManager
-  machines/           # machine.gd, slot_machine.gd, reel.gd
-  parts/              # part_data.gd, part_effect.gd
-  scoring/            # scoring_engine.gd
+  dice/               # die.gd, dice_bag.gd
+  scoring/            # scoring_engine.gd, combo_detector.gd
   combat/             # combat_manager.gd
 
 assets/
-  art/                # symbols, machines, parts, ui
+  art/                # dice, faces, modifiers, ui
   audio/              # sfx, music
   fonts/
 
 resources/
-  data/               # symbols.json, parts.json, scoring_rules.json
+  data/               # faces.json, dice_shop.json, combos.json
   themes/             # default_theme.tres
 ```
 
@@ -99,22 +98,26 @@ resources/
 Each round consists of two phases:
 
 **Phase 1 — Preparation ("The Flea Market"):**
-- The player visits a flea market filled with parts and components.
-- Parts can be assembled into probabilistic machines (e.g. slot machines).
-- Parts are divided into **structural** (build the machine) and **modifier** (tune its behavior) categories.
+- The player visits a flea market to buy dice, replacement faces, and modifiers.
+- **Dice** go into the player's bag. Each die has 6 faces (default: numbers 1–6).
+- **Faces** can be swapped onto existing dice to change their odds (Dice Forge style).
+- **Modifiers** are joker-like items that transform scoring rules globally.
 
-**Phase 2 — Combat ("The Spin"):**
-- The player activates their assembled machines.
-- Each machine can be activated a limited number of times per round (determined by Levers).
-- Outcomes of all machines are combined to produce a final combat score.
+**Phase 2 — Combat ("The Roll"):**
+- The player rolls 5 dice from their bag.
+- After seeing the result, the player may **keep** some dice and **reroll** the rest (up to 2 rerolls).
+- The final result is scored based on **combinations** (pairs, straights, full house, etc.).
+- Modifiers apply on top, multiplying or transforming the score.
+- The goal is to beat the round's **target score** (blind).
 
 ### Key Concepts
 
-- **Structural Parts** — Frame (machine body), Reel (spinning drum with symbols), Lever (activator granting spins). Required to build a functional machine.
-- **Modifier Parts** — Symbol Injector (adds symbol weight), Weight Shifter (changes probability), Score Multiplier (boosts points). Applied on top to tune the machine.
-- **Probabilistic Machines** — player-built devices producing random outcomes; slot machine is the primary archetype. Assembled from Frame + 3 Reels + at least 1 Lever.
-- **Activation Limit** — number of uses per combat phase; governed by Lever parts.
-- **Score Combination** — system for aggregating individual machine results into a final combat score.
+- **Die** — a six-sided die from the player's bag. Base dice are colorless with faces 1–6. Colored dice are rarer and unlock color-based combos.
+- **Face** — a single side of a die. Faces can be swapped at the flea market to change a die's number distribution (e.g. replace a 1-face with a second 6-face).
+- **Modifier** — a joker-like item with a global effect on scoring (e.g. "all Full Houses score double", "pairs count as triples"). The primary source of build-defining power.
+- **Combo** — a scoring pattern in the rolled dice. Based on Yahtzee: Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee (five of a kind). Colored dice add Flush (5 dice of the same color).
+- **Reroll** — the player's tactical tool. After rolling, keep favorable dice and reroll the rest. Limited to 2 rerolls per hand by default.
+- **Blind** — the target score the player must beat to advance. Escalates each round.
 
 ---
 
@@ -122,39 +125,38 @@ Each round consists of two phases:
 
 The smallest playable version that demonstrates the core loop.
 
-**Goal:** Validate that **buy parts → assemble a machine → spin it for score** is fun and understandable in a single session.
+**Goal:** Validate that **buy dice → customize faces → roll combos → beat target score** is fun and understandable in a single session.
 
 #### Three Screens
 
 1. **MainMenu** — Start and Exit buttons.
-2. **FleaMarket** — Simplified shop (fixed catalogue) + machine assembly on one screen.
-3. **Combat** — Assembled machines on a field; click to spin; score accumulates.
+2. **FleaMarket** — Simplified shop (fixed catalogue) + dice bag management on one screen.
+3. **Combat** — Roll dice, keep/reroll, score combos against a target.
 
 #### What's In
 
 | Feature | Details |
 |---------|---------|
-| Machine type | Single slot machine with 3 reels |
-| Flea market | Fixed catalogue of ~10–12 parts with coin prices |
-| Part taxonomy | Structural (Frame, Reel, Lever) + Modifier (Symbol Injector, Weight Shifter, Score Multiplier) |
-| Coin budget | Player starts with 50 coins; parts have costs |
-| Assembly | Place Frame on field → attach Reels, Levers, Modifiers |
-| Combat | Click machine to spin; limited spins per machine; score accumulates |
-| Combat end | Player clicks "End Combat" or all spins exhausted; results overlay with final score |
-| Scoring | 3-of-a-kind and 2-of-a-kind matches, symbol values, optional multipliers |
+| Dice | 5 colorless dice with default faces (1–6) |
+| Flea market | Fixed catalogue of ~10–12 items (extra dice, replacement faces, modifiers) with coin prices |
+| Item taxonomy | Dice (add to bag) + Faces (swap onto a die) + Modifiers (global scoring effects) |
+| Coin budget | Player starts with a fixed coin amount; items have costs |
+| Customization | Select a die → swap one of its faces with a purchased face |
+| Combat | Roll 5 dice; keep some, reroll the rest; up to 2 rerolls per hand; multiple hands per round |
+| Combat end | Player exhausts all hands or beats the target score; results overlay with final score |
+| Scoring | Yahtzee-style combos: Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee |
 
 #### What's Out
 
+- Colored dice and flush combos
 - Randomized flea market stock
-- Multiple machine types
-- Opponent / AI / target score
 - Round progression, difficulty scaling
 - Visual polish, animations, sound
 - Meta-progression (unlocks, carry-over)
 
 #### Deliverable
 
-A single playable session: flea market → buy parts → assemble slot machine → combat → spin for score → final result.
+A single playable session: flea market → buy dice and faces → customize dice → combat → roll combos → final result.
 
 ---
 
@@ -166,41 +168,41 @@ The complete demo experience showcasing all core systems across multiple rounds.
 
 #### Flea Market
 
-- Randomized selection of parts each round.
-- Multiple part categories with different rarities and effects.
+- Randomized selection of dice, faces, and modifiers each round.
+- Rarity tiers for items (common, uncommon, rare).
 - Limited budget per round, forcing meaningful choices.
-- Persistent part inventory across rounds.
+- Colored dice appear in later rounds, unlocking flush combos.
 
-#### Machine Building
+#### Dice Building
 
-- Multiple machine types (slot machine + at least one alternative: coin flipper, dice roller, roulette wheel).
-- Multiple machines per round.
-- Part synergies — certain combos unlock bonus effects.
-- Visible machine stats (activation limit, expected value, variance).
+- Swap faces on any owned die at the flea market.
+- Colored dice unlock the Flush combo (5 dice of the same color).
+- Visible die stats (face distribution, expected value).
+- Modifier synergies — certain modifier combos unlock bonus effects.
 
 #### Combat
 
-- Distinct activation limits per machine.
-- Rich score combination (additive, multiplicative, conditional bonuses).
-- AI-generated target score scaling with round number.
-- Clear feedback on each spin result and running total.
+- Multiple hands per round with limited rerolls per hand.
+- Rich combo scoring with modifiers (additive, multiplicative, conditional bonuses).
+- Escalating blinds (target scores) scaling with round number.
+- Clear feedback on each roll result, combo detected, and running total.
 
 #### Progression
 
-- 5–7 rounds with escalating difficulty.
-- Flea market evolution — rarer/more powerful parts in later rounds.
-- Win/loss conditions — survive all rounds to win; losing has consequences (lost parts, reduced budget).
+- 5–7 rounds with escalating blinds.
+- Flea market evolution — rarer faces and powerful modifiers in later rounds.
+- Win/loss conditions — survive all rounds to win; losing has consequences (lost dice, reduced budget).
 
 #### Polish
 
-- Animations — spinning reels, part assembly, score tallying.
-- Sound design — mechanical sounds, market ambiance, victory/defeat cues.
-- UI/UX — intuitive drag-and-drop, clear info hierarchy.
+- Animations — dice rolling, face swapping, score tallying.
+- Sound design — dice sounds, market ambiance, victory/defeat cues.
+- UI/UX — intuitive dice management, clear info hierarchy.
 - Tutorial — guided first round.
 
 #### Deliverable
 
-Self-contained demo: multiple rounds of shopping → assembly → combat with escalating challenge, ending in win or loss.
+Self-contained demo: multiple rounds of shopping → dice customization → combat with escalating blinds, ending in win or loss.
 
 ---
 
@@ -208,9 +210,9 @@ Self-contained demo: multiple rounds of shopping → assembly → combat with es
 
 | System | BASIC4 | FULL44 adds |
 |--------|--------|-------------|
-| Machines | 1 slot machine | Multiple types, multiple per round |
+| Dice | 5 colorless dice, default faces | Colored dice, flush combos, larger bag |
 | Flea Market | Fixed catalogue, flat coin budget | Randomized stock, scaling prices, rarity tiers |
-| Parts | ~10–12 items, structural + simple modifiers | Large pool, synergies, triggers, conditionals |
-| Combat | Click-to-spin, manual/auto end | Opponent target score, consequences |
+| Items | ~10–12 items: dice, faces, modifiers | Large pool, synergies, conditional modifiers |
+| Combat | Roll + reroll, Yahtzee combos, single target score | Escalating blinds, rich modifier interactions |
 | Progression | Single round | 5–7 rounds, persistent inventory, difficulty scaling |
 | Polish | Placeholder art, no sound | Animations, SFX, music, tutorial |

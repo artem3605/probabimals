@@ -7,9 +7,9 @@
 ### Why Godot
 
 - Free and open-source — no licensing fees or revenue share.
-- Best-in-class 2D engine — ideal for a UI-heavy game with slot machines, drag-and-drop assembly, and card-like part displays.
+- Best-in-class 2D engine — ideal for a UI-heavy game with dice displays, drag-and-drop customization, and card-like shop items.
 - Built-in visual editor — scenes, animations, particles, and UI layouts are created visually, not purely in code.
-- Signal system — native event-driven architecture, perfect for "reel stopped → calculate result → play animation" flows.
+- Signal system — native event-driven architecture, perfect for "dice rolled → evaluate combos → play animation" flows.
 - One-click export — builds for Windows, macOS, Linux (and optionally web/mobile) with minimal configuration.
 - Lightweight — ~40 MB engine, fast iteration cycle.
 

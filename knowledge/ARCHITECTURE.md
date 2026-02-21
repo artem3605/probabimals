@@ -3,8 +3,8 @@
 ## Three Screens
 
 - **Screen 1 — MainMenu**: Start and Exit buttons.
-- **Screen 2 — FleaMarket**: Simplified shop (fixed catalogue of parts) + machine assembly field on one screen. Player buys parts, places machine bases on the field, inserts structural parts (lever, reels) into them. Coin counter. "Combat" button to proceed.
-- **Screen 3 — Combat**: The assembled machines are shown on the field. Player clicks any machine to spin it. Each machine has a limited number of spins (determined by its parts). Score accumulates across all spins. Combat ends when player clicks "End Combat" or all spins are exhausted. Results overlay appears with final score.
+- **Screen 2 — FleaMarket**: Simplified shop (fixed catalogue of items) + dice bag management on one screen. Player buys dice, faces, and modifiers. Coin counter. "Combat" button to proceed.
+- **Screen 3 — Combat**: The player's dice bag is shown. Player rolls 5 dice, keeps some, rerolls the rest (up to 2 rerolls). Score accumulates across hands. Combat ends when the player exhausts all hands or beats the target score. Results overlay appears with final score.
 
 **Flow:** MainMenu → FleaMarket → Combat → MainMenu (FULL44 adds: Combat → FleaMarket for next round).
 
@@ -20,43 +20,39 @@ scenes/
     main_menu.tscn               # Start / Exit screen
     main_menu.gd
   flea_market/
-    flea_market_screen.tscn      # shop + assembly combined
+    flea_market_screen.tscn      # shop + dice bag management combined
     flea_market_screen.gd
     shop_item.tscn               # single item card in shop shelf
     shop_item.gd
-    part_card.tscn               # part card in hand
-    part_card.gd
-    machine_slot.tscn            # slot on the field for a machine
-    machine_slot.gd
+    die_card.tscn                # die card in bag display
+    die_card.gd
+    face_slot.tscn               # face slot on a die (for swapping)
+    face_slot.gd
   combat/
     combat_screen.tscn           # combat phase UI
     combat_screen.gd
-    slot_machine_visual.tscn     # clickable machine during combat
-    slot_machine_visual.gd
-    reel_visual.tscn             # single reel column visual
-    reel_visual.gd
+    dice_tray_visual.tscn        # the rolling area showing 5 dice
+    dice_tray_visual.gd
+    die_visual.tscn              # single die visual (shows face result)
+    die_visual.gd
 
 scripts/
   autoload/
     game_manager.gd              # game state, phase transitions, player wallet
     data_manager.gd              # loads & serves JSON data
-  machines/
-    machine.gd                   # base class (RefCounted)
-    slot_machine.gd              # 3-reel slot: holds reels, spins_remaining
-    reel.gd                      # weighted symbol pool, spin logic
-  parts/
-    part_data.gd                 # custom Resource: name, cost, type, effect
-    part_effect.gd               # applies a part's effect to a machine
+  dice/
+    die.gd                       # single die (RefCounted): holds 6 faces, color
+    dice_bag.gd                  # player's bag of dice, draw logic
   scoring/
-    scoring_engine.gd            # match detection + point calculation
+    scoring_engine.gd            # combo detection + point calculation
+    combo_detector.gd            # identifies combos in a set of rolled values
   combat/
-    combat_manager.gd            # orchestrates spin-resolve-score loop
+    combat_manager.gd            # orchestrates roll-reroll-score loop
 
 assets/
   art/
-    symbols/                     # 128×128 PNG per symbol
-    machines/                    # machine frame, reel bg, payline
-    parts/                       # part card artwork
+    dice/                        # die sprites, face icons
+    modifiers/                   # modifier card artwork
     ui/                          # buttons, panels, backgrounds
   audio/
     sfx/
@@ -65,9 +61,9 @@ assets/
 
 resources/
   data/
-    symbols.json                 # symbol definitions (id, name, weight, value)
-    parts.json                   # part definitions (id, name, type, cost, params)
-    scoring_rules.json           # match multipliers
+    faces.json                   # face definitions (id, value, rarity)
+    dice_shop.json               # shop catalogue (dice, faces, modifiers with costs)
+    combos.json                  # combo definitions and scoring rules
   themes/
     default_theme.tres
 ```
@@ -80,70 +76,73 @@ resources/
 
 - `current_phase: Phase` — MAIN_MENU, FLEA_MARKET, COMBAT
 - `coins: int` — player's currency
-- `hand: Array[PartData]` — purchased parts not yet placed
-- `machines: Array[Machine]` — assembled machines on the field
+- `dice_bag: DiceBag` — player's collection of dice
+- `modifiers: Array[Modifier]` — active modifiers
 - `total_score: int`
 - Signals: `phase_changed`, `coins_changed`, `score_changed`
-- Methods: `start_game()`, `go_to_combat()`, `end_combat()`, `buy_part()`, `create_machine()`, `attach_part_to_machine()`
+- Methods: `start_game()`, `go_to_combat()`, `end_combat()`, `buy_item()`, `swap_face()`
 
 ### DataManager (`scripts/autoload/data_manager.gd`)
 
 - Loads JSON files at `_ready()`
-- `get_all_symbols()`, `get_symbol(id)`, `get_all_parts()`, `get_scoring_rules()`, `get_shop_catalogue()`
+- `get_all_faces()`, `get_face(id)`, `get_shop_catalogue()`, `get_combo_rules()`
 - Pure data accessor — no game logic
 
 ---
 
-## Part Taxonomy
+## Item Taxonomy
 
-### Structural Parts (build the machine)
+### Dice (add to bag)
 
-- **Frame** — the machine body; placing a frame on the field creates a machine slot.
-- **Reel** — a spinning drum with default symbols. A slot machine needs exactly 3 reels.
-- **Lever** — activator; determines how many spins the machine gets.
+- **Die** — a six-sided die with customizable faces. Base dice are colorless with default faces 1–6. Colored dice are rarer and enable flush combos.
 
-### Modifier Parts (tune the machine)
+### Faces (swap onto a die)
 
-- **ADD_SYMBOL** — adds extra copies of a specific symbol to reels.
-- **CHANGE_WEIGHT** — changes probability distribution of a symbol.
-- **SCORE_MULTIPLIER** — multiplies points from this machine.
+- **Face** — replaces one side of a die. Changes the number distribution (e.g. a face with value 6 replaces a face with value 1, making 6 more likely).
+
+### Modifiers (global scoring effects)
+
+- **Score Modifier** — multiplies or transforms scoring (e.g. "Full Houses score double").
+- **Combo Modifier** — changes combo rules (e.g. "pairs count as triples").
+- **Reroll Modifier** — grants extra rerolls or other roll manipulation.
 
 ---
 
 ## Core Systems
 
-### Machine System
+### Dice System
 
-- `Machine` (RefCounted) — base class. Holds frame, reels, levers, modifiers. Tracks `spins_remaining`. `is_complete()` checks frame + 3 reels + 1 lever.
-- `SlotMachine` extends `Machine` — `spin()` returns array of 3 symbol IDs via weighted random picks from reels.
-- `Reel` (RefCounted) — maintains `base_symbol_weights` and `bonus_weights`. `spin()` does a weighted random pick from effective weights.
+- `Die` (RefCounted) — holds an array of 6 face values and an optional color. `roll()` returns a random face value (uniform distribution across the 6 faces).
+- `DiceBag` (RefCounted) — holds the player's collection of dice. `draw(n)` returns n dice for rolling. Tracks which dice are in the bag.
 
 ### Scoring Engine
 
-- `ScoringEngine` (RefCounted) — `calculate_spin_score(results, machine)` returns base points, multiplier, total, and match details.
-- Rules: 3-of-a-kind → symbol value × 3.0, 2-of-a-kind → symbol value × 1.0, then apply machine score multiplier.
+- `ComboDetector` (RefCounted) — `detect_combos(results: Array[int])` analyzes 5 rolled values and returns the best combo (Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee). With colored dice, also detects Flush.
+- `ScoringEngine` (RefCounted) — `calculate_hand_score(combo, values, modifiers)` returns base points, multiplier, and total. Applies active modifiers.
 
 ### Combat Manager
 
-- `CombatManager` (Node) — created by CombatScreen. Tracks running score and active state.
-- `spin_machine(machine)` — resolves a spin, scores it, emits `machine_spun` signal.
-- `end_combat()` — called by player or auto when all spins exhausted. Emits `combat_ended`.
+- `CombatManager` (Node) — created by CombatScreen. Tracks running score, hands remaining, rerolls remaining.
+- `roll_dice()` — rolls all unheld dice, emits `dice_rolled` signal.
+- `hold_die(index)` / `unhold_die(index)` — toggles hold state on a die.
+- `score_hand()` — evaluates the current roll, scores it, emits `hand_scored` signal.
+- `end_combat()` — called by player or auto when all hands exhausted. Emits `combat_ended`.
 
 ---
 
 ## Data Formats
 
-### symbols.json
+### faces.json
 
-Each symbol: `id`, `name`, `weight` (reel probability), `value` (base score).
+Each face: `id`, `value` (the number shown), `rarity`, `cost`.
 
-### parts.json
+### dice_shop.json
 
-Each part: `id`, `name`, `description`, `category` (structural/modifier), `type` (FRAME/REEL/LEVER/ADD_SYMBOL/CHANGE_WEIGHT/SCORE_MULTIPLIER), `cost`, `params`.
+Each shop item: `id`, `name`, `description`, `category` (die/face/modifier), `cost`, `params`.
 
-### scoring_rules.json
+### combos.json
 
-Multipliers: `three_of_a_kind_multiplier`, `two_of_a_kind_multiplier`, `no_match_points`.
+Combo definitions: `name`, `pattern` (e.g. "three_of_a_kind"), `base_score`, `multiplier`.
 
 ---
 
@@ -155,13 +154,15 @@ Control root → Background (ColorRect) → CenterContainer → VBoxContainer wi
 ### FleaMarket
 Control root → Background → MarginContainer → MainVBox:
 - TopBar: title, CoinLabel, CombatButton
-- ContentSplit (HSplitContainer): ShopPanel (GridContainer of ShopItems) | FieldPanel (VBoxContainer of MachineSlots)
-- HandPanel: HBoxContainer of PartCards
+- ContentSplit (HSplitContainer): ShopPanel (GridContainer of ShopItems) | BagPanel (VBoxContainer showing dice in bag with face details)
+- InfoPanel: selected item details, buy/swap buttons
 
 ### Combat
 Control root → Background → MarginContainer → VBoxContainer:
-- HUD: CombatTitle, ScoreLabel, EndCombatButton
-- ScrollContainer → CombatMachineField (VBoxContainer of SlotMachineVisuals)
+- HUD: CombatTitle, ScoreLabel, HandsRemainingLabel, RerollsLabel
+- DiceTray: HBoxContainer of 5 DieVisuals (clickable to hold/unhold)
+- ActionBar: RollButton, ScoreHandButton, EndCombatButton
+- ComboLabel: displays detected combo name
 - ResultOverlay (ColorRect, initially hidden): FinalScoreLabel, MenuButton
 
 ---
@@ -170,9 +171,9 @@ Control root → Background → MarginContainer → VBoxContainer:
 
 | System | BASIC4 | FULL44 adds |
 |--------|--------|-------------|
-| Machines | 1 slot machine (supports multiple architecturally) | Multiple types, multiple per round |
+| Dice | 5 colorless dice, default faces | Colored dice, flush combos, larger bag |
 | Flea Market | Fixed catalogue, flat coin budget | Randomized stock, scaling prices, rarity tiers |
-| Parts | ~10-12 items, structural + simple modifiers | Large pool, synergies, triggers, conditionals |
-| Combat | Click-to-spin, manual/auto end | Opponent target score, consequences |
-| Progression | Single round | 5-7 rounds, persistent inventory, difficulty scaling |
+| Items | ~10–12 items: dice, faces, modifiers | Large pool, synergies, conditional modifiers |
+| Combat | Roll + reroll, Yahtzee combos, single target score | Escalating blinds, rich modifier interactions |
+| Progression | Single round | 5–7 rounds, persistent inventory, difficulty scaling |
 | Polish | Placeholder art, no sound | Animations, SFX, music, tutorial |

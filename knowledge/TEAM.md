@@ -10,26 +10,26 @@
 ## Responsibilities to Distribute
 
 ### Game Design
-- Core mechanics design (probability systems, scoring rules, synergies)
-- Part/component design (stats, effects, rarities)
+- Core mechanics design (dice systems, combo scoring, synergies)
+- Dice/face/modifier design (stats, effects, rarities)
 - Balance and tuning (difficulty curve, economy, expected values)
-- Round progression design (flea market scaling, opponent difficulty)
+- Round progression design (flea market scaling, blind escalation)
 
 ### Programming
-- Game logic (machine assembly, spin resolution, score calculation)
-- UI implementation (flea market, inventory, machine builder, combat HUD)
-- Animations and VFX (reel spinning, score tallying, transitions)
-- Data architecture (part definitions, save/load, configuration)
+- Game logic (dice rolling, rerolls, combo resolution, score calculation)
+- UI implementation (flea market, dice bag, face swapping, combat HUD)
+- Animations and VFX (dice rolling, score tallying, transitions)
+- Data architecture (face definitions, save/load, configuration)
 - Audio integration (hooking up sounds to game events)
 
 ### Art & Visual Design
 - UI/UX design (layouts, wireframes, interaction flows)
-- Sprite art (parts, machine visuals, reel symbols, flea market environment)
+- Sprite art (dice, face icons, modifier cards, flea market environment)
 - Visual effects (particle effects, highlights, feedback cues)
 - Fonts and color palette
 
 ### Audio
-- Sound effects (mechanical spins, clicks, win/loss jingles)
+- Sound effects (dice rolls, clicks, win/loss jingles)
 - Ambient sounds (flea market atmosphere)
 - Music (if applicable)
 
