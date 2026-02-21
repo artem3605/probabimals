@@ -12,6 +12,28 @@
 2. **Dice crafting** — depth comes from discovering synergies between dice, faces, and modifiers to build powerful scoring engines.
 3. **Round progression** — each round offers new dice and parts alongside escalating score targets, encouraging adaptation.
 
+### References
+
+**Gameplay:**
+
+| Game | What we take from it |
+|------|----------------------|
+| **Balatro** | Escalating blinds, joker/modifier system that defines builds, "chips x mult" scoring feel |
+| **Yahtzee** | Roll + keep/reroll mechanic, combo taxonomy (pairs, straights, full house, etc.) |
+| **Dice Forge** | Swappable die faces as the core customization mechanic |
+| **Slice & Dice** | Digital dice roguelike — each die = a unit with custom faces, tactical roll phase |
+| **King of Tokyo** | Yahtzee-style rolling in a combat wrapper, push-your-luck tension |
+
+**Visual / UI:**
+
+| Reference | What to look at |
+|-----------|-----------------|
+| **Balatro** | Card layout, shop UI, scoring animation (chips + mult flying in), neon-on-felt aesthetic |
+| **Dicey Dungeons** | Dice as prominent UI elements, clear face readability, colorful character-driven style |
+| **Slice & Dice** | Compact dice tray, face icons, minimal but readable combat UI |
+| **Slay the Spire** | Shop/reward screen layout, map progression, modifier/relic display |
+| **Ganz Schon Clever** | Dice selection UI, color-coding, combo chain visualization |
+
 ---
 
 ## 1. Team
@@ -118,6 +140,43 @@ Each round consists of two phases:
 - **Combo** — a scoring pattern in the rolled dice. Based on Yahtzee: Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee (five of a kind). Colored dice add Flush (5 dice of the same color).
 - **Reroll** — the player's tactical tool. After rolling, keep favorable dice and reroll the rest. Limited to 2 rerolls per hand by default.
 - **Blind** — the target score the player must beat to advance. Escalates each round.
+
+### Building Blueprint
+
+The player's "build" consists of three layers that work together:
+
+```
+┌─────────────────────────────────────────────┐
+│                 MODIFIERS                    │
+│  Global scoring rules that reshape combos   │
+│  (e.g. "Full Houses x2", "pairs → triples") │
+├─────────────────────────────────────────────┤
+│              DICE BAG (5+ dice)             │
+│  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐   │
+│  │ Die 1 │ │ Die 2 │ │ Die 3 │ │ Die 4 │…  │
+│  │[faces]│ │[faces]│ │[faces]│ │[faces]│   │
+│  └───────┘ └───────┘ └───────┘ └───────┘   │
+│  Each die: 6 customizable faces             │
+├─────────────────────────────────────────────┤
+│               COMBAT RESOURCES              │
+│  Hands per round · Rerolls per hand         │
+└─────────────────────────────────────────────┘
+```
+
+**What the player needs to build a functional setup:**
+
+| Component | Minimum (BASIC4) | What it does |
+|-----------|-------------------|--------------|
+| Dice | 5 colorless dice (given at start) | Rolled each hand; faces determine possible outcomes |
+| Faces | Default 1–6 on each die | Swappable — the primary way to skew probabilities |
+| Modifiers | 0 (optional) | Transform scoring; not required but define late-game power |
+| Hands | Fixed per round (e.g. 3–4) | Number of scoring attempts per combat |
+| Rerolls | 2 per hand (default) | Tactical rerolls to chase better combos |
+
+**Strategic layers:**
+1. **Face distribution** — which numbers appear on your dice (e.g. load up on 6s for high pairs, or spread evenly for straights).
+2. **Dice color** (FULL44) — colored dice enable flush combos, adding a second axis of matching.
+3. **Modifier synergy** — modifiers that reward specific combos incentivize shaping dice faces to hit those combos consistently.
 
 ---
 
