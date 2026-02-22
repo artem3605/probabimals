@@ -25,7 +25,7 @@ func _animate_title_glow() -> void:
 
 
 func _on_start_pressed() -> void:
-	pass # TODO: transition to FleaMarket scene
+	GameManager.start_game()
 
 
 func _on_exit_pressed() -> void:

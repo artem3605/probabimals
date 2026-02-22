@@ -8,6 +8,12 @@ config/name="Probabimals"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 
+[autoload]
+
+DataManager="*res://scripts/autoload/data_manager.gd"
+ThemeSetup="*res://scripts/autoload/theme_setup.gd"
+GameManager="*res://scripts/autoload/game_manager.gd"
+
 [display]
 
 window/size/viewport_width=1280
