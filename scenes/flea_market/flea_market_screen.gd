@@ -1,438 +1,455 @@
-extends Control
+extends "res://scripts/ui/pixel_bg.gd"
 
-var bg_texture: Texture2D
-var shop_grid: GridContainer
-var bag_container: VBoxContainer
-var info_panel: PanelContainer
-var info_label: RichTextLabel
-var coin_label: Label
-var selected_item: Dictionary = {}
-var selected_die_index: int = -1
-var selected_face_index: int = -1
-var buy_button: Button
-var swap_section: VBoxContainer
-var face_buttons_container: HBoxContainer
+const REROLL_COST := 10
+const SHOP_SLOTS := 7
+
+const DIE_COLORS := {
+	"colorless": Color.WHITE,
+	"red": Color("ff4444"),
+	"green": Color("9acd32"),
+	"blue": Color("4a9eff"),
+	"gold": Color("ffd700"),
+	"purple": Color("9b59b6"),
+}
+
+var _shop_offerings: Array[Dictionary] = []
+var _coin_label: Label
+var _shop_container: HBoxContainer
+var _reroll_btn: Button
+var _ready_btn: Button
+var _back_btn: Button
+var _my_dice_btn: Button
+var _info_popup: PanelContainer
+var _info_label: RichTextLabel
+var _buy_button: Button
+var _selected_item: Dictionary = {}
+var _all_buttons: Array = []
+
 
 func _ready() -> void:
-	theme = ThemeSetup.game_theme
-	bg_texture = load("res://assets/art/ui/felt_background.png")
+	super._ready()
 	_build_ui()
-	_populate_shop()
-	_update_bag_display()
+	_generate_offerings()
 	_update_coins()
-	GameManager.coins_changed.connect(_on_coins_changed)
+	GameManager.coins_changed.connect(func(_a: int): _update_coins())
+
+
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+
+func _draw() -> void:
+	_draw_all_bg()
+	_draw_button_shadows(_all_buttons, Vector2(4, 4))
+	_draw_shop_card_shadows()
+
 
 func _build_ui() -> void:
-	var bg := TextureRect.new()
-	bg.texture = bg_texture
-	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.add_theme_constant_override("margin_left", 32)
+	margin.add_theme_constant_override("margin_right", 32)
+	margin.add_theme_constant_override("margin_top", 64)
+	margin.add_theme_constant_override("margin_bottom", 24)
 	add_child(margin)
 
-	var main_vbox := VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 12)
-	margin.add_child(main_vbox)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 48)
+	margin.add_child(vbox)
 
-	# Top bar
-	_build_top_bar(main_vbox)
+	_build_top_bar(vbox)
+	_build_shop_row(vbox)
+	_build_action_bar(vbox)
+	_build_info_popup()
 
-	# Content split
-	var content := HSplitContainer.new()
-	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content.split_offset = 700
-	main_vbox.add_child(content)
-
-	# Left panel: shop
-	var shop_panel := PanelContainer.new()
-	shop_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_panel.size_flags_stretch_ratio = 1.6
-	shop_panel.add_theme_stylebox_override("panel", ThemeSetup.make_panel_style())
-	content.add_child(shop_panel)
-
-	var shop_vbox := VBoxContainer.new()
-	shop_vbox.add_theme_constant_override("separation", 8)
-	shop_panel.add_child(shop_vbox)
-
-	var shop_title := Label.new()
-	shop_title.text = "SHOP"
-	shop_title.add_theme_font_size_override("font_size", 24)
-	shop_title.add_theme_font_override("font", ThemeSetup.font_bold)
-	shop_title.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	shop_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	shop_vbox.add_child(shop_title)
-
-	var shop_scroll := ScrollContainer.new()
-	shop_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	shop_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	shop_vbox.add_child(shop_scroll)
-
-	shop_grid = GridContainer.new()
-	shop_grid.columns = 3
-	shop_grid.add_theme_constant_override("h_separation", 10)
-	shop_grid.add_theme_constant_override("v_separation", 10)
-	shop_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_scroll.add_child(shop_grid)
-
-	# Right panel: dice bag
-	var bag_panel := PanelContainer.new()
-	bag_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bag_panel.size_flags_stretch_ratio = 1.0
-	bag_panel.add_theme_stylebox_override("panel", ThemeSetup.make_panel_style())
-	content.add_child(bag_panel)
-
-	var bag_vbox := VBoxContainer.new()
-	bag_vbox.add_theme_constant_override("separation", 8)
-	bag_panel.add_child(bag_vbox)
-
-	var bag_title := Label.new()
-	bag_title.text = "DICE BAG"
-	bag_title.add_theme_font_size_override("font_size", 24)
-	bag_title.add_theme_font_override("font", ThemeSetup.font_bold)
-	bag_title.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	bag_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	bag_vbox.add_child(bag_title)
-
-	var bag_scroll := ScrollContainer.new()
-	bag_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bag_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	bag_vbox.add_child(bag_scroll)
-
-	bag_container = VBoxContainer.new()
-	bag_container.add_theme_constant_override("separation", 8)
-	bag_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bag_scroll.add_child(bag_container)
-
-	# Bottom info panel
-	_build_info_panel(main_vbox)
-
-	# Fade in
-	modulate.a = 0.0
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 1.0, 0.4)
 
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 16)
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
-	var title := Label.new()
-	title.text = "FLEA MARKET"
-	title.add_theme_font_size_override("font_size", 32)
-	title.add_theme_font_override("font", ThemeSetup.font_bold)
-	title.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	bar.add_child(title)
+	# BACK button
+	_back_btn = _make_pixel_button("BACK", Vector2(96, 52), 14)
+	_back_btn.pressed.connect(_on_back_pressed)
+	bar.add_child(_back_btn)
+	_all_buttons.append(_back_btn)
 
+	# Spacer
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	coin_label = Label.new()
-	coin_label.add_theme_font_size_override("font_size", 26)
-	coin_label.add_theme_font_override("font", ThemeSetup.font_bold)
-	coin_label.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	bar.add_child(coin_label)
+	# Title
+	var title_vbox := VBoxContainer.new()
+	title_vbox.add_theme_constant_override("separation", 8)
+	bar.add_child(title_vbox)
 
-	var fight_btn := Button.new()
-	fight_btn.text = "FIGHT!"
-	fight_btn.custom_minimum_size = Vector2(140, 50)
-	fight_btn.add_theme_font_size_override("font_size", 26)
-	fight_btn.add_theme_font_override("font", ThemeSetup.font_bold)
-	var fight_style := ThemeSetup.make_accent_button_style(Color(0.75, 0.2, 0.15, 0.9))
-	fight_btn.add_theme_stylebox_override("normal", fight_style)
-	var fight_hover := fight_style.duplicate()
-	fight_hover.bg_color = Color(0.85, 0.25, 0.18, 0.95)
-	fight_btn.add_theme_stylebox_override("hover", fight_hover)
-	fight_btn.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	fight_btn.add_theme_color_override("font_hover_color", Color.WHITE)
-	fight_btn.pressed.connect(_on_fight_pressed)
-	bar.add_child(fight_btn)
+	var title := Label.new()
+	title.text = "FLEA MARKET"
+	title.add_theme_font_override("font", _pixel_font)
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", DARK)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_vbox.add_child(title)
 
-func _build_info_panel(parent: VBoxContainer) -> void:
-	info_panel = PanelContainer.new()
-	info_panel.custom_minimum_size = Vector2(0, 130)
-	info_panel.add_theme_stylebox_override("panel", ThemeSetup.make_panel_style(
-		Color(0.06, 0.06, 0.1, 0.92), ThemeSetup.COLOR_BORDER, 8
-	))
-	parent.add_child(info_panel)
+	var underline := ColorRect.new()
+	underline.custom_minimum_size = Vector2(296, 4)
+	underline.color = DARK
+	title_vbox.add_child(underline)
 
-	var info_hbox := HBoxContainer.new()
-	info_hbox.add_theme_constant_override("separation", 16)
-	info_panel.add_child(info_hbox)
+	# Spacer
+	var spacer2 := Control.new()
+	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer2)
 
-	info_label = RichTextLabel.new()
-	info_label.bbcode_enabled = true
-	info_label.fit_content = true
-	info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	info_label.add_theme_font_override("normal_font", ThemeSetup.font_regular)
-	info_label.add_theme_font_override("bold_font", ThemeSetup.font_bold)
-	info_label.add_theme_font_size_override("normal_font_size", 18)
-	info_label.add_theme_font_size_override("bold_font_size", 20)
-	info_label.text = "Select an item from the shop or a die from your bag."
-	info_hbox.add_child(info_label)
+	# Right side: coins + MY DICE
+	var right_vbox := VBoxContainer.new()
+	right_vbox.add_theme_constant_override("separation", 12)
+	bar.add_child(right_vbox)
 
-	var btn_vbox := VBoxContainer.new()
-	btn_vbox.add_theme_constant_override("separation", 8)
-	btn_vbox.custom_minimum_size = Vector2(180, 0)
-	info_hbox.add_child(btn_vbox)
+	# Coin display
+	var coin_panel := PanelContainer.new()
+	var coin_style := StyleBoxFlat.new()
+	coin_style.bg_color = GOLD
+	coin_style.border_color = BORDER_BLACK
+	coin_style.set_border_width_all(4)
+	coin_style.set_corner_radius_all(0)
+	coin_style.set_content_margin_all(8)
+	coin_panel.add_theme_stylebox_override("panel", coin_style)
+	coin_panel.custom_minimum_size = Vector2(124, 48)
+	right_vbox.add_child(coin_panel)
 
-	buy_button = Button.new()
-	buy_button.text = "BUY"
-	buy_button.custom_minimum_size = Vector2(160, 45)
-	buy_button.add_theme_font_size_override("font_size", 22)
-	buy_button.add_theme_font_override("font", ThemeSetup.font_bold)
-	var buy_style := ThemeSetup.make_accent_button_style(Color(0.15, 0.5, 0.2, 0.9))
-	buy_button.add_theme_stylebox_override("normal", buy_style)
-	var buy_hover := buy_style.duplicate()
-	buy_hover.bg_color = Color(0.18, 0.6, 0.25, 0.95)
-	buy_button.add_theme_stylebox_override("hover", buy_hover)
-	buy_button.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	buy_button.add_theme_color_override("font_hover_color", Color.WHITE)
-	buy_button.pressed.connect(_on_buy_pressed)
-	buy_button.visible = false
-	btn_vbox.add_child(buy_button)
+	var coin_hbox := HBoxContainer.new()
+	coin_hbox.add_theme_constant_override("separation", 8)
+	coin_panel.add_child(coin_hbox)
 
-	swap_section = VBoxContainer.new()
-	swap_section.visible = false
-	swap_section.add_theme_constant_override("separation", 4)
-	btn_vbox.add_child(swap_section)
+	# Small coin icon (drawn as a colored square)
+	var coin_icon := ColorRect.new()
+	coin_icon.custom_minimum_size = Vector2(20, 20)
+	coin_icon.color = Color("b8960a")
+	coin_hbox.add_child(coin_icon)
 
-	var swap_label := Label.new()
-	swap_label.text = "Select face to replace:"
-	swap_label.add_theme_font_size_override("font_size", 14)
-	swap_section.add_child(swap_label)
+	_coin_label = Label.new()
+	_coin_label.add_theme_font_override("font", _pixel_font)
+	_coin_label.add_theme_font_size_override("font_size", 16)
+	_coin_label.add_theme_color_override("font_color", DARK)
+	coin_hbox.add_child(_coin_label)
 
-	face_buttons_container = HBoxContainer.new()
-	face_buttons_container.add_theme_constant_override("separation", 4)
-	swap_section.add_child(face_buttons_container)
+	# MY DICE button
+	_my_dice_btn = Button.new()
+	_my_dice_btn.text = "MY DICE"
+	_my_dice_btn.custom_minimum_size = Vector2(124, 44)
+	_my_dice_btn.add_theme_font_override("font", _pixel_font)
+	_my_dice_btn.add_theme_font_size_override("font_size", 12)
+	var dice_style := StyleBoxFlat.new()
+	dice_style.bg_color = Color("4a9eff")
+	dice_style.border_color = BORDER_BLACK
+	dice_style.set_border_width_all(4)
+	dice_style.set_corner_radius_all(0)
+	dice_style.set_content_margin_all(8)
+	_my_dice_btn.add_theme_stylebox_override("normal", dice_style)
+	var dice_hover := dice_style.duplicate()
+	dice_hover.bg_color = Color("5ab0ff")
+	_my_dice_btn.add_theme_stylebox_override("hover", dice_hover)
+	_my_dice_btn.add_theme_color_override("font_color", DARK)
+	_my_dice_btn.add_theme_color_override("font_hover_color", DARK)
+	_my_dice_btn.pressed.connect(_on_my_dice_pressed)
+	right_vbox.add_child(_my_dice_btn)
+	_all_buttons.append(_my_dice_btn)
 
-func _populate_shop() -> void:
-	for child in shop_grid.get_children():
-		child.queue_free()
 
-	var catalogue := DataManager.get_shop_catalogue()
-	for item in catalogue:
-		var card := _create_shop_card(item)
-		shop_grid.add_child(card)
+func _build_shop_row(parent: VBoxContainer) -> void:
+	var center := CenterContainer.new()
+	parent.add_child(center)
 
-func _create_shop_card(item: Dictionary) -> PanelContainer:
-	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(195, 140)
-	var card_style := ThemeSetup.make_panel_style(
-		Color(0.08, 0.08, 0.12, 0.9), Color(0.5, 0.4, 0.1, 0.5), 8
-	)
-	card.add_theme_stylebox_override("panel", card_style)
+	_shop_container = HBoxContainer.new()
+	_shop_container.add_theme_constant_override("separation", 32)
+	center.add_child(_shop_container)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 4)
-	card.add_child(vbox)
 
-	# Category badge
-	var cat_label := Label.new()
-	var category: String = item.get("category", "")
-	cat_label.text = category.to_upper()
-	cat_label.add_theme_font_size_override("font_size", 12)
-	match category:
-		"die":
-			cat_label.add_theme_color_override("font_color", ThemeSetup.COLOR_CYAN)
-		"face":
-			cat_label.add_theme_color_override("font_color", ThemeSetup.COLOR_GREEN)
-		"modifier":
-			cat_label.add_theme_color_override("font_color", ThemeSetup.COLOR_MAGENTA)
-	vbox.add_child(cat_label)
-
-	# Name
-	var name_label := Label.new()
-	name_label.text = item.get("name", "Unknown")
-	name_label.add_theme_font_size_override("font_size", 17)
-	name_label.add_theme_font_override("font", ThemeSetup.font_bold)
-	name_label.add_theme_color_override("font_color", Color.WHITE)
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(name_label)
-
-	# Description (truncated)
-	var desc := Label.new()
-	var desc_text: String = item.get("description", "")
-	if desc_text.length() > 60:
-		desc_text = desc_text.substr(0, 57) + "..."
-	desc.text = desc_text
-	desc.add_theme_font_size_override("font_size", 13)
-	desc.add_theme_color_override("font_color", ThemeSetup.COLOR_TEXT_MUTED)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size = Vector2(0, 36)
-	vbox.add_child(desc)
-
-	# Cost
-	var cost_label := Label.new()
-	cost_label.text = str(item.get("cost", 0)) + " coins"
-	cost_label.add_theme_font_size_override("font_size", 16)
-	cost_label.add_theme_font_override("font", ThemeSetup.font_bold)
-	cost_label.add_theme_color_override("font_color", ThemeSetup.COLOR_GOLD)
-	vbox.add_child(cost_label)
-
-	# Click handler
-	var click_btn := Button.new()
-	click_btn.set_anchors_preset(Control.PRESET_FULL_RECT)
-	click_btn.flat = true
-	click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	click_btn.pressed.connect(_on_shop_item_selected.bind(item, card))
-	card.add_child(click_btn)
-
-	return card
-
-func _update_bag_display() -> void:
-	for child in bag_container.get_children():
-		child.queue_free()
-
-	var dice := GameManager.dice_bag.get_all()
-	for i in range(dice.size()):
-		var die_row := _create_die_row(dice[i], i)
-		bag_container.add_child(die_row)
-
-func _create_die_row(die: Die, index: int) -> PanelContainer:
-	var panel := PanelContainer.new()
-	var is_selected := (index == selected_die_index)
-	var border_color := ThemeSetup.COLOR_GOLD if is_selected else Color(0.3, 0.3, 0.35, 0.5)
-	var bg_color := Color(0.12, 0.11, 0.07, 0.9) if is_selected else Color(0.07, 0.07, 0.1, 0.8)
-	panel.add_theme_stylebox_override("panel", ThemeSetup.make_panel_style(bg_color, border_color, 8))
+func _build_action_bar(parent: VBoxContainer) -> void:
+	var center := CenterContainer.new()
+	parent.add_child(center)
 
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 6)
-	panel.add_child(hbox)
+	hbox.add_theme_constant_override("separation", 24)
+	center.add_child(hbox)
 
-	var die_label := Label.new()
-	die_label.text = "Die " + str(index + 1) + ":"
-	die_label.add_theme_font_size_override("font_size", 16)
-	die_label.add_theme_font_override("font", ThemeSetup.font_bold)
-	die_label.custom_minimum_size = Vector2(60, 0)
-	hbox.add_child(die_label)
+	# REROLL button (pink)
+	_reroll_btn = Button.new()
+	_reroll_btn.custom_minimum_size = Vector2(152, 68)
+	_reroll_btn.add_theme_font_override("font", _pixel_font)
+	_reroll_btn.add_theme_font_size_override("font_size", 14)
+	var reroll_style := StyleBoxFlat.new()
+	reroll_style.bg_color = Color("ff69b4")
+	reroll_style.border_color = BORDER_BLACK
+	reroll_style.set_border_width_all(4)
+	reroll_style.set_corner_radius_all(0)
+	reroll_style.set_content_margin_all(8)
+	_reroll_btn.add_theme_stylebox_override("normal", reroll_style)
+	var reroll_hover := reroll_style.duplicate()
+	reroll_hover.bg_color = Color("ff80c0")
+	_reroll_btn.add_theme_stylebox_override("hover", reroll_hover)
+	_reroll_btn.add_theme_color_override("font_color", DARK)
+	_reroll_btn.add_theme_color_override("font_hover_color", DARK)
+	_reroll_btn.text = "REROLL\n%d coins" % REROLL_COST
+	_reroll_btn.pressed.connect(_on_reroll_pressed)
+	hbox.add_child(_reroll_btn)
+	_all_buttons.append(_reroll_btn)
 
-	for f in range(die.faces.size()):
-		var face_btn := Button.new()
-		face_btn.text = str(die.faces[f])
-		face_btn.custom_minimum_size = Vector2(38, 38)
-		face_btn.add_theme_font_size_override("font_size", 18)
-		face_btn.add_theme_font_override("font", ThemeSetup.font_bold)
+	# READY! button (green)
+	_ready_btn = Button.new()
+	_ready_btn.text = "READY!"
+	_ready_btn.custom_minimum_size = Vector2(168, 68)
+	_ready_btn.add_theme_font_override("font", _pixel_font)
+	_ready_btn.add_theme_font_size_override("font_size", 16)
+	var ready_style := StyleBoxFlat.new()
+	ready_style.bg_color = Color("9acd32")
+	ready_style.border_color = BORDER_BLACK
+	ready_style.set_border_width_all(4)
+	ready_style.set_corner_radius_all(0)
+	ready_style.set_content_margin_all(8)
+	_ready_btn.add_theme_stylebox_override("normal", ready_style)
+	var ready_hover := ready_style.duplicate()
+	ready_hover.bg_color = Color("b0dd48")
+	_ready_btn.add_theme_stylebox_override("hover", ready_hover)
+	_ready_btn.add_theme_color_override("font_color", DARK)
+	_ready_btn.add_theme_color_override("font_hover_color", DARK)
+	_ready_btn.pressed.connect(_on_ready_pressed)
+	hbox.add_child(_ready_btn)
+	_all_buttons.append(_ready_btn)
 
-		var face_style := StyleBoxFlat.new()
-		face_style.bg_color = Color(0.15, 0.15, 0.2, 0.9)
-		face_style.border_color = Color(0.4, 0.35, 0.2, 0.6)
-		face_style.set_border_width_all(1)
-		face_style.set_corner_radius_all(6)
-		face_style.set_content_margin_all(4)
-		face_btn.add_theme_stylebox_override("normal", face_style)
-		var hover_style := face_style.duplicate()
-		hover_style.border_color = ThemeSetup.COLOR_GOLD
-		face_btn.add_theme_stylebox_override("hover", hover_style)
-		face_btn.add_theme_color_override("font_color", Color.WHITE)
-		hbox.add_child(face_btn)
 
-	# Click handler for the whole row
-	var click_btn := Button.new()
-	click_btn.set_anchors_preset(Control.PRESET_FULL_RECT)
-	click_btn.flat = true
-	click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	click_btn.pressed.connect(_on_die_selected.bind(index))
-	panel.add_child(click_btn)
+func _build_info_popup() -> void:
+	_info_popup = PanelContainer.new()
+	_info_popup.visible = false
+	_info_popup.set_anchors_preset(Control.PRESET_CENTER)
+	_info_popup.custom_minimum_size = Vector2(400, 180)
+	_info_popup.offset_left = -200
+	_info_popup.offset_right = 200
+	_info_popup.offset_top = -90
+	_info_popup.offset_bottom = 90
+	var popup_style := StyleBoxFlat.new()
+	popup_style.bg_color = Color("1a1a1a")
+	popup_style.border_color = GOLD
+	popup_style.set_border_width_all(4)
+	popup_style.set_corner_radius_all(0)
+	popup_style.set_content_margin_all(16)
+	_info_popup.add_theme_stylebox_override("panel", popup_style)
+	add_child(_info_popup)
 
-	return panel
+	var popup_vbox := VBoxContainer.new()
+	popup_vbox.add_theme_constant_override("separation", 12)
+	_info_popup.add_child(popup_vbox)
 
-func _update_coins() -> void:
-	coin_label.text = "Coins: " + str(GameManager.coins)
+	_info_label = RichTextLabel.new()
+	_info_label.bbcode_enabled = true
+	_info_label.fit_content = true
+	_info_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_info_label.add_theme_font_override("normal_font", _pixel_font)
+	_info_label.add_theme_font_override("bold_font", _pixel_font)
+	_info_label.add_theme_font_size_override("normal_font_size", 12)
+	_info_label.add_theme_font_size_override("bold_font_size", 14)
+	popup_vbox.add_child(_info_label)
 
-func _on_coins_changed(_amount: int) -> void:
-	_update_coins()
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 12)
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	popup_vbox.add_child(btn_row)
 
-func _on_shop_item_selected(item: Dictionary, _card: PanelContainer) -> void:
-	selected_item = item
-	var category: String = item.get("category", "")
-	var desc: String = item.get("description", "")
+	_buy_button = _make_pixel_button("BUY", Vector2(100, 40), 12)
+	_buy_button.pressed.connect(_on_buy_pressed)
+	btn_row.add_child(_buy_button)
 
-	var bbcode := "[b]%s[/b]\n%s\n[color=#e8c832]Cost: %d coins[/color]" % [
-		item.get("name", ""), desc, item.get("cost", 0)
-	]
-	info_label.text = bbcode
+	var close_btn := _make_pixel_button("CLOSE", Vector2(100, 40), 12)
+	close_btn.pressed.connect(func(): _info_popup.visible = false)
+	btn_row.add_child(close_btn)
 
-	if category == "face":
-		buy_button.visible = false
-		if selected_die_index >= 0:
-			_show_face_swap_ui(item)
-		else:
-			swap_section.visible = false
-			info_label.text += "\n[color=#aaa]Select a die from your bag first.[/color]"
-			buy_button.visible = true
-			buy_button.text = "SELECT DIE FIRST"
-			buy_button.disabled = true
-	else:
-		swap_section.visible = false
-		buy_button.visible = true
-		buy_button.text = "BUY"
-		buy_button.disabled = GameManager.coins < item.get("cost", 0)
 
-func _show_face_swap_ui(item: Dictionary) -> void:
-	swap_section.visible = true
-	buy_button.visible = false
+# -- Shop generation -----------------------------------------------------------
 
-	for child in face_buttons_container.get_children():
+func _generate_offerings() -> void:
+	_shop_offerings.clear()
+	var catalogue := DataManager.get_shop_catalogue()
+	if catalogue.is_empty():
+		return
+
+	var shuffled := catalogue.duplicate()
+	shuffled.shuffle()
+	var count := mini(SHOP_SLOTS, shuffled.size())
+	for i in count:
+		_shop_offerings.append(shuffled[i])
+
+	_refresh_shop_display()
+
+
+func _refresh_shop_display() -> void:
+	for child in _shop_container.get_children():
 		child.queue_free()
 
-	var die := GameManager.dice_bag.get_die(selected_die_index)
-	if die == null:
-		return
+	for i in _shop_offerings.size():
+		var item := _shop_offerings[i]
+		var card := _create_shop_card(item, i)
+		_shop_container.add_child(card)
 
-	var face_value: int = item.get("params", {}).get("value", 1)
-	for f in range(die.faces.size()):
-		var btn := Button.new()
-		btn.text = str(die.faces[f])
-		btn.custom_minimum_size = Vector2(36, 36)
-		btn.add_theme_font_size_override("font_size", 16)
-		btn.tooltip_text = "Replace %d with %d" % [die.faces[f], face_value]
-		btn.pressed.connect(_on_face_swap.bind(f, face_value, item))
-		face_buttons_container.add_child(btn)
 
-func _on_face_swap(face_index: int, new_value: int, item: Dictionary) -> void:
-	if GameManager.coins < item.get("cost", 0):
+func _create_shop_card(item: Dictionary, _index: int) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 8)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+
+	# Die visual card (96x96)
+	var card_btn := Button.new()
+	card_btn.custom_minimum_size = Vector2(96, 96)
+
+	var card_color := _get_item_color(item)
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = card_color
+	card_style.border_color = BORDER_BLACK
+	card_style.set_border_width_all(4)
+	card_style.set_corner_radius_all(0)
+	card_style.set_content_margin_all(4)
+	card_btn.add_theme_stylebox_override("normal", card_style)
+
+	var hover_style := card_style.duplicate()
+	hover_style.border_color = GOLD
+	card_btn.add_theme_stylebox_override("hover", hover_style)
+
+	card_btn.add_theme_font_override("font", _pixel_font)
+	card_btn.add_theme_font_size_override("font_size", 24)
+	card_btn.add_theme_color_override("font_color", _get_text_color(card_color))
+	card_btn.add_theme_color_override("font_hover_color", _get_text_color(card_color))
+	card_btn.text = _get_card_label(item)
+	card_btn.pressed.connect(_on_shop_item_clicked.bind(item))
+	col.add_child(card_btn)
+
+	# Price tag (gold, small)
+	var price_btn := Button.new()
+	price_btn.custom_minimum_size = Vector2(56, 32)
+	var price_style := StyleBoxFlat.new()
+	price_style.bg_color = GOLD
+	price_style.border_color = BORDER_BLACK
+	price_style.set_border_width_all(4)
+	price_style.set_corner_radius_all(0)
+	price_style.set_content_margin_all(4)
+	price_btn.add_theme_stylebox_override("normal", price_style)
+	price_btn.add_theme_stylebox_override("hover", price_style)
+	price_btn.add_theme_font_override("font", _pixel_font)
+	price_btn.add_theme_font_size_override("font_size", 12)
+	price_btn.add_theme_color_override("font_color", DARK)
+	price_btn.text = str(item.get("cost", 0))
+	price_btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(price_btn)
+
+	return col
+
+
+func _get_item_color(item: Dictionary) -> Color:
+	var category: String = item.get("category", "")
+	match category:
+		"die":
+			var die_id: String = item.get("id", "")
+			if "loaded" in die_id:
+				return Color("ff4444")
+			elif "balanced" in die_id:
+				return Color("9acd32")
+			return Color.WHITE
+		"face":
+			return Color.WHITE
+		"modifier":
+			return Color.WHITE
+	return Color.WHITE
+
+
+func _get_text_color(bg: Color) -> Color:
+	if bg.get_luminance() > 0.5:
+		return Color("0a0a0a")
+	return Color.WHITE
+
+
+func _get_card_label(item: Dictionary) -> String:
+	var category: String = item.get("category", "")
+	match category:
+		"die":
+			return "D"
+		"face":
+			var val: int = item.get("params", {}).get("value", 0)
+			return str(val)
+		"modifier":
+			var val = item.get("params", {}).get("value", 2.0)
+			return "x%s" % str(int(val))
+	return "?"
+
+
+func _draw_shop_card_shadows() -> void:
+	for card_col in _shop_container.get_children():
+		if card_col is VBoxContainer and card_col.get_child_count() > 0:
+			var card_btn: Control = card_col.get_child(0)
+			if is_instance_valid(card_btn) and card_btn.visible:
+				var gp := card_btn.global_position - global_position
+				draw_rect(
+					Rect2(gp + Vector2(4, 4), card_btn.size),
+					SHADOW_COLOR
+				)
+
+
+# -- Coin display --------------------------------------------------------------
+
+func _update_coins() -> void:
+	if _coin_label:
+		_coin_label.text = str(GameManager.coins)
+	if _reroll_btn:
+		_reroll_btn.disabled = GameManager.coins < REROLL_COST
+
+
+# -- Callbacks -----------------------------------------------------------------
+
+func _on_back_pressed() -> void:
+	GameManager.go_to_main_menu()
+
+
+func _on_reroll_pressed() -> void:
+	if GameManager.coins < REROLL_COST:
 		return
-	GameManager.coins -= item.get("cost", 0)
+	GameManager.coins -= REROLL_COST
 	GameManager.coins_changed.emit(GameManager.coins)
-	GameManager.swap_face(selected_die_index, face_index, new_value)
-	_update_bag_display()
-	swap_section.visible = false
-	info_label.text = "Face swapped successfully!"
+	_generate_offerings()
+	_update_coins()
 
-func _on_die_selected(index: int) -> void:
-	selected_die_index = index
-	_update_bag_display()
-	var die := GameManager.dice_bag.get_die(index)
-	if die:
-		var faces_str := ""
-		for f in die.faces:
-			faces_str += str(f) + " "
-		info_label.text = "[b]Die %d[/b]\nFaces: %s" % [index + 1, faces_str.strip_edges()]
 
-	if not selected_item.is_empty() and selected_item.get("category", "") == "face":
-		_show_face_swap_ui(selected_item)
+func _on_ready_pressed() -> void:
+	GameManager.go_to_dice_select()
+
+
+func _on_my_dice_pressed() -> void:
+	_info_popup.visible = true
+	_buy_button.visible = false
+	var dice := GameManager.dice_bag.get_all()
+	var text := "[b]MY DICE[/b]\n"
+	for i in dice.size():
+		var d: Die = dice[i]
+		text += "Die %d: %s (%s)\n" % [i + 1, str(d.faces), d.color]
+	_info_label.text = text
+
+
+func _on_shop_item_clicked(item: Dictionary) -> void:
+	_selected_item = item
+	_info_popup.visible = true
+	_buy_button.visible = true
+	_buy_button.disabled = GameManager.coins < item.get("cost", 0)
+	_info_label.text = "[b]%s[/b]\n%s\n[color=#ffd700]Cost: %d coins[/color]" % [
+		item.get("name", ""), item.get("description", ""), item.get("cost", 0)
+	]
+
 
 func _on_buy_pressed() -> void:
-	if selected_item.is_empty():
+	if _selected_item.is_empty():
 		return
-	var success := GameManager.buy_item(selected_item)
+	var success := GameManager.buy_item(_selected_item)
 	if success:
-		info_label.text = "[color=#33dd55]Purchased: %s[/color]" % selected_item.get("name", "")
-		_update_bag_display()
-		buy_button.disabled = true
+		_info_label.text = "[color=#9acd32]Purchased: %s[/color]" % _selected_item.get("name", "")
+		_buy_button.disabled = true
+		_update_coins()
 	else:
-		info_label.text = "[color=#dd3333]Not enough coins![/color]"
-
-func _on_fight_pressed() -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(GameManager.go_to_combat)
+		_info_label.text = "[color=#ff4444]Not enough coins![/color]"
