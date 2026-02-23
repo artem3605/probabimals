@@ -8,6 +8,12 @@ var _time := 0.0
 @onready var _continue_btn: Button = %ContinueButton
 @onready var _settings_btn: Button = %SettingsButton
 @onready var _exit_btn: Button = %ExitButton
+@onready var _sun: Control = $Sun
+@onready var _sun_image: TextureRect = $Sun/SunImage
+
+var _sun_origin: Vector2
+var _sun_state := 0
+var _sun_textures: Array[Texture2D]
 
 
 func _ready() -> void:
@@ -19,6 +25,15 @@ func _ready() -> void:
 
 	_title_label.add_theme_font_override("font", _pixel_font)
 	_title_underline.color = DARK
+
+	_sun_textures = [
+		load("res://assets/art/decorations/sun_happy.svg"),
+		load("res://assets/art/decorations/sun_neutral.svg"),
+		load("res://assets/art/decorations/sun_sad.svg"),
+	]
+	_sun_origin = _sun.position
+	_sun.pivot_offset = _sun.size * 0.5
+	_sun.gui_input.connect(_on_sun_input)
 	for btn in [_new_game_btn, _continue_btn, _settings_btn, _exit_btn]:
 		btn.add_theme_font_override("font", _pixel_font)
 		btn.mouse_entered.connect(_on_btn_hover_enter.bind(btn))
@@ -27,6 +42,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
+	var sun_sway := Vector2(sin(_time * 0.3) * 5.0, cos(_time * 0.2) * 6.0)
+	_sun.position = _sun_origin + sun_sway
+	_sun.rotation = sin(_time * 0.4) * 0.06
 	queue_redraw()
 
 
@@ -130,3 +148,13 @@ func _on_settings_pressed() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
+
+
+func _on_sun_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_sun_state = (_sun_state + 1) % _sun_textures.size()
+		_sun_image.texture = _sun_textures[_sun_state]
+
+		var tw := create_tween()
+		tw.tween_property(_sun, "scale", Vector2(1.15, 1.15), 0.08).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_sun, "scale", Vector2.ONE, 0.12).set_ease(Tween.EASE_IN_OUT)

@@ -1,7 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/main_menu/main_menu.gd" id="1_script"]
 [ext_resource type="FontFile" path="res://assets/fonts/PressStart2P-Regular.ttf" id="2_font"]
+[ext_resource type="Texture2D" path="res://assets/art/decorations/sun_happy.svg" id="3_sun_happy"]
+[ext_resource type="Texture2D" path="res://assets/art/decorations/sun_sad.svg" id="4_sun_sad"]
+[ext_resource type="Texture2D" path="res://assets/art/decorations/sun_neutral.svg" id="5_sun_neutral"]
 
 [sub_resource type="StyleBoxFlat" id="btn_normal"]
 bg_color = Color(0.102, 0.102, 0.102, 1.0)
@@ -58,6 +61,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
+
+[node name="Sun" type="Control" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -140.0
+offset_top = 10.0
+offset_right = -27.0
+offset_bottom = 115.0
+
+[node name="SunImage" type="TextureRect" parent="Sun"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_sun_happy")
+stretch_mode = 5
+mouse_filter = 1
 
 [node name="TitleLabel" type="Label" parent="."]
 layout_mode = 1
