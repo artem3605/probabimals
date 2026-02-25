@@ -23,6 +23,8 @@ func _ready() -> void:
 	_settings_btn.pressed.connect(_on_settings_pressed)
 	_exit_btn.pressed.connect(_on_exit_pressed)
 
+	_continue_btn.disabled = not GameManager.has_save()
+
 	_title_label.add_theme_font_override("font", _pixel_font)
 	_title_underline.color = DARK
 
@@ -139,7 +141,7 @@ func _on_new_game_pressed() -> void:
 
 
 func _on_continue_pressed() -> void:
-	pass
+	GameManager.load_game()
 
 
 func _on_settings_pressed() -> void:

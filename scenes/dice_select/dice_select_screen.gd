@@ -2,25 +2,12 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const MAX_SELECTION := 5
 
-const DIE_NAMES := {
-	"colorless": "Basic Die",
-	"red": "Red Die",
-	"green": "Green Die",
-	"blue": "Blue Die",
-	"gold": "Gold Die",
-	"purple": "Purple Die",
-}
-
-const DICE_SHEET_COLS := 3
-const DICE_SHEET_ROWS := 2
-
 var _selected_indices: Array[int] = []
 var _subtitle_label: Label
 var _confirm_btn: Button
-var _back_btn: Button
+var _menu_btn: Button
 var _dice_cards: Array[Button] = []
 var _grid_container: GridContainer
-var _all_buttons: Array = []
 var _dice_face_textures: Array[AtlasTexture] = []
 
 
@@ -36,24 +23,12 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	_draw_all_bg()
-	_draw_button_shadows([_back_btn], Vector2(4, 4))
+	_draw_button_shadows([_menu_btn], Vector2(4, 4))
 	_draw_button_shadows([_confirm_btn], Vector2(8, 8))
 
 
-func _load_dice_sheet() -> void:
-	var sheet: Texture2D = load("res://assets/art/dice/dice_sheet.png")
-	var cell_w := sheet.get_width() / float(DICE_SHEET_COLS)
-	var cell_h := sheet.get_height() / float(DICE_SHEET_ROWS)
-	for row in DICE_SHEET_ROWS:
-		for col in DICE_SHEET_COLS:
-			var atlas := AtlasTexture.new()
-			atlas.atlas = sheet
-			atlas.region = Rect2(col * cell_w, row * cell_h, cell_w, cell_h)
-			_dice_face_textures.append(atlas)
-
-
 func _build_ui() -> void:
-	_load_dice_sheet()
+	_dice_face_textures = _load_dice_sheet()
 
 	var margin := _make_screen_margin()
 	add_child(margin)
@@ -69,21 +44,27 @@ func _build_ui() -> void:
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
-	var bar := Control.new()
-	bar.custom_minimum_size = Vector2(0, 56)
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 16)
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
-	_back_btn = _make_pixel_button("BACK", Vector2(96, 56), 14)
-	_back_btn.pressed.connect(_on_back_pressed)
-	_back_btn.position = Vector2.ZERO
-	bar.add_child(_back_btn)
-	_all_buttons.append(_back_btn)
+	_menu_btn = _make_menu_button()
+	bar.add_child(_menu_btn)
 
-	var title_center := CenterContainer.new()
-	title_center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bar.add_child(title_center)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer)
 
-	title_center.add_child(_make_title_bar("SELECT DICE"))
+	bar.add_child(_make_title_bar("SELECT DICE"))
+
+	var spacer2 := Control.new()
+	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer2)
+
+	var right_placeholder := Control.new()
+	right_placeholder.custom_minimum_size = Vector2(96, 0)
+	bar.add_child(right_placeholder)
 
 
 func _build_subtitle(parent: VBoxContainer) -> void:
@@ -114,15 +95,7 @@ func _create_dice_card(die: Die, index: int) -> VBoxContainer:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
 
-	var card_btn := Button.new()
-	card_btn.custom_minimum_size = Vector2(110, 110)
-	card_btn.text = ""
-
-	var empty := StyleBoxEmpty.new()
-	card_btn.add_theme_stylebox_override("normal", empty)
-	card_btn.add_theme_stylebox_override("hover", empty)
-	card_btn.add_theme_stylebox_override("pressed", empty)
-	card_btn.add_theme_stylebox_override("focus", empty)
+	var card_btn := _make_icon_button(Vector2(110, 110))
 
 	var sprite := TextureRect.new()
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -132,12 +105,11 @@ func _create_dice_card(die: Die, index: int) -> VBoxContainer:
 	sprite.texture = _dice_face_textures[0]
 	card_btn.add_child(sprite)
 
-	card_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	card_btn.pressed.connect(_on_die_card_pressed.bind(index))
 	col.add_child(card_btn)
 	_dice_cards.append(card_btn)
 
-	var name_label := _make_pixel_label(DIE_NAMES.get(die.color, "Basic Die"), 12)
+	var name_label := _make_pixel_label(DIE_NAMES.get(die.color, "BASIC"), 12)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.custom_minimum_size = Vector2(120, 18)
 	col.add_child(name_label)
@@ -193,13 +165,9 @@ func _build_confirm_bar(parent: VBoxContainer) -> void:
 	_confirm_btn.disabled = true
 	_confirm_btn.pressed.connect(_on_confirm_pressed)
 	center.add_child(_confirm_btn)
-	_all_buttons.append(_confirm_btn)
 
 
 # -- Callbacks -----------------------------------------------------------------
-
-func _on_back_pressed() -> void:
-	GameManager.go_to_flea_market()
 
 
 func _on_die_card_pressed(index: int) -> void:

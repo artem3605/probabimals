@@ -21,7 +21,6 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 [autoload]
 
 DataManager="*res://scripts/autoload/data_manager.gd"
-ThemeSetup="*res://scripts/autoload/theme_setup.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 
 [display]

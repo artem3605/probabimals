@@ -8,7 +8,6 @@ var _coin_label: Label
 var _shop_container: HBoxContainer
 var _reroll_btn: Button
 var _ready_btn: Button
-var _back_btn: Button
 var _my_dice_btn: Button
 var _desc_panel: PanelContainer
 var _desc_title: Label
@@ -59,10 +58,9 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
-	_back_btn = _make_pixel_button("BACK", Vector2(96, 52), 14)
-	_back_btn.pressed.connect(_on_back_pressed)
-	bar.add_child(_back_btn)
-	_all_buttons.append(_back_btn)
+	var menu_btn := _make_menu_button()
+	bar.add_child(menu_btn)
+	_all_buttons.append(menu_btn)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -274,9 +272,6 @@ func _update_coins() -> void:
 
 
 # -- Callbacks -----------------------------------------------------------------
-
-func _on_back_pressed() -> void:
-	GameManager.go_to_main_menu()
 
 
 func _on_reroll_pressed() -> void:

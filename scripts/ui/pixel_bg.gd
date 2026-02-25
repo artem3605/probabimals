@@ -1,6 +1,6 @@
 extends Control
 ## Base class for screens that share the pixel-art background style:
-## sky-blue fill, faint grid overlay, dark square strips at top & bottom.
+## sky-blue fill with faint grid overlay.
 
 const BG_COLOR := Color("87ceeb")
 const DARK := Color("1a1a1a")
@@ -23,53 +23,36 @@ const DIE_COLORS := {
 	"purple": Color("9b59b6"),
 }
 
-const STRIP_H := 32.0
-const BOTTOM_SQUARE_SIZE := 32.0
-const BOTTOM_SQUARE_COUNT := 12
+const DIE_NAMES := {
+	"colorless": "BASIC",
+	"red": "LOADED",
+	"green": "BALANCED",
+	"blue": "BLUE",
+	"gold": "GOLD",
+	"purple": "PURPLE",
+}
+
+const DICE_SHEET_COLS := 3
+const DICE_SHEET_ROWS := 2
 
 var _pixel_font: Font
 
 
 func _ready() -> void:
 	_pixel_font = load("res://assets/fonts/PressStart2P-Regular.ttf")
-
-
-func _draw_pixel_background() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), BG_COLOR)
-
-
-func _draw_grid_overlay() -> void:
-	var col := Color(0, 0, 0, 0.10)
-	var cell := 32.0
-	var cols := int(size.x / cell)
-	var rows := int(size.y / cell)
-	for i in range(1, cols):
-		var x := float(i) * cell
-		draw_line(Vector2(x, 0), Vector2(x, size.y), col, 1.0)
-	for j in range(1, rows):
-		var y := float(j) * cell
-		draw_line(Vector2(0, y), Vector2(size.x, y), col, 1.0)
-
-
-func _draw_top_strip() -> void:
-	var count := ceili(size.x / STRIP_H)
-	var w := size.x / float(count)
-	for i in count:
-		draw_rect(Rect2(float(i) * w, 0, w - 1.0, STRIP_H), DARK)
-
-
-func _draw_bottom_strip() -> void:
-	var y := size.y - BOTTOM_SQUARE_SIZE - 16.0
-	var total_w := float(BOTTOM_SQUARE_COUNT) * BOTTOM_SQUARE_SIZE
-	var spacing := (size.x - total_w) / float(BOTTOM_SQUARE_COUNT + 1)
-	for i in BOTTOM_SQUARE_COUNT:
-		var x := spacing + float(i) * (BOTTOM_SQUARE_SIZE + spacing)
-		draw_rect(Rect2(x, y, BOTTOM_SQUARE_SIZE, BOTTOM_SQUARE_SIZE), DARK)
+	queue_redraw()
 
 
 func _draw_all_bg() -> void:
-	_draw_pixel_background()
-	_draw_grid_overlay()
+	draw_rect(Rect2(Vector2.ZERO, size), BG_COLOR)
+	var col := Color(0, 0, 0, 0.10)
+	var cell := 32.0
+	for i in range(1, int(size.x / cell)):
+		var x := float(i) * cell
+		draw_line(Vector2(x, 0), Vector2(x, size.y), col, 1.0)
+	for j in range(1, int(size.y / cell)):
+		var y := float(j) * cell
+		draw_line(Vector2(0, y), Vector2(size.x, y), col, 1.0)
 
 
 ## Create a pixel-style button (dark bg, gold text, black border, drop shadow).
@@ -173,6 +156,49 @@ func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 	vbox.add_child(underline)
 
 	return vbox
+
+
+## Create the standard "MENU" button that returns to the main menu.
+## Override _go_to_main_menu() in subclasses to customize transition behavior.
+func _make_menu_button() -> Button:
+	var btn := _make_pixel_button("MENU", Vector2(96, 56), 14)
+	btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	btn.pressed.connect(_go_to_main_menu)
+	return btn
+
+
+## Navigate back to the main menu. Override in subclasses for custom transitions.
+func _go_to_main_menu() -> void:
+	GameManager.go_to_main_menu()
+
+
+## Load the 3x2 dice sprite sheet and return an array of AtlasTextures (faces 1-6).
+func _load_dice_sheet() -> Array[AtlasTexture]:
+	var textures: Array[AtlasTexture] = []
+	var sheet: Texture2D = load("res://assets/art/dice/dice_sheet.png")
+	var cell_w := sheet.get_width() / float(DICE_SHEET_COLS)
+	var cell_h := sheet.get_height() / float(DICE_SHEET_ROWS)
+	for row in DICE_SHEET_ROWS:
+		for col in DICE_SHEET_COLS:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(col * cell_w, row * cell_h, cell_w, cell_h)
+			textures.append(atlas)
+	return textures
+
+
+## Create a transparent-background button for displaying dice/card sprites.
+func _make_icon_button(min_size: Vector2) -> Button:
+	var btn := Button.new()
+	btn.text = ""
+	btn.custom_minimum_size = min_size
+	var empty := StyleBoxEmpty.new()
+	btn.add_theme_stylebox_override("normal", empty)
+	btn.add_theme_stylebox_override("hover", empty)
+	btn.add_theme_stylebox_override("pressed", empty)
+	btn.add_theme_stylebox_override("focus", empty)
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	return btn
 
 
 ## Draw drop-shadow rectangles behind a list of buttons.
