@@ -275,3 +275,140 @@ Self-contained demo: multiple rounds of shopping → dice customization → comb
 | Combat | Roll + reroll, Yahtzee combos, single target score | Escalating blinds, rich modifier interactions |
 | Progression | Single round | 5–7 rounds, persistent inventory, difficulty scaling |
 | Polish | Placeholder art, no sound | Animations, SFX, music, tutorial |
+
+---
+
+## 4. Core Gameplay Loop
+
+The game runs on an **Action → Reward → Expansion** cycle. Each pass through the loop deepens the player's build and raises the stakes.
+
+```mermaid
+graph LR
+    Action["Action\n(Combat: Roll, Hold, Reroll)"] -->|"beat the blind"| Reward["Reward\n(Coins, Progression, Feedback)"]
+    Reward -->|"spend coins"| Expansion["Expansion\n(Flea Market: Dice, Faces, Modifiers)"]
+    Expansion -->|"stronger build"| Action
+```
+
+### Action — Combat ("The Roll")
+
+The player rolls 5 dice from their bag, then makes tactical decisions under pressure:
+
+- **Hold or reroll?** Each hand allows up to 2 rerolls. Keeping a partial combo (e.g. a pair) and rerolling the rest is a calculated risk — more rerolls mean more chances, but the outcome is never guaranteed.
+- **Which combo to chase?** The current face distribution on the player's dice determines which combos are realistic. A bag loaded with 6s favors pairs and multiples; evenly spread faces favor straights.
+- **When to stop?** The player has multiple hands per round. A mediocre hand still contributes to the running score — sometimes "good enough" beats gambling for perfection.
+
+The tension comes from the gap between probability and certainty. The player's dice are biased in their favor, but never deterministic.
+
+### Reward — Feedback and Progression
+
+Rewards operate on two timescales:
+
+**Immediate (per hand):**
+- Combo detection with visual and audio feedback — seeing "FULL HOUSE ×3" pop with a score burst is the moment-to-moment dopamine hit.
+- Running score climbing toward the blind creates mounting tension or relief.
+
+**Round-end:**
+- Beating the blind earns coins and advances to the next round.
+
+### Expansion — The Flea Market
+
+Between rounds, the player spends earned coins to reshape their build:
+
+- **Dice** add to the bag, increasing selection options.
+- **Faces** swap onto existing dice, skewing probability distributions (e.g. replacing a 1-face with a second 6-face makes pairs of 6s more likely).
+- **Modifiers** transform scoring rules globally (e.g. "Full Houses score ×3"), redefining which combos are worth chasing.
+
+Each purchase changes the decision space in the next Action phase. New faces alter which combos are probable; new modifiers alter which combos are *valuable*. This is where the player's understanding of probability becomes a strategic asset.
+
+### Loop Acceleration
+
+The loop's character shifts as the run progresses:
+
+| Phase | Player focus | Example |
+|-------|-------------|---------|
+| Early rounds | Raw value — buy faces with high numbers to inflate base scores | Swap 1-faces for 6-faces |
+| Mid-game | Probability shaping — skew dice toward specific combos | Load three dice with matching faces to reliably hit Three of a Kind |
+| Late game | Synergy engineering — stack modifiers that multiply each other | "Full House ×3" + dice tuned to always land Full Houses = exponential scoring |
+
+The player who merely rolls dice will plateau. The player who *designs* their dice bag — understanding that swapping a single face shifts a 17% chance to a 33% chance — will outscale the blinds.
+
+---
+
+## 5. Difficulty Curve and Progression
+
+### Blind Escalation
+
+Target scores (blinds) grow **slightly faster than linear** across rounds, creating a curve that feels fair early and punishing late:
+
+```
+blind(round) = base × round^exponent
+```
+
+Suggested tuning: `base = 150`, `exponent = 1.4`. This yields:
+
+| Round | Blind | Approx. growth |
+|-------|-------|----------------|
+| 1 | 150 | — |
+| 2 | 395 | ×2.6 |
+| 3 | 720 | ×1.8 |
+| 4 | 1 115 | ×1.5 |
+| 5 | 1 570 | ×1.4 |
+| 6 | 2 080 | ×1.3 |
+| 7 | 2 640 | ×1.3 |
+
+The growth rate *decreases* over time, but raw jumps get larger. Early doublings teach the player that they need to improve their build; later rounds demand optimization rather than raw power.
+
+### Player Power Curve
+
+The player's scoring potential grows through three channels:
+
+1. **Face upgrades** — replacing low faces with high ones increases base score linearly.
+2. **Combo consistency** — shaping faces toward specific patterns (e.g. three dice with matching faces) makes high-multiplier combos reliable rather than lucky.
+3. **Modifier stacking** — modifiers multiply combo scores; multiple modifiers targeting the same combo create exponential growth.
+
+```mermaid
+graph LR
+    subgraph playerPower [Player Power Sources]
+        Faces["Face upgrades\n(linear growth)"]
+        Combos["Combo consistency\n(probability shaping)"]
+        Modifiers["Modifier synergy\n(exponential growth)"]
+    end
+    Faces --> TotalPower["Scoring potential"]
+    Combos --> TotalPower
+    Modifiers --> TotalPower
+```
+
+**Design intent:** channels 1 and 2 alone should be enough to clear rounds 1–4. Rounds 5–7 require channel 3 (modifier synergies), forcing the player to think beyond face values and into build architecture.
+
+### Power vs. Blinds
+
+The relationship between player power and blind targets defines the emotional arc of the run:
+
+| Round | Blind pressure | Player state | Intended feel |
+|-------|---------------|--------------|---------------|
+| 1 | Low | Default dice, starter coins | Tutorial — learn mechanics, easy win |
+| 2 | Moderate | First upgrades purchased | Confidence — upgrades visibly help |
+| 3 | Rising | Build direction emerging | Commitment — player picks a strategy |
+| 4 | Matched | Build functional but tight | Tension — close calls, every hand matters |
+| 5 | High | Build needs synergy to keep up | Pressure — raw stats no longer enough |
+| 6 | Very high | Modifier combos required | Mastery — only well-designed builds survive |
+| 7 | Peak | Full engine or bust | Climax — all-or-nothing finale |
+
+### Flea Market Evolution
+
+The shop's item pool shifts across rounds to support the power curve:
+
+| Round | Available items | Budget | Design purpose |
+|-------|----------------|--------|----------------|
+| 1–2 | Common faces, basic dice | 50–60 coins | Build foundation — high-value faces, extra dice |
+| 3–4 | Uncommon faces, first modifiers | 70–90 coins | Specialize — commit to a combo archetype |
+| 5–6 | Rare faces, powerful modifiers | 100–130 coins | Synergize — stack multipliers, fine-tune |
+| 7 | No shop (final round) | — | Prove the build — no more preparation |
+
+Prices scale with rarity: common faces cost 4–10 coins, uncommon 12–18, rare 20–30. Budget grows faster than common prices but slower than rare prices, forcing the player to choose between many small upgrades or one powerful item.
+
+### Failure
+
+Failing a blind ends the run. The player loses all progress — dice, faces, modifiers, coins — and starts over from round 1 with the default setup.
+
+This creates clear stakes: every round matters, and there is no safety net. The restart loop is fast (flea market → combat takes under a minute), so failure feels like "one more try" rather than wasted time. Over repeated runs the player learns which builds work, making each attempt sharper than the last.

@@ -1,0 +1,136 @@
+[
+  {
+    "id": "basic_die",
+    "name": "Basic Die",
+    "description": "An extra standard six-sided die",
+    "category": "die",
+    "cost": 15,
+    "params": {
+      "color": "colorless"
+    }
+  },
+  {
+    "id": "loaded_die",
+    "name": "Loaded Die",
+    "description": "A die weighted toward high rolls: faces 1, 5, 5, 6, 6, 6",
+    "category": "die",
+    "cost": 25,
+    "params": {
+      "faces": [1, 5, 5, 6, 6, 6],
+      "color": "red"
+    }
+  },
+  {
+    "id": "balanced_die",
+    "name": "Balanced Die",
+    "description": "A die with balanced mid-range faces: 3, 3, 4, 4, 5, 5",
+    "category": "die",
+    "cost": 20,
+    "params": {
+      "faces": [3, 3, 4, 4, 5, 5],
+      "color": "green"
+    }
+  },
+  {
+    "id": "extra_6",
+    "name": "Extra Six",
+    "description": "Replace a face with an extra 6",
+    "category": "face",
+    "cost": 10,
+    "params": {
+      "face_id": "extra_6",
+      "value": 6
+    }
+  },
+  {
+    "id": "extra_5",
+    "name": "Extra Five",
+    "description": "Replace a face with an extra 5",
+    "category": "face",
+    "cost": 8,
+    "params": {
+      "face_id": "extra_5",
+      "value": 5
+    }
+  },
+  {
+    "id": "extra_4",
+    "name": "Extra Four",
+    "description": "Replace a face with an extra 4",
+    "category": "face",
+    "cost": 5,
+    "params": {
+      "face_id": "extra_4",
+      "value": 4
+    }
+  },
+  {
+    "id": "lucky_6",
+    "name": "Lucky Six",
+    "description": "A rare lucky 6 face",
+    "category": "face",
+    "cost": 15,
+    "params": {
+      "face_id": "lucky_6",
+      "value": 6
+    }
+  },
+  {
+    "id": "double_3",
+    "name": "Double Three",
+    "description": "Replace a face with a double 3",
+    "category": "face",
+    "cost": 4,
+    "params": {
+      "face_id": "double_3",
+      "value": 3
+    }
+  },
+  {
+    "id": "pair_boost",
+    "name": "Pair Boost",
+    "description": "Pairs score double",
+    "category": "modifier",
+    "cost": 12,
+    "params": {
+      "effect": "multiply_combo",
+      "target_combo": "pair",
+      "value": 2.0
+    }
+  },
+  {
+    "id": "full_house_master",
+    "name": "Full House Master",
+    "description": "Full houses score x3",
+    "category": "modifier",
+    "cost": 18,
+    "params": {
+      "effect": "multiply_combo",
+      "target_combo": "full_house",
+      "value": 3.0
+    }
+  },
+  {
+    "id": "reroll_plus",
+    "name": "Reroll Plus",
+    "description": "+1 reroll per hand",
+    "category": "modifier",
+    "cost": 10,
+    "params": {
+      "effect": "add_rerolls",
+      "value": 1
+    }
+  },
+  {
+    "id": "yahtzee_hunter",
+    "name": "Yahtzee Hunter",
+    "description": "Yahtzee scores x2 extra",
+    "category": "modifier",
+    "cost": 22,
+    "params": {
+      "effect": "multiply_combo",
+      "target_combo": "yahtzee",
+      "value": 2.0
+    }
+  }
+]

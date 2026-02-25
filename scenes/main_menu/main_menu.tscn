@@ -1,0 +1,207 @@
+[gd_scene format=3 uid="uid://c10v420uifk5c"]
+
+[ext_resource type="Script" uid="uid://cje5edkh1la6i" path="res://scenes/main_menu/main_menu.gd" id="1_script"]
+[ext_resource type="FontFile" uid="uid://bqtklskcwnmha" path="res://assets/fonts/PressStart2P-Regular.ttf" id="2_font"]
+[ext_resource type="Texture2D" uid="uid://dw5qo32qw3g03" path="res://assets/art/decorations/sun_happy.svg" id="3_sun_happy"]
+
+[sub_resource type="StyleBoxFlat" id="btn_normal"]
+content_margin_left = 32.0
+content_margin_top = 16.0
+content_margin_right = 32.0
+content_margin_bottom = 16.0
+bg_color = Color(0.102, 0.102, 0.102, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0, 0, 0, 1)
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_offset = Vector2(6, 6)
+
+[sub_resource type="StyleBoxFlat" id="btn_pressed"]
+content_margin_left = 32.0
+content_margin_top = 16.0
+content_margin_right = 32.0
+content_margin_bottom = 16.0
+bg_color = Color(0.04, 0.04, 0.04, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0, 0, 0, 1)
+shadow_color = Color(0, 0, 0, 0.2)
+shadow_offset = Vector2(3, 3)
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+content_margin_left = 32.0
+content_margin_top = 16.0
+content_margin_right = 32.0
+content_margin_bottom = 16.0
+bg_color = Color(0.25, 0.25, 0.25, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.4, 0.4, 0.4, 1)
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_offset = Vector2(6, 6)
+
+[sub_resource type="StyleBoxFlat" id="btn_focus"]
+content_margin_left = 32.0
+content_margin_top = 16.0
+content_margin_right = 32.0
+content_margin_bottom = 16.0
+bg_color = Color(0, 0, 0, 0)
+draw_center = false
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.843, 0, 0.8)
+
+[sub_resource type="StyleBoxFlat" id="btn_disabled"]
+content_margin_left = 32.0
+content_margin_top = 16.0
+content_margin_right = 32.0
+content_margin_bottom = 16.0
+bg_color = Color(0.07, 0.07, 0.07, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.15, 0.15, 0.15, 1)
+
+[node name="MainMenu" type="Control" unique_id=990062621]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Sun" type="Control" parent="." unique_id=806777665]
+anchors_preset = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -140.0
+offset_top = 10.0
+offset_right = -27.0
+offset_bottom = 115.0
+
+[node name="SunImage" type="TextureRect" parent="Sun" unique_id=182094440]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_sun_happy")
+stretch_mode = 5
+
+[node name="TitleLabel" type="Label" parent="." unique_id=1560764548]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 140.0
+offset_right = 280.0
+offset_bottom = 200.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.102, 0.102, 0.102, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 36
+text = "PROBABIMALS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TitleUnderline" type="ColorRect" parent="." unique_id=375737021]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -230.0
+offset_top = 210.0
+offset_right = 230.0
+offset_bottom = 218.0
+grow_horizontal = 2
+color = Color(0.102, 0.102, 0.102, 1)
+
+[node name="ButtonContainer" type="VBoxContainer" parent="." unique_id=11746058]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 270.0
+offset_right = 160.0
+offset_bottom = 610.0
+grow_horizontal = 2
+theme_override_constants/separation = 16
+
+[node name="NewGameButton" type="Button" parent="ButtonContainer" unique_id=482550422]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_focus_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.667, 0, 1)
+theme_override_colors/font_hover_color = Color(1, 0.843, 0, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/focus = SubResource("btn_focus")
+text = "NEW GAME"
+
+[node name="ContinueButton" type="Button" parent="ButtonContainer" unique_id=2049855861]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_focus_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.667, 0, 1)
+theme_override_colors/font_hover_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_disabled_color = Color(0.4, 0.35, 0.1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/focus = SubResource("btn_focus")
+theme_override_styles/disabled = SubResource("btn_disabled")
+text = "CONTINUE"
+
+[node name="SettingsButton" type="Button" parent="ButtonContainer" unique_id=1638875809]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_focus_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.667, 0, 1)
+theme_override_colors/font_hover_color = Color(1, 0.843, 0, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/focus = SubResource("btn_focus")
+text = "SETTINGS"
+
+[node name="ExitButton" type="Button" parent="ButtonContainer" unique_id=533731284]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_focus_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.667, 0, 1)
+theme_override_colors/font_hover_color = Color(1, 0.843, 0, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/focus = SubResource("btn_focus")
+text = "EXIT"

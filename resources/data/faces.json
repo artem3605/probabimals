@@ -1,0 +1,68 @@
+[
+  {
+    "id": "face_1",
+    "value": 1,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "face_2",
+    "value": 2,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "face_3",
+    "value": 3,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "face_4",
+    "value": 4,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "face_5",
+    "value": 5,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "face_6",
+    "value": 6,
+    "rarity": "common",
+    "cost": 0
+  },
+  {
+    "id": "extra_5",
+    "value": 5,
+    "rarity": "uncommon",
+    "cost": 8
+  },
+  {
+    "id": "extra_6",
+    "value": 6,
+    "rarity": "uncommon",
+    "cost": 10
+  },
+  {
+    "id": "extra_4",
+    "value": 4,
+    "rarity": "common",
+    "cost": 5
+  },
+  {
+    "id": "lucky_6",
+    "value": 6,
+    "rarity": "rare",
+    "cost": 15
+  },
+  {
+    "id": "double_3",
+    "value": 3,
+    "rarity": "common",
+    "cost": 4
+  }
+]
