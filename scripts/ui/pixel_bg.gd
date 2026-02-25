@@ -130,6 +130,32 @@ func _make_pixel_label(text: String, font_size: int, color: Color = DARK) -> Lab
 	return lbl
 
 
+## Create the standard screen layout: margin > outer VBox > content VBox (expands) + bottom action bar (fixed).
+## Returns { "content": VBoxContainer, "action_bar": HBoxContainer }.
+func _make_screen_layout(content_separation: int = 32, clip_content: bool = false) -> Dictionary:
+	var margin := _make_screen_margin()
+	add_child(margin)
+
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 32)
+	margin.add_child(outer)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", content_separation)
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.clip_contents = clip_content
+	outer.add_child(content)
+
+	var center := CenterContainer.new()
+	outer.add_child(center)
+
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 24)
+	center.add_child(bar)
+
+	return { "content": content, "action_bar": bar }
+
+
 ## Create the standard full-screen margin container used by all screens.
 func _make_screen_margin() -> MarginContainer:
 	var margin := MarginContainer.new()

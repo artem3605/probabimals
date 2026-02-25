@@ -1,5 +1,6 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const ItemCard = preload("res://scripts/ui/item_card.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := 7
 
@@ -34,22 +35,23 @@ func _draw() -> void:
 
 
 func _build_ui() -> void:
-	var margin := _make_screen_margin()
-	add_child(margin)
+	var layout := _make_screen_layout(48)
+	var content: VBoxContainer = layout["content"]
+	var action_bar: HBoxContainer = layout["action_bar"]
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 48)
-	margin.add_child(vbox)
+	_build_top_bar(content)
+	_build_shop_row(content)
+	_build_description_panel(content)
 
-	_build_top_bar(vbox)
-	_build_shop_row(vbox)
-	_build_description_panel(vbox)
+	_reroll_btn = _make_colored_button("REROLL\n%d coins" % REROLL_COST, Vector2(152, 68), PINK, PINK.lightened(0.15), 14)
+	_reroll_btn.pressed.connect(_on_reroll_pressed)
+	action_bar.add_child(_reroll_btn)
+	_all_buttons.append(_reroll_btn)
 
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(spacer)
-
-	_build_action_bar(vbox)
+	_ready_btn = _make_colored_button("READY!", Vector2(168, 68), GREEN, GREEN.lightened(0.15), 16)
+	_ready_btn.pressed.connect(_on_ready_pressed)
+	action_bar.add_child(_ready_btn)
+	_all_buttons.append(_ready_btn)
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
@@ -92,7 +94,8 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	coin_hbox.add_child(_coin_label)
 
 	_my_dice_btn = _make_colored_button("MY DICE", Vector2(124, 44), BLUE, BLUE.lightened(0.15), 12)
-	_my_dice_btn.pressed.connect(_on_my_dice_pressed)
+	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
+	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
 	right_vbox.add_child(_my_dice_btn)
 	_all_buttons.append(_my_dice_btn)
 
@@ -130,25 +133,6 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	desc_vbox.add_child(_desc_body)
 
 
-func _build_action_bar(parent: VBoxContainer) -> void:
-	var center := CenterContainer.new()
-	parent.add_child(center)
-
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 24)
-	center.add_child(hbox)
-
-	_reroll_btn = _make_colored_button("REROLL\n%d coins" % REROLL_COST, Vector2(152, 68), PINK, PINK.lightened(0.15), 14)
-	_reroll_btn.pressed.connect(_on_reroll_pressed)
-	hbox.add_child(_reroll_btn)
-	_all_buttons.append(_reroll_btn)
-
-	_ready_btn = _make_colored_button("READY!", Vector2(168, 68), GREEN, GREEN.lightened(0.15), 16)
-	_ready_btn.pressed.connect(_on_ready_pressed)
-	hbox.add_child(_ready_btn)
-	_all_buttons.append(_ready_btn)
-
-
 # -- Shop generation -----------------------------------------------------------
 
 func _generate_offerings() -> void:
@@ -172,94 +156,28 @@ func _refresh_shop_display() -> void:
 
 	for i in _shop_offerings.size():
 		var item := _shop_offerings[i]
-		var card := _create_shop_card(item, i)
+		var card := ItemCard.new()
+		card.setup_as_shop_item(item, _pixel_font)
+		card.card_pressed.connect(_on_shop_item_clicked.bind(item))
+		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
+		card.card_hover_exited.connect(_on_card_hover_exit)
 		_shop_container.add_child(card)
 
 
-func _create_shop_card(item: Dictionary, _index: int) -> VBoxContainer:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-
-	var card_color := _get_item_color(item)
-	var text_color := _get_text_color(card_color)
-
-	var card_btn := Button.new()
-	card_btn.custom_minimum_size = Vector2(96, 96)
-	card_btn.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, 4, 4))
-	card_btn.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, 4, 4))
-	card_btn.add_theme_font_override("font", _pixel_font)
-	card_btn.add_theme_font_size_override("font_size", 24)
-	card_btn.add_theme_color_override("font_color", text_color)
-	card_btn.add_theme_color_override("font_hover_color", text_color)
-	card_btn.text = _get_card_label(item)
-	card_btn.pressed.connect(_on_shop_item_clicked.bind(item))
-	card_btn.mouse_entered.connect(_on_card_hover_enter.bind(item))
-	card_btn.mouse_exited.connect(_on_card_hover_exit)
-	col.add_child(card_btn)
-
-	var price_style := _make_style(GOLD, BORDER_BLACK, 4, 4)
-	var price_btn := Button.new()
-	price_btn.custom_minimum_size = Vector2(56, 32)
-	price_btn.add_theme_stylebox_override("normal", price_style)
-	price_btn.add_theme_stylebox_override("hover", price_style)
-	price_btn.add_theme_font_override("font", _pixel_font)
-	price_btn.add_theme_font_size_override("font_size", 12)
-	price_btn.add_theme_color_override("font_color", DARK)
-	price_btn.text = str(item.get("cost", 0))
-	price_btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(price_btn)
-
-	return col
-
-
-func _get_item_color(item: Dictionary) -> Color:
-	var category: String = item.get("category", "")
-	match category:
-		"die":
-			var die_id: String = item.get("id", "")
-			if "loaded" in die_id:
-				return DIE_COLORS["red"]
-			elif "balanced" in die_id:
-				return DIE_COLORS["green"]
-			return Color.WHITE
-		"face":
-			return Color.WHITE
-		"modifier":
-			return Color.WHITE
-	return Color.WHITE
-
-
-func _get_text_color(bg: Color) -> Color:
-	if bg.get_luminance() > 0.5:
-		return Color("0a0a0a")
-	return Color.WHITE
-
-
-func _get_card_label(item: Dictionary) -> String:
-	var category: String = item.get("category", "")
-	match category:
-		"die":
-			return "D"
-		"face":
-			var val: int = item.get("params", {}).get("value", 0)
-			return str(val)
-		"modifier":
-			var val = item.get("params", {}).get("value", 2.0)
-			return "x%s" % str(int(val))
-	return "?"
-
-
 func _draw_shop_card_shadows() -> void:
-	for card_col in _shop_container.get_children():
-		if card_col is VBoxContainer and card_col.get_child_count() > 0:
-			var card_btn: Control = card_col.get_child(0)
-			if is_instance_valid(card_btn) and card_btn.visible:
-				var gp := card_btn.global_position - global_position
-				draw_rect(
-					Rect2(gp + Vector2(4, 4), card_btn.size),
-					SHADOW_COLOR
-				)
+	for child in _shop_container.get_children():
+		if not child is ItemCard:
+			continue
+		var card: Control = child
+		if card.get("main_button") == null:
+			continue
+		var btn: Button = card.get("main_button")
+		if is_instance_valid(btn) and btn.visible:
+			var gp: Vector2 = btn.global_position - global_position
+			draw_rect(
+				Rect2(gp + Vector2(4, 4), btn.size),
+				SHADOW_COLOR
+			)
 
 
 # -- Coin display --------------------------------------------------------------
@@ -287,21 +205,53 @@ func _on_ready_pressed() -> void:
 	GameManager.go_to_dice_select()
 
 
-func _on_my_dice_pressed() -> void:
+func _on_my_dice_hover_enter() -> void:
 	var dice := GameManager.dice_bag.get_all()
+	var groups: Dictionary = {}
+	for d: Die in dice:
+		var key := d.die_name
+		if not groups.has(key):
+			groups[key] = { "faces": d.faces.duplicate(), "count": 0 }
+		groups[key]["count"] += 1
+
+	var max_name := 0
+	var max_faces := 0
+	var entries: Array[Dictionary] = []
+	for key: String in groups:
+		var g: Dictionary = groups[key]
+		var faces_str := "(%s)" % ",".join(g["faces"].map(func(f: int) -> String: return str(f)))
+		if key.length() > max_name:
+			max_name = key.length()
+		if faces_str.length() > max_faces:
+			max_faces = faces_str.length()
+		entries.append({ "name": key, "faces": faces_str, "count": g["count"] })
+
 	_desc_title.text = "MY DICE"
+	_desc_title.add_theme_color_override("font_color", GOLD)
 	var lines := ""
-	for i in dice.size():
-		var d: Die = dice[i]
-		lines += "Die %d: %s (%s)\n" % [i + 1, str(d.faces), d.color]
-	_desc_body.text = lines
+	for e: Dictionary in entries:
+		var padded_name: String = e["name"]
+		while padded_name.length() < max_name:
+			padded_name += " "
+		var padded_faces: String = e["faces"]
+		while padded_faces.length() < max_faces:
+			padded_faces += " "
+		lines += "%s %s x%d\n" % [padded_name, padded_faces, e["count"]]
+	_desc_body.text = lines.strip_edges()
 	_desc_panel.visible = true
 
 
-func _on_card_hover_enter(item: Dictionary) -> void:
+func _on_my_dice_hover_exit() -> void:
+	_desc_panel.visible = false
+
+
+func _on_card_hover_enter(card: Control) -> void:
 	_desc_title.add_theme_color_override("font_color", GOLD)
-	_desc_title.text = "%s  -  %d coins" % [item.get("name", ""), item.get("cost", 0)]
-	_desc_body.text = item.get("description", "")
+	if card.hover_cost >= 0:
+		_desc_title.text = "%s  -  %d coins" % [card.hover_name, card.hover_cost]
+	else:
+		_desc_title.text = card.hover_name
+	_desc_body.text = card.hover_description
 	_desc_panel.visible = true
 
 

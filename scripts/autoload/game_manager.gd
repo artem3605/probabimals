@@ -48,7 +48,9 @@ func buy_item(item: Dictionary) -> bool:
 			else:
 				faces_arr = [1, 2, 3, 4, 5, 6]
 			var die_color: String = params.get("color", "colorless")
-			dice_bag.add_die(Die.new(faces_arr, die_color))
+			var die_name: String = item.get("name", "Basic Die")
+			var die_desc: String = item.get("description", "A standard six-sided die")
+			dice_bag.add_die(Die.new(faces_arr, die_color, die_name, die_desc))
 		"face":
 			pass
 		"modifier":
@@ -113,7 +115,8 @@ func has_save() -> bool:
 func save_game() -> void:
 	var dice_arr: Array = []
 	for d in dice_bag.get_all():
-		dice_arr.append({"faces": Array(d.faces), "color": d.color})
+		dice_arr.append({"faces": Array(d.faces), "color": d.color,
+			"name": d.die_name, "description": d.description})
 
 	var save_phase := current_phase
 	if save_phase == Phase.COMBAT:
@@ -156,7 +159,9 @@ func load_game() -> void:
 		var faces: Array[int] = []
 		for f in d.get("faces", [1, 2, 3, 4, 5, 6]):
 			faces.append(int(f))
-		dice_bag.add_die(Die.new(faces, str(d.get("color", "colorless"))))
+		var die_name: String = str(d.get("name", "Basic Die"))
+		var die_desc: String = str(d.get("description", "A standard six-sided die"))
+		dice_bag.add_die(Die.new(faces, str(d.get("color", "colorless")), die_name, die_desc))
 
 	modifiers.clear()
 	var mods: Array = data.get("modifiers", [])

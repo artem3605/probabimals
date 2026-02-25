@@ -1,14 +1,17 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const ItemCard = preload("res://scripts/ui/item_card.gd")
 const MAX_SELECTION := 5
 
 var _selected_indices: Array[int] = []
 var _subtitle_label: Label
 var _confirm_btn: Button
 var _menu_btn: Button
-var _dice_cards: Array[Button] = []
+var _dice_cards: Array[ItemCard] = []
 var _grid_container: GridContainer
-var _dice_face_textures: Array[AtlasTexture] = []
+var _desc_panel: PanelContainer
+var _desc_title: Label
+var _desc_body: Label
 
 
 func _ready() -> void:
@@ -28,19 +31,21 @@ func _draw() -> void:
 
 
 func _build_ui() -> void:
-	_dice_face_textures = _load_dice_sheet()
+	var layout := _make_screen_layout(32, true)
+	var content: VBoxContainer = layout["content"]
+	var action_bar: HBoxContainer = layout["action_bar"]
 
-	var margin := _make_screen_margin()
-	add_child(margin)
+	_build_top_bar(content)
+	_build_subtitle(content)
+	_build_dice_grid(content)
+	_build_description_panel(content)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 32)
-	margin.add_child(vbox)
-
-	_build_top_bar(vbox)
-	_build_subtitle(vbox)
-	_build_dice_grid(vbox)
-	_build_confirm_bar(vbox)
+	_confirm_btn = _make_colored_button("CONFIRM", Vector2(216, 64), GREEN, GREEN.lightened(0.15), 16)
+	_confirm_btn.add_theme_stylebox_override("disabled", _make_style(Color("121212"), Color("262626")))
+	_confirm_btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
+	_confirm_btn.disabled = true
+	_confirm_btn.pressed.connect(_on_confirm_pressed)
+	action_bar.add_child(_confirm_btn)
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
@@ -87,34 +92,13 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 	var all_dice := GameManager.dice_bag.get_all()
 	for i in all_dice.size():
 		var die: Die = all_dice[i]
-		var card := _create_dice_card(die, i)
+		var card := ItemCard.new()
+		card.setup_as_dice_item(die, _pixel_font)
+		card.card_pressed.connect(_on_die_card_pressed.bind(i))
+		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
+		card.card_hover_exited.connect(_on_card_hover_exit)
 		_grid_container.add_child(card)
-
-
-func _create_dice_card(die: Die, index: int) -> VBoxContainer:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-
-	var card_btn := _make_icon_button(Vector2(110, 110))
-
-	var sprite := TextureRect.new()
-	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
-	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sprite.texture = _dice_face_textures[0]
-	card_btn.add_child(sprite)
-
-	card_btn.pressed.connect(_on_die_card_pressed.bind(index))
-	col.add_child(card_btn)
-	_dice_cards.append(card_btn)
-
-	var name_label := _make_pixel_label(DIE_NAMES.get(die.color, "BASIC"), 12)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.custom_minimum_size = Vector2(120, 18)
-	col.add_child(name_label)
-
-	return col
+		_dice_cards.append(card)
 
 
 # -- State management ----------------------------------------------------------
@@ -127,47 +111,54 @@ func _update_state() -> void:
 
 func _update_card_visuals() -> void:
 	for i in _dice_cards.size():
-		var card_btn := _dice_cards[i]
-		var is_selected := i in _selected_indices
-
-		if is_selected:
-			var sel_style := _make_style(Color.TRANSPARENT, GOLD)
-			card_btn.add_theme_stylebox_override("normal", sel_style)
-		else:
-			card_btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+		_dice_cards[i].set_selected(i in _selected_indices)
 
 
 func _update_confirm_button() -> void:
 	if _confirm_btn == null:
 		return
-	var ready := _selected_indices.size() == MAX_SELECTION
-	_confirm_btn.disabled = not ready
-
-	if ready:
-		_confirm_btn.add_theme_stylebox_override("normal", _make_style(GREEN))
-		_confirm_btn.add_theme_stylebox_override("hover", _make_style(GREEN.lightened(0.15)))
-		_confirm_btn.add_theme_color_override("font_color", DARK)
-	else:
-		_confirm_btn.add_theme_stylebox_override("normal", _make_style(DISABLED_BG))
-		_confirm_btn.add_theme_stylebox_override("hover", _make_style(DISABLED_BG))
-		_confirm_btn.add_theme_color_override("font_color", DISABLED_TEXT)
+	_confirm_btn.disabled = _selected_indices.size() != MAX_SELECTION
 
 
-func _build_confirm_bar(parent: VBoxContainer) -> void:
+func _build_description_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_confirm_btn = Button.new()
-	_confirm_btn.text = "CONFIRM"
-	_confirm_btn.custom_minimum_size = Vector2(216, 64)
-	_confirm_btn.add_theme_font_override("font", _pixel_font)
-	_confirm_btn.add_theme_font_size_override("font_size", 16)
-	_confirm_btn.disabled = true
-	_confirm_btn.pressed.connect(_on_confirm_pressed)
-	center.add_child(_confirm_btn)
+	_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_desc_panel.visible = false
+	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(_desc_panel)
+
+	var desc_vbox := VBoxContainer.new()
+	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_panel.add_child(desc_vbox)
+
+	_desc_title = _make_pixel_label("", 14, GOLD)
+	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_vbox.add_child(_desc_title)
+
+	_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_vbox.add_child(_desc_body)
 
 
 # -- Callbacks -----------------------------------------------------------------
+
+
+func _on_card_hover_enter(card: Control) -> void:
+	_desc_title.add_theme_color_override("font_color", GOLD)
+	if card.hover_cost >= 0:
+		_desc_title.text = "%s  -  %d coins" % [card.hover_name, card.hover_cost]
+	else:
+		_desc_title.text = card.hover_name
+	_desc_body.text = card.hover_description
+	_desc_panel.visible = true
+
+
+func _on_card_hover_exit() -> void:
+	_desc_panel.visible = false
 
 
 func _on_die_card_pressed(index: int) -> void:

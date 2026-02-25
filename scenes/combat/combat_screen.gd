@@ -9,7 +9,6 @@ var _dice_face_textures: Array[AtlasTexture] = []
 var _dice_sprites: Array[TextureRect] = []
 
 var _menu_btn: Button
-var _rerolls_panel_label: Label
 var _combo_name_label: Label
 var _score_pts_label: Label
 var _score_panel: PanelContainer
@@ -76,17 +75,22 @@ func _setup_combat() -> void:
 func _build_ui() -> void:
 	_dice_face_textures = _load_dice_sheet()
 
-	var margin := _make_screen_margin()
-	add_child(margin)
+	var layout := _make_screen_layout(32)
+	var content: VBoxContainer = layout["content"]
+	var action_bar: HBoxContainer = layout["action_bar"]
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 32)
-	margin.add_child(vbox)
+	_build_top_bar(content)
+	_build_score_panel(content)
+	_build_dice_tray(content)
 
-	_build_top_bar(vbox)
-	_build_score_panel(vbox)
-	_build_dice_tray(vbox)
-	_build_action_bar(vbox)
+	_reroll_btn = _make_colored_button("REROLL\n3 left", Vector2(140, 68), PINK, PINK.lightened(0.15), 14)
+	_reroll_btn.pressed.connect(_on_roll_pressed)
+	action_bar.add_child(_reroll_btn)
+
+	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 68), GREEN, GREEN.lightened(0.15), 16)
+	_end_turn_btn.pressed.connect(_on_score_pressed)
+	action_bar.add_child(_end_turn_btn)
+
 	_build_result_overlay()
 	_create_particles()
 
@@ -102,18 +106,6 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 
 	_menu_btn = _make_menu_button()
 	bar.add_child(_menu_btn)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(spacer)
-
-	var rerolls_panel := _make_panel(GOLD, BORDER_BLACK, Vector2(200, 48))
-	bar.add_child(rerolls_panel)
-
-	_rerolls_panel_label = _make_pixel_label("", 16)
-	_rerolls_panel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_rerolls_panel_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	rerolls_panel.add_child(_rerolls_panel_label)
 
 
 func _build_score_panel(parent: VBoxContainer) -> void:
@@ -190,23 +182,6 @@ func _set_die_face(index: int, value: int) -> void:
 	sprite.visible = true
 
 
-func _build_action_bar(parent: VBoxContainer) -> void:
-	var center := CenterContainer.new()
-	parent.add_child(center)
-
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 24)
-	center.add_child(hbox)
-
-	_reroll_btn = _make_colored_button("REROLL\n3 left", Vector2(140, 68), PINK, PINK.lightened(0.15), 14)
-	_reroll_btn.pressed.connect(_on_roll_pressed)
-	hbox.add_child(_reroll_btn)
-
-	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 68), GREEN, GREEN.lightened(0.15), 16)
-	_end_turn_btn.pressed.connect(_on_score_pressed)
-	hbox.add_child(_end_turn_btn)
-
-
 func _build_result_overlay() -> void:
 	_result_overlay = ColorRect.new()
 	_result_overlay.color = Color(0, 0, 0, 0.85)
@@ -257,8 +232,6 @@ func _draw_score_panel_shadow() -> void:
 
 func _update_rerolls_display() -> void:
 	var remaining := combat_mgr.rerolls_remaining
-	if _rerolls_panel_label:
-		_rerolls_panel_label.text = "REROLLS: %d" % remaining
 	if _reroll_btn:
 		_reroll_btn.disabled = not combat_mgr.can_roll()
 		_reroll_btn.text = "REROLL\n%d left" % remaining
