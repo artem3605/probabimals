@@ -30,13 +30,11 @@ func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int) -> vo
 	_reset_held()
 
 func roll_dice() -> void:
-	if not has_rolled:
-		has_rolled = true
-	else:
-		if rerolls_remaining <= 0:
-			return
-		rerolls_remaining -= 1
-		rerolls_changed.emit(rerolls_remaining)
+	if rerolls_remaining <= 0:
+		return
+	rerolls_remaining -= 1
+	rerolls_changed.emit(rerolls_remaining)
+	has_rolled = true
 
 	for i in range(active_dice.size()):
 		if not held_dice[i]:
@@ -103,7 +101,7 @@ func end_combat() -> void:
 	combat_ended.emit(running_score, running_score >= target_score)
 
 func can_roll() -> bool:
-	return (not has_rolled) or rerolls_remaining > 0
+	return rerolls_remaining > 0
 
 func can_score() -> bool:
 	return has_rolled and current_roll.size() > 0

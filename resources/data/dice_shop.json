@@ -5,7 +5,9 @@
     "description": "An extra standard six-sided die",
     "category": "die",
     "cost": 15,
-    "params": {}
+    "params": {
+      "color": "colorless"
+    }
   },
   {
     "id": "loaded_die",
@@ -14,7 +16,8 @@
     "category": "die",
     "cost": 25,
     "params": {
-      "faces": [1, 5, 5, 6, 6, 6]
+      "faces": [1, 5, 5, 6, 6, 6],
+      "color": "red"
     }
   },
   {
@@ -24,7 +27,8 @@
     "category": "die",
     "cost": 20,
     "params": {
-      "faces": [3, 3, 4, 4, 5, 5]
+      "faces": [3, 3, 4, 4, 5, 5],
+      "color": "green"
     }
   },
   {

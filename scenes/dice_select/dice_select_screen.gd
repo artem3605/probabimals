@@ -20,6 +20,9 @@ const DIE_NAMES := {
 	"purple": "Purple Die",
 }
 
+const DICE_SHEET_COLS := 3
+const DICE_SHEET_ROWS := 2
+
 var _selected_indices: Array[int] = []
 var _subtitle_label: Label
 var _confirm_btn: Button
@@ -27,6 +30,7 @@ var _back_btn: Button
 var _dice_cards: Array[Button] = []
 var _grid_container: GridContainer
 var _all_buttons: Array = []
+var _dice_face_textures: Array[AtlasTexture] = []
 
 
 func _ready() -> void:
@@ -43,10 +47,23 @@ func _draw() -> void:
 	_draw_all_bg()
 	_draw_button_shadows([_back_btn], Vector2(4, 4))
 	_draw_button_shadows([_confirm_btn], Vector2(8, 8))
-	_draw_dice_card_shadows()
+
+
+func _load_dice_sheet() -> void:
+	var sheet: Texture2D = load("res://assets/art/dice/dice_sheet.png")
+	var cell_w := sheet.get_width() / float(DICE_SHEET_COLS)
+	var cell_h := sheet.get_height() / float(DICE_SHEET_ROWS)
+	for row in DICE_SHEET_ROWS:
+		for col in DICE_SHEET_COLS:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(col * cell_w, row * cell_h, cell_w, cell_h)
+			_dice_face_textures.append(atlas)
 
 
 func _build_ui() -> void:
+	_load_dice_sheet()
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 32)
@@ -66,22 +83,23 @@ func _build_ui() -> void:
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 16)
+	var bar := Control.new()
+	bar.custom_minimum_size = Vector2(0, 56)
 	parent.add_child(bar)
 
 	_back_btn = _make_pixel_button("BACK", Vector2(96, 56), 14)
 	_back_btn.pressed.connect(_on_back_pressed)
+	_back_btn.position = Vector2.ZERO
 	bar.add_child(_back_btn)
 	_all_buttons.append(_back_btn)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(spacer)
+	var title_center := CenterContainer.new()
+	title_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bar.add_child(title_center)
 
 	var title_vbox := VBoxContainer.new()
 	title_vbox.add_theme_constant_override("separation", 8)
-	bar.add_child(title_vbox)
+	title_center.add_child(title_vbox)
 
 	var title := Label.new()
 	title.text = "SELECT DICE"
@@ -95,12 +113,6 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	underline.custom_minimum_size = Vector2(296, 4)
 	underline.color = DARK
 	title_vbox.add_child(underline)
-
-	# Right spacer to balance the BACK button
-	var spacer2 := Control.new()
-	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spacer2.custom_minimum_size = Vector2(128, 0)
-	bar.add_child(spacer2)
 
 
 func _build_subtitle(parent: VBoxContainer) -> void:
@@ -135,27 +147,24 @@ func _create_dice_card(die: Die, index: int) -> VBoxContainer:
 	col.add_theme_constant_override("separation", 8)
 
 	var card_btn := Button.new()
-	card_btn.custom_minimum_size = Vector2(96, 96)
+	card_btn.custom_minimum_size = Vector2(110, 110)
 	card_btn.text = ""
 
-	var bg_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
-	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = bg_color
-	card_style.border_color = BORDER_BLACK
-	card_style.set_border_width_all(4)
-	card_style.set_corner_radius_all(0)
-	card_style.set_content_margin_all(4)
-	card_btn.add_theme_stylebox_override("normal", card_style)
+	var empty := StyleBoxEmpty.new()
+	card_btn.add_theme_stylebox_override("normal", empty)
+	card_btn.add_theme_stylebox_override("hover", empty)
+	card_btn.add_theme_stylebox_override("pressed", empty)
+	card_btn.add_theme_stylebox_override("focus", empty)
 
-	var hover_style := card_style.duplicate()
-	hover_style.border_color = GOLD
-	card_btn.add_theme_stylebox_override("hover", hover_style)
+	var sprite := TextureRect.new()
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sprite.texture = _dice_face_textures[0]
+	card_btn.add_child(sprite)
 
-	var selected_style := card_style.duplicate()
-	selected_style.border_color = GOLD
-	selected_style.set_border_width_all(6)
-	card_btn.add_theme_stylebox_override("focus", selected_style)
-
+	card_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	card_btn.pressed.connect(_on_die_card_pressed.bind(index))
 	col.add_child(card_btn)
 	_dice_cards.append(card_btn)
@@ -172,15 +181,6 @@ func _create_dice_card(die: Die, index: int) -> VBoxContainer:
 	return col
 
 
-func _draw_dice_card_shadows() -> void:
-	for card_btn in _dice_cards:
-		if is_instance_valid(card_btn) and card_btn.visible:
-			var gp := card_btn.global_position - global_position
-			draw_rect(
-				Rect2(gp + Vector2(6, 6), card_btn.size),
-				SHADOW_COLOR
-			)
-
 
 # -- State management ----------------------------------------------------------
 
@@ -191,26 +191,19 @@ func _update_state() -> void:
 
 
 func _update_card_visuals() -> void:
-	var all_dice := GameManager.dice_bag.get_all()
 	for i in _dice_cards.size():
 		var card_btn := _dice_cards[i]
 		var is_selected := i in _selected_indices
-		var die: Die = all_dice[i] if i < all_dice.size() else null
-		var bg_color: Color = DIE_COLORS.get(die.color, Color.WHITE) if die else Color.WHITE
-
-		var style := StyleBoxFlat.new()
-		style.bg_color = bg_color
-		style.set_corner_radius_all(0)
-		style.set_content_margin_all(4)
 
 		if is_selected:
-			style.border_color = GOLD
-			style.set_border_width_all(6)
+			var sel_style := StyleBoxFlat.new()
+			sel_style.bg_color = Color.TRANSPARENT
+			sel_style.border_color = GOLD
+			sel_style.set_border_width_all(4)
+			sel_style.set_corner_radius_all(0)
+			card_btn.add_theme_stylebox_override("normal", sel_style)
 		else:
-			style.border_color = BORDER_BLACK
-			style.set_border_width_all(4)
-
-		card_btn.add_theme_stylebox_override("normal", style)
+			card_btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 
 
 func _update_confirm_button() -> void:

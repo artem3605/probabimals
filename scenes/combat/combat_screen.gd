@@ -9,20 +9,17 @@ const DIE_COLORS := {
 	"purple": Color("9b59b6"),
 }
 
-const PIP_LAYOUTS := {
-	1: [Vector2(0.5, 0.5)],
-	2: [Vector2(0.3, 0.3), Vector2(0.7, 0.7)],
-	3: [Vector2(0.3, 0.3), Vector2(0.5, 0.5), Vector2(0.7, 0.7)],
-	4: [Vector2(0.3, 0.3), Vector2(0.7, 0.3), Vector2(0.3, 0.7), Vector2(0.7, 0.7)],
-	5: [Vector2(0.3, 0.3), Vector2(0.7, 0.3), Vector2(0.5, 0.5), Vector2(0.3, 0.7), Vector2(0.7, 0.7)],
-	6: [Vector2(0.3, 0.3), Vector2(0.7, 0.3), Vector2(0.3, 0.5), Vector2(0.7, 0.5), Vector2(0.3, 0.7), Vector2(0.7, 0.7)],
-}
+const DICE_SHEET_COLS := 3
+const DICE_SHEET_ROWS := 2
 
 var combat_mgr: CombatManager
 var dice_visuals: Array[Button] = []
 var _die_colors: Array[Color] = []
 var _current_values: Array[int] = []
 var _lock_labels: Array[Label] = []
+var _die_names: Array[String] = []
+var _dice_face_textures: Array[AtlasTexture] = []
+var _dice_sprites: Array[TextureRect] = []
 
 var _back_btn: Button
 var _rerolls_panel_label: Label
@@ -57,10 +54,8 @@ func _draw() -> void:
 	_draw_all_bg()
 	_draw_button_shadows([_back_btn], Vector2(4, 4))
 	_draw_score_panel_shadow()
-	_draw_dice_shadows()
 	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
 	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
-	_draw_pips()
 
 
 func _setup_combat() -> void:
@@ -77,9 +72,15 @@ func _setup_combat() -> void:
 
 	_die_colors.clear()
 	_current_values.clear()
+	_die_names.clear()
 	for d in dice:
 		_die_colors.append(DIE_COLORS.get(d.color, Color.WHITE))
 		_current_values.append(0)
+		_die_names.append(_get_die_display_name(d))
+
+	for i in range(_lock_labels.size()):
+		if i < _die_names.size():
+			_lock_labels[i].text = _die_names[i]
 
 	combat_mgr.dice_rolled.connect(_on_dice_rolled)
 	combat_mgr.die_held.connect(_on_die_held)
@@ -92,7 +93,21 @@ func _setup_combat() -> void:
 	_update_action_buttons()
 
 
+func _load_dice_sheet() -> void:
+	var sheet: Texture2D = load("res://assets/art/dice/dice_sheet.png")
+	var cell_w := sheet.get_width() / float(DICE_SHEET_COLS)
+	var cell_h := sheet.get_height() / float(DICE_SHEET_ROWS)
+	for row in DICE_SHEET_ROWS:
+		for col in DICE_SHEET_COLS:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(col * cell_w, row * cell_h, cell_w, cell_h)
+			_dice_face_textures.append(atlas)
+
+
 func _build_ui() -> void:
+	_load_dice_sheet()
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 32)
@@ -131,27 +146,6 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	var title_vbox := VBoxContainer.new()
-	title_vbox.add_theme_constant_override("separation", 8)
-	bar.add_child(title_vbox)
-
-	var title := Label.new()
-	title.text = "ROLL!"
-	title.add_theme_font_override("font", _pixel_font)
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", DARK)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_vbox.add_child(title)
-
-	var underline := ColorRect.new()
-	underline.custom_minimum_size = Vector2(152, 4)
-	underline.color = DARK
-	title_vbox.add_child(underline)
-
-	var spacer2 := Control.new()
-	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(spacer2)
-
 	# Rerolls counter (gold panel)
 	var rerolls_panel := PanelContainer.new()
 	var rp_style := StyleBoxFlat.new()
@@ -168,6 +162,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	_rerolls_panel_label.add_theme_font_override("font", _pixel_font)
 	_rerolls_panel_label.add_theme_font_size_override("font_size", 16)
 	_rerolls_panel_label.add_theme_color_override("font_color", DARK)
+	_rerolls_panel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rerolls_panel_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rerolls_panel.add_child(_rerolls_panel_label)
 
@@ -229,7 +224,7 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 		dice_visuals.append(die_btn)
 
 		var lock_lbl := Label.new()
-		lock_lbl.text = "CLICK LOCK"
+		lock_lbl.text = ""
 		lock_lbl.add_theme_font_override("font", _pixel_font)
 		lock_lbl.add_theme_font_size_override("font_size", 12)
 		lock_lbl.add_theme_color_override("font_color", DARK)
@@ -244,26 +239,36 @@ func _create_die_button(index: int) -> Button:
 	btn.text = ""
 	btn.custom_minimum_size = Vector2(128, 128)
 
-	var bg_color := Color.WHITE
-	if index < _die_colors.size():
-		bg_color = _die_colors[index]
+	var empty := StyleBoxEmpty.new()
+	btn.add_theme_stylebox_override("normal", empty)
+	btn.add_theme_stylebox_override("hover", empty)
+	btn.add_theme_stylebox_override("pressed", empty)
+	btn.add_theme_stylebox_override("focus", empty)
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg_color
-	style.border_color = BORDER_BLACK
-	style.set_border_width_all(4)
-	style.set_corner_radius_all(0)
-	style.set_content_margin_all(4)
-	btn.add_theme_stylebox_override("normal", style)
-
-	var hover := style.duplicate()
-	hover.border_color = GOLD
-	btn.add_theme_stylebox_override("hover", hover)
+	var sprite := TextureRect.new()
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sprite.visible = false
+	btn.add_child(sprite)
+	_dice_sprites.append(sprite)
 
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	btn.pressed.connect(_on_die_clicked.bind(index))
 
 	return btn
+
+
+func _set_die_face(index: int, value: int) -> void:
+	if index < 0 or index >= _dice_sprites.size():
+		return
+	var sprite := _dice_sprites[index]
+	if value <= 0 or value > 6:
+		sprite.visible = false
+		return
+	sprite.texture = _dice_face_textures[value - 1]
+	sprite.visible = true
 
 
 func _build_action_bar(parent: VBoxContainer) -> void:
@@ -385,43 +390,15 @@ func _draw_score_panel_shadow() -> void:
 	draw_rect(Rect2(gp + Vector2(8, 8), _score_panel.size), SHADOW_COLOR)
 
 
-func _draw_dice_shadows() -> void:
-	for btn in dice_visuals:
-		if is_instance_valid(btn) and btn.visible:
-			var gp := btn.global_position - global_position
-			draw_rect(Rect2(gp + Vector2(8, 8), btn.size), SHADOW_COLOR)
 
-
-func _draw_pips() -> void:
-	for i in range(dice_visuals.size()):
-		if i >= _current_values.size():
-			break
-		var val: int = _current_values[i]
-		if val <= 0 or val > 6:
-			continue
-		var btn := dice_visuals[i]
-		if not is_instance_valid(btn):
-			continue
-
-		var gp := btn.global_position - global_position
-		var btn_size := btn.size
-		var inset := 20.0
-		var draw_area := Rect2(gp + Vector2(inset, inset), btn_size - Vector2(inset * 2, inset * 2))
-		var pip_r := 7.0
-		var pip_col := DARK
-
-		var bg_color := Color.WHITE
-		if i < _die_colors.size():
-			bg_color = _die_colors[i]
-		if bg_color.get_luminance() < 0.4:
-			pip_col = Color.WHITE
-
-		var positions: Array = PIP_LAYOUTS.get(val, [])
-		for p_idx in positions.size():
-			var p: Vector2 = positions[p_idx]
-			var cx: float = draw_area.position.x + p.x * draw_area.size.x
-			var cy: float = draw_area.position.y + p.y * draw_area.size.y
-			draw_rect(Rect2(cx - pip_r, cy - pip_r, pip_r * 2, pip_r * 2), pip_col)
+func _get_die_display_name(d: Die) -> String:
+	match d.color:
+		"red": return "LOADED"
+		"green": return "BALANCED"
+		"blue": return "BLUE"
+		"gold": return "GOLD"
+		"purple": return "PURPLE"
+		_: return "BASIC"
 
 
 # -- HUD updates --------------------------------------------------------------
@@ -454,26 +431,19 @@ func _on_die_held(index: int, held: bool) -> void:
 		return
 	var btn := dice_visuals[index]
 
-	var bg_color := Color.WHITE
-	if index < _die_colors.size():
-		bg_color = _die_colors[index]
-
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(0)
-	style.set_content_margin_all(4)
-	style.bg_color = bg_color
-
 	if held:
-		style.border_color = GOLD
-		style.set_border_width_all(6)
+		var held_style := StyleBoxFlat.new()
+		held_style.bg_color = Color.TRANSPARENT
+		held_style.border_color = GOLD
+		held_style.set_border_width_all(4)
+		held_style.set_corner_radius_all(0)
+		btn.add_theme_stylebox_override("normal", held_style)
 	else:
-		style.border_color = BORDER_BLACK
-		style.set_border_width_all(4)
-
-	btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 
 	if index < _lock_labels.size():
-		_lock_labels[index].text = "LOCKED" if held else "CLICK LOCK"
+		var die_name := _die_names[index] if index < _die_names.size() else ""
+		_lock_labels[index].text = "LOCKED" if held else die_name
 		_lock_labels[index].add_theme_color_override("font_color", GOLD if held else DARK)
 
 	var tween := create_tween()
@@ -519,6 +489,7 @@ func _show_random_faces() -> void:
 	for i in range(5):
 		if not combat_mgr.is_held(i) and i < _current_values.size():
 			_current_values[i] = randi_range(1, 6)
+			_set_die_face(i, _current_values[i])
 
 
 func _do_actual_roll() -> void:
@@ -529,6 +500,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 	for i in range(results.size()):
 		if i < _current_values.size():
 			_current_values[i] = results[i]
+			_set_die_face(i, results[i])
 
 	var combo := combat_mgr.get_current_combo()
 	if not combo.is_empty():
@@ -616,20 +588,12 @@ func _reset_for_next_hand() -> void:
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0
+		_set_die_face(i, 0)
 	for i in range(dice_visuals.size()):
-		var bg_color := Color.WHITE
-		if i < _die_colors.size():
-			bg_color = _die_colors[i]
-		var style := StyleBoxFlat.new()
-		style.bg_color = bg_color
-		style.border_color = BORDER_BLACK
-		style.set_border_width_all(4)
-		style.set_corner_radius_all(0)
-		style.set_content_margin_all(4)
-		dice_visuals[i].add_theme_stylebox_override("normal", style)
+		dice_visuals[i].add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 
 	for i in range(_lock_labels.size()):
-		_lock_labels[i].text = "CLICK LOCK"
+		_lock_labels[i].text = _die_names[i] if i < _die_names.size() else ""
 		_lock_labels[i].add_theme_color_override("font_color", DARK)
 
 	_update_rerolls_display()

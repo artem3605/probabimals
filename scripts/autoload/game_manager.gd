@@ -13,7 +13,7 @@ var modifiers: Array = []
 var total_score: int = 0
 var target_score: int = 150
 var hands_per_round: int = 4
-var rerolls_per_hand: int = 2
+var rerolls_per_hand: int = 3
 var selected_dice: Array[Die] = []
 
 func start_game() -> void:
@@ -44,7 +44,8 @@ func buy_item(item: Dictionary) -> bool:
 					faces_arr.append(int(f))
 			else:
 				faces_arr = [1, 2, 3, 4, 5, 6]
-			dice_bag.add_die(Die.new(faces_arr))
+			var die_color: String = params.get("color", "colorless")
+			dice_bag.add_die(Die.new(faces_arr, die_color))
 		"face":
 			pass
 		"modifier":
