@@ -2,15 +2,6 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const MAX_SELECTION := 5
 
-const DIE_COLORS := {
-	"colorless": Color.WHITE,
-	"red": Color("ff4444"),
-	"green": Color("9acd32"),
-	"blue": Color("4a9eff"),
-	"gold": Color("ffd700"),
-	"purple": Color("9b59b6"),
-}
-
 const DIE_NAMES := {
 	"colorless": "Basic Die",
 	"red": "Red Die",
@@ -64,12 +55,7 @@ func _load_dice_sheet() -> void:
 func _build_ui() -> void:
 	_load_dice_sheet()
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 64)
-	margin.add_theme_constant_override("margin_bottom", 24)
+	var margin := _make_screen_margin()
 	add_child(margin)
 
 	var vbox := VBoxContainer.new()
@@ -97,29 +83,11 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	title_center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bar.add_child(title_center)
 
-	var title_vbox := VBoxContainer.new()
-	title_vbox.add_theme_constant_override("separation", 8)
-	title_center.add_child(title_vbox)
-
-	var title := Label.new()
-	title.text = "SELECT DICE"
-	title.add_theme_font_override("font", _pixel_font)
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", DARK)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_vbox.add_child(title)
-
-	var underline := ColorRect.new()
-	underline.custom_minimum_size = Vector2(296, 4)
-	underline.color = DARK
-	title_vbox.add_child(underline)
+	title_center.add_child(_make_title_bar("SELECT DICE"))
 
 
 func _build_subtitle(parent: VBoxContainer) -> void:
-	_subtitle_label = Label.new()
-	_subtitle_label.add_theme_font_override("font", _pixel_font)
-	_subtitle_label.add_theme_font_size_override("font_size", 14)
-	_subtitle_label.add_theme_color_override("font_color", DARK)
+	_subtitle_label = _make_pixel_label("", 14)
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(_subtitle_label)
 
@@ -169,17 +137,12 @@ func _create_dice_card(die: Die, index: int) -> VBoxContainer:
 	col.add_child(card_btn)
 	_dice_cards.append(card_btn)
 
-	var name_label := Label.new()
-	name_label.text = DIE_NAMES.get(die.color, "Basic Die")
-	name_label.add_theme_font_override("font", _pixel_font)
-	name_label.add_theme_font_size_override("font_size", 12)
-	name_label.add_theme_color_override("font_color", DARK)
+	var name_label := _make_pixel_label(DIE_NAMES.get(die.color, "Basic Die"), 12)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.custom_minimum_size = Vector2(120, 18)
 	col.add_child(name_label)
 
 	return col
-
 
 
 # -- State management ----------------------------------------------------------
@@ -196,11 +159,7 @@ func _update_card_visuals() -> void:
 		var is_selected := i in _selected_indices
 
 		if is_selected:
-			var sel_style := StyleBoxFlat.new()
-			sel_style.bg_color = Color.TRANSPARENT
-			sel_style.border_color = GOLD
-			sel_style.set_border_width_all(4)
-			sel_style.set_corner_radius_all(0)
+			var sel_style := _make_style(Color.TRANSPARENT, GOLD)
 			card_btn.add_theme_stylebox_override("normal", sel_style)
 		else:
 			card_btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
@@ -212,24 +171,14 @@ func _update_confirm_button() -> void:
 	var ready := _selected_indices.size() == MAX_SELECTION
 	_confirm_btn.disabled = not ready
 
-	var style := StyleBoxFlat.new()
-	style.set_border_width_all(4)
-	style.set_corner_radius_all(0)
-	style.set_content_margin_all(8)
-	style.border_color = BORDER_BLACK
-
 	if ready:
-		style.bg_color = Color("9acd32")
+		_confirm_btn.add_theme_stylebox_override("normal", _make_style(GREEN))
+		_confirm_btn.add_theme_stylebox_override("hover", _make_style(GREEN.lightened(0.15)))
 		_confirm_btn.add_theme_color_override("font_color", DARK)
 	else:
-		style.bg_color = Color("99a1af")
-		_confirm_btn.add_theme_color_override("font_color", Color("4a5565"))
-
-	_confirm_btn.add_theme_stylebox_override("normal", style)
-	var hover := style.duplicate()
-	if ready:
-		hover.bg_color = Color("b0dd48")
-	_confirm_btn.add_theme_stylebox_override("hover", hover)
+		_confirm_btn.add_theme_stylebox_override("normal", _make_style(DISABLED_BG))
+		_confirm_btn.add_theme_stylebox_override("hover", _make_style(DISABLED_BG))
+		_confirm_btn.add_theme_color_override("font_color", DISABLED_TEXT)
 
 
 func _build_confirm_bar(parent: VBoxContainer) -> void:

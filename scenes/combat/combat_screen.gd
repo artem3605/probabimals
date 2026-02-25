@@ -1,14 +1,5 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
-const DIE_COLORS := {
-	"colorless": Color.WHITE,
-	"red": Color("ff4444"),
-	"green": Color("9acd32"),
-	"blue": Color("4a9eff"),
-	"gold": Color("ffd700"),
-	"purple": Color("9b59b6"),
-}
-
 const DICE_SHEET_COLS := 3
 const DICE_SHEET_ROWS := 2
 
@@ -108,12 +99,7 @@ func _load_dice_sheet() -> void:
 func _build_ui() -> void:
 	_load_dice_sheet()
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 64)
-	margin.add_theme_constant_override("margin_bottom", 24)
+	var margin := _make_screen_margin()
 	add_child(margin)
 
 	var vbox := VBoxContainer.new()
@@ -146,22 +132,10 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	# Rerolls counter (gold panel)
-	var rerolls_panel := PanelContainer.new()
-	var rp_style := StyleBoxFlat.new()
-	rp_style.bg_color = GOLD
-	rp_style.border_color = BORDER_BLACK
-	rp_style.set_border_width_all(4)
-	rp_style.set_corner_radius_all(0)
-	rp_style.set_content_margin_all(8)
-	rerolls_panel.add_theme_stylebox_override("panel", rp_style)
-	rerolls_panel.custom_minimum_size = Vector2(200, 48)
+	var rerolls_panel := _make_panel(GOLD, BORDER_BLACK, Vector2(200, 48))
 	bar.add_child(rerolls_panel)
 
-	_rerolls_panel_label = Label.new()
-	_rerolls_panel_label.add_theme_font_override("font", _pixel_font)
-	_rerolls_panel_label.add_theme_font_size_override("font_size", 16)
-	_rerolls_panel_label.add_theme_color_override("font_color", DARK)
+	_rerolls_panel_label = _make_pixel_label("", 16)
 	_rerolls_panel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_rerolls_panel_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rerolls_panel.add_child(_rerolls_panel_label)
@@ -171,15 +145,7 @@ func _build_score_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_score_panel = PanelContainer.new()
-	var sp_style := StyleBoxFlat.new()
-	sp_style.bg_color = Color.WHITE
-	sp_style.border_color = BORDER_BLACK
-	sp_style.set_border_width_all(4)
-	sp_style.set_corner_radius_all(0)
-	sp_style.set_content_margin_all(16)
-	_score_panel.add_theme_stylebox_override("panel", sp_style)
-	_score_panel.custom_minimum_size = Vector2(216, 107)
+	_score_panel = _make_panel(Color.WHITE, BORDER_BLACK, Vector2(216, 107), 16)
 	center.add_child(_score_panel)
 
 	var score_vbox := VBoxContainer.new()
@@ -187,19 +153,11 @@ func _build_score_panel(parent: VBoxContainer) -> void:
 	score_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_score_panel.add_child(score_vbox)
 
-	_combo_name_label = Label.new()
-	_combo_name_label.text = ""
-	_combo_name_label.add_theme_font_override("font", _pixel_font)
-	_combo_name_label.add_theme_font_size_override("font_size", 18)
-	_combo_name_label.add_theme_color_override("font_color", Color("ff6b4a"))
+	_combo_name_label = _make_pixel_label("", 18, Color("ff6b4a"))
 	_combo_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_vbox.add_child(_combo_name_label)
 
-	_score_pts_label = Label.new()
-	_score_pts_label.text = "ROLL!"
-	_score_pts_label.add_theme_font_override("font", _pixel_font)
-	_score_pts_label.add_theme_font_size_override("font_size", 24)
-	_score_pts_label.add_theme_color_override("font_color", DARK)
+	_score_pts_label = _make_pixel_label("ROLL!", 24)
 	_score_pts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_vbox.add_child(_score_pts_label)
 
@@ -223,11 +181,7 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 		col.add_child(die_btn)
 		dice_visuals.append(die_btn)
 
-		var lock_lbl := Label.new()
-		lock_lbl.text = ""
-		lock_lbl.add_theme_font_override("font", _pixel_font)
-		lock_lbl.add_theme_font_size_override("font_size", 12)
-		lock_lbl.add_theme_color_override("font_color", DARK)
+		var lock_lbl := _make_pixel_label("", 12)
 		lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lock_lbl.custom_minimum_size = Vector2(128, 18)
 		col.add_child(lock_lbl)
@@ -279,57 +233,12 @@ func _build_action_bar(parent: VBoxContainer) -> void:
 	hbox.add_theme_constant_override("separation", 24)
 	center.add_child(hbox)
 
-	# REROLL button (pink)
-	var reroll_vbox := VBoxContainer.new()
-	reroll_vbox.add_theme_constant_override("separation", 0)
-
-	_reroll_btn = Button.new()
-	_reroll_btn.custom_minimum_size = Vector2(140, 68)
-	_reroll_btn.add_theme_font_override("font", _pixel_font)
-	_reroll_btn.add_theme_font_size_override("font_size", 14)
-	var rs := StyleBoxFlat.new()
-	rs.bg_color = Color("ff69b4")
-	rs.border_color = BORDER_BLACK
-	rs.set_border_width_all(4)
-	rs.set_corner_radius_all(0)
-	rs.set_content_margin_all(8)
-	_reroll_btn.add_theme_stylebox_override("normal", rs)
-	var rs_hover := rs.duplicate()
-	rs_hover.bg_color = Color("ff80c0")
-	_reroll_btn.add_theme_stylebox_override("hover", rs_hover)
-	var rs_disabled := rs.duplicate()
-	rs_disabled.bg_color = Color("99a1af")
-	_reroll_btn.add_theme_stylebox_override("disabled", rs_disabled)
-	_reroll_btn.add_theme_color_override("font_color", DARK)
-	_reroll_btn.add_theme_color_override("font_hover_color", DARK)
-	_reroll_btn.add_theme_color_override("font_disabled_color", Color("4a5565"))
-	_reroll_btn.text = "REROLL\n3 left"
+	_reroll_btn = _make_colored_button("REROLL\n3 left", Vector2(140, 68), PINK, PINK.lightened(0.15), 14)
 	_reroll_btn.pressed.connect(_on_roll_pressed)
 	hbox.add_child(_reroll_btn)
 	_all_shadow_btns.append(_reroll_btn)
 
-	# END TURN button (green)
-	_end_turn_btn = Button.new()
-	_end_turn_btn.text = "END TURN"
-	_end_turn_btn.custom_minimum_size = Vector2(200, 68)
-	_end_turn_btn.add_theme_font_override("font", _pixel_font)
-	_end_turn_btn.add_theme_font_size_override("font_size", 16)
-	var es := StyleBoxFlat.new()
-	es.bg_color = Color("9acd32")
-	es.border_color = BORDER_BLACK
-	es.set_border_width_all(4)
-	es.set_corner_radius_all(0)
-	es.set_content_margin_all(8)
-	_end_turn_btn.add_theme_stylebox_override("normal", es)
-	var es_hover := es.duplicate()
-	es_hover.bg_color = Color("b0dd48")
-	_end_turn_btn.add_theme_stylebox_override("hover", es_hover)
-	var es_disabled := es.duplicate()
-	es_disabled.bg_color = Color("99a1af")
-	_end_turn_btn.add_theme_stylebox_override("disabled", es_disabled)
-	_end_turn_btn.add_theme_color_override("font_color", DARK)
-	_end_turn_btn.add_theme_color_override("font_hover_color", DARK)
-	_end_turn_btn.add_theme_color_override("font_disabled_color", Color("4a5565"))
+	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 68), GREEN, GREEN.lightened(0.15), 16)
 	_end_turn_btn.pressed.connect(_on_score_pressed)
 	hbox.add_child(_end_turn_btn)
 	_all_shadow_btns.append(_end_turn_btn)
@@ -351,24 +260,15 @@ func _build_result_overlay() -> void:
 	vbox.add_theme_constant_override("separation", 20)
 	center.add_child(vbox)
 
-	result_message = Label.new()
-	result_message.add_theme_font_size_override("font_size", 36)
-	result_message.add_theme_font_override("font", _pixel_font)
+	result_message = _make_pixel_label("", 36)
 	result_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(result_message)
 
-	result_score_label = Label.new()
-	result_score_label.add_theme_font_size_override("font_size", 48)
-	result_score_label.add_theme_font_override("font", _pixel_font)
-	result_score_label.add_theme_color_override("font_color", GOLD)
+	result_score_label = _make_pixel_label("", 48, GOLD)
 	result_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(result_score_label)
 
-	var target_info := Label.new()
-	target_info.text = "Target: " + str(GameManager.target_score)
-	target_info.add_theme_font_size_override("font_size", 16)
-	target_info.add_theme_font_override("font", _pixel_font)
-	target_info.add_theme_color_override("font_color", Color("aaaaaa"))
+	var target_info := _make_pixel_label("Target: " + str(GameManager.target_score), 16, Color("aaaaaa"))
 	target_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(target_info)
 
@@ -388,7 +288,6 @@ func _draw_score_panel_shadow() -> void:
 		return
 	var gp := _score_panel.global_position - global_position
 	draw_rect(Rect2(gp + Vector2(8, 8), _score_panel.size), SHADOW_COLOR)
-
 
 
 func _get_die_display_name(d: Die) -> String:
@@ -432,12 +331,7 @@ func _on_die_held(index: int, held: bool) -> void:
 	var btn := dice_visuals[index]
 
 	if held:
-		var held_style := StyleBoxFlat.new()
-		held_style.bg_color = Color.TRANSPARENT
-		held_style.border_color = GOLD
-		held_style.set_border_width_all(4)
-		held_style.set_corner_radius_all(0)
-		btn.add_theme_stylebox_override("normal", held_style)
+		btn.add_theme_stylebox_override("normal", _make_style(Color.TRANSPARENT, GOLD))
 	else:
 		btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 
@@ -523,11 +417,11 @@ func _show_combo(combo: Dictionary) -> void:
 		2, 3:
 			_combo_name_label.add_theme_color_override("font_color", Color("ff6b4a"))
 		4, 5:
-			_combo_name_label.add_theme_color_override("font_color", Color("4a9eff"))
+			_combo_name_label.add_theme_color_override("font_color", BLUE)
 		6, 7:
 			_combo_name_label.add_theme_color_override("font_color", GOLD)
 		8:
-			_combo_name_label.add_theme_color_override("font_color", Color("ff69b4"))
+			_combo_name_label.add_theme_color_override("font_color", PINK)
 
 	var base: int = combo.get("base_score", 0)
 	var mult: int = combo.get("multiplier", 1)
@@ -564,7 +458,7 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	tween.tween_callback(func():
 		_combo_name_label.text = combo.get("name", "").to_upper()
 		_score_pts_label.text = "+%d PTS" % total
-		_score_pts_label.add_theme_color_override("font_color", Color("9acd32"))
+		_score_pts_label.add_theme_color_override("font_color", GREEN)
 	)
 	tween.tween_interval(0.5)
 
@@ -629,7 +523,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 		result_message.add_theme_color_override("font_color", GOLD)
 	else:
 		result_message.text = "DEFEAT"
-		result_message.add_theme_color_override("font_color", Color("ff4444"))
+		result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
 
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
@@ -674,10 +568,10 @@ func _create_particles() -> void:
 	roll_particles.gravity = Vector2(0, 50)
 	roll_particles.scale_amount_min = 2.0
 	roll_particles.scale_amount_max = 4.0
-	roll_particles.color = Color("4a9eff")
+	roll_particles.color = BLUE
 	var roll_gradient := Gradient.new()
 	roll_gradient.set_color(0, Color(1, 1, 1, 0.8))
-	roll_gradient.set_color(1, Color(Color("4a9eff"), 0.0))
+	roll_gradient.set_color(1, Color(BLUE, 0.0))
 	roll_particles.color_ramp = roll_gradient
 	roll_particles.z_index = 100
 	add_child(roll_particles)
@@ -687,12 +581,12 @@ func _emit_score_particles(combo_priority: int) -> void:
 	score_particles.position = Vector2(size.x / 2, size.y * 0.25)
 	score_particles.amount = 20 + combo_priority * 8
 	if combo_priority >= 7:
-		score_particles.color = Color("ff69b4")
+		score_particles.color = PINK
 		score_particles.amount = 60
 	elif combo_priority >= 5:
 		score_particles.color = GOLD
 	else:
-		score_particles.color = Color("4a9eff")
+		score_particles.color = BLUE
 	score_particles.restart()
 	score_particles.emitting = true
 
