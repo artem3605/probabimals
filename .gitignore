@@ -4,6 +4,7 @@
 # Godot export
 *.translation
 export_presets.cfg
+build/
 
 # Mono / .NET (if ever used)
 .mono/

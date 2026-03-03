@@ -28,6 +28,8 @@ func start_game() -> void:
 	for i in range(5):
 		dice_bag.add_die(Die.new())
 	selected_dice.clear()
+	PokiSDK.commercial_break()
+	await PokiSDK.commercial_break_done
 	_change_phase(Phase.FLEA_MARKET)
 
 func buy_item(item: Dictionary) -> bool:
@@ -89,21 +91,30 @@ func go_to_dice_select() -> void:
 func end_combat(final_score: int) -> void:
 	total_score = final_score
 	score_changed.emit(total_score)
+	PokiSDK.gameplay_stop()
 
 func _change_phase(new_phase: Phase) -> void:
+	var old_phase := current_phase
 	current_phase = new_phase
 	phase_changed.emit(new_phase)
 	if new_phase != Phase.MAIN_MENU:
 		save_game()
+
+	if new_phase == Phase.MAIN_MENU and old_phase != Phase.MAIN_MENU:
+		PokiSDK.commercial_break()
+		await PokiSDK.commercial_break_done
+
 	match new_phase:
 		Phase.MAIN_MENU:
 			get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")
 		Phase.FLEA_MARKET:
 			get_tree().change_scene_to_file("res://scenes/flea_market/flea_market_screen.tscn")
+			PokiSDK.gameplay_start()
 		Phase.DICE_SELECT:
 			get_tree().change_scene_to_file("res://scenes/dice_select/dice_select_screen.tscn")
 		Phase.COMBAT:
 			get_tree().change_scene_to_file("res://scenes/combat/combat_screen.tscn")
+			PokiSDK.gameplay_start()
 
 
 # -- Save / Load ---------------------------------------------------------------
@@ -169,6 +180,9 @@ func load_game() -> void:
 		modifiers.append(m)
 
 	selected_dice.clear()
+
+	PokiSDK.commercial_break()
+	await PokiSDK.commercial_break_done
 
 	var phase_name: String = data.get("phase", "FLEA_MARKET")
 	var phase_idx := Phase.keys().find(phase_name)

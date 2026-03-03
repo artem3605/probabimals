@@ -10,15 +10,29 @@ var _dice_sprites: Array[TextureRect] = []
 
 var _menu_btn: Button
 var _combo_name_label: Label
-var _score_pts_label: Label
+var _score_value_label: Label
+var _score_pts_suffix: Label
+var _score_breakdown_label: Label
 var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _dice_container: HBoxContainer
 
+var _hand_info_label: Label
+var _target_label: Label
+var _target_panel: PanelContainer
+
+var _score_bar_fill: ColorRect
+var _score_bar_track: ColorRect
+var _score_bar_label: Label
+
+var _total_hands: int = 4
+
 var _result_overlay: ColorRect
 var _result_score_label: Label
 var _result_message: Label
+
+var _pause_overlay: ColorRect
 
 var _score_particles: CPUParticles2D
 var _roll_particles: CPUParticles2D
@@ -37,7 +51,8 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	_draw_all_bg()
 	_draw_button_shadows([_menu_btn], Vector2(4, 4))
-	_draw_score_panel_shadow()
+	_draw_panel_shadow(_target_panel, Vector2(4, 4))
+	_draw_panel_shadow(_score_panel, Vector2(8, 8))
 	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
 	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
 
@@ -64,12 +79,17 @@ func _setup_combat() -> void:
 		if i < _die_color_names.size():
 			_lock_labels[i].text = _die_color_names[i]
 
+	_total_hands = GameManager.hands_per_round
+
 	combat_mgr.dice_rolled.connect(_on_dice_rolled)
 	combat_mgr.die_held.connect(_on_die_held)
 	combat_mgr.combat_ended.connect(_on_combat_ended)
 	combat_mgr.rerolls_changed.connect(_on_rerolls_changed)
+	combat_mgr.hands_changed.connect(_on_hands_changed)
 
 	_update_rerolls_display()
+	_update_hand_display()
+	_update_score_bar()
 
 
 func _build_ui() -> void:
@@ -79,19 +99,29 @@ func _build_ui() -> void:
 	var content: VBoxContainer = layout["content"]
 	var action_bar: HBoxContainer = layout["action_bar"]
 
+	var center_wrap := action_bar.get_parent()
+	var outer := center_wrap.get_parent()
+	center_wrap.remove_child(action_bar)
+	outer.remove_child(center_wrap)
+	center_wrap.queue_free()
+	outer.add_child(action_bar)
+
 	_build_top_bar(content)
 	_build_score_panel(content)
 	_build_dice_tray(content)
 
-	_reroll_btn = _make_colored_button("REROLL\n3 left", Vector2(140, 68), PINK, PINK.lightened(0.15), 14)
+	_build_score_bar(action_bar)
+
+	_reroll_btn = _make_colored_button("REROLL (3)", Vector2(200, 48), PINK, PINK.lightened(0.15), 14)
 	_reroll_btn.pressed.connect(_on_roll_pressed)
 	action_bar.add_child(_reroll_btn)
 
-	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 68), GREEN, GREEN.lightened(0.15), 16)
+	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 48), GREEN, GREEN.lightened(0.15), 16)
 	_end_turn_btn.pressed.connect(_on_score_pressed)
 	action_bar.add_child(_end_turn_btn)
 
 	_build_result_overlay()
+	_build_pause_overlay()
 	_create_particles()
 
 	modulate.a = 0.0
@@ -105,18 +135,45 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	parent.add_child(bar)
 
 	_menu_btn = _make_menu_button()
+	_menu_btn.custom_minimum_size.y = 40
+	_menu_btn.pressed.disconnect(_go_to_main_menu)
+	_menu_btn.pressed.connect(_on_pause_pressed)
 	bar.add_child(_menu_btn)
+
+	_hand_info_label = _make_pixel_label("", 14, DARK)
+	_hand_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hand_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hand_info_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.add_child(_hand_info_label)
+
+	_target_panel = _make_panel(DARK, BORDER_BLACK, Vector2(142, 42), 8)
+	var target_style: StyleBoxFlat = _target_panel.get_theme_stylebox("panel")
+	target_style.content_margin_left = 12
+	target_style.content_margin_right = 12
+	_target_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	bar.add_child(_target_panel)
+
+	var target_hbox := HBoxContainer.new()
+	target_hbox.add_theme_constant_override("separation", 8)
+	target_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_target_panel.add_child(target_hbox)
+
+	var target_text := _make_pixel_label("TARGET", 14, Color.WHITE)
+	target_hbox.add_child(target_text)
+
+	_target_label = _make_pixel_label(str(GameManager.target_score), 20, GOLD)
+	target_hbox.add_child(_target_label)
 
 
 func _build_score_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_score_panel = _make_panel(Color.WHITE, BORDER_BLACK, Vector2(216, 107), 16)
+	_score_panel = _make_panel(Color.WHITE, BORDER_BLACK, Vector2(244, 124), 16)
 	center.add_child(_score_panel)
 
 	var score_vbox := VBoxContainer.new()
-	score_vbox.add_theme_constant_override("separation", 4)
+	score_vbox.add_theme_constant_override("separation", 6)
 	score_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_score_panel.add_child(score_vbox)
 
@@ -124,9 +181,56 @@ func _build_score_panel(parent: VBoxContainer) -> void:
 	_combo_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_vbox.add_child(_combo_name_label)
 
-	_score_pts_label = _make_pixel_label("ROLL!", 24)
-	_score_pts_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	score_vbox.add_child(_score_pts_label)
+	var pts_row := HBoxContainer.new()
+	pts_row.add_theme_constant_override("separation", 8)
+	pts_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	score_vbox.add_child(pts_row)
+
+	_score_value_label = _make_pixel_label("ROLL!", 32)
+	_score_value_label.size_flags_vertical = Control.SIZE_SHRINK_END
+	pts_row.add_child(_score_value_label)
+
+	_score_pts_suffix = _make_pixel_label("", 18)
+	_score_pts_suffix.size_flags_vertical = Control.SIZE_SHRINK_END
+	pts_row.add_child(_score_pts_suffix)
+
+	_score_breakdown_label = _make_pixel_label("", 14, Color("4a9ebb"))
+	_score_breakdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	score_vbox.add_child(_score_breakdown_label)
+
+
+func _build_score_bar(parent: HBoxContainer) -> void:
+	var bar_container := HBoxContainer.new()
+	bar_container.add_theme_constant_override("separation", 12)
+	bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar_container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	parent.add_child(bar_container)
+
+	var score_label := _make_pixel_label("SCORE", 14, DARK)
+	score_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar_container.add_child(score_label)
+
+	var track_wrapper := Control.new()
+	track_wrapper.custom_minimum_size = Vector2(300, 24)
+	track_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	track_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	track_wrapper.clip_contents = true
+	bar_container.add_child(track_wrapper)
+
+	_score_bar_track = ColorRect.new()
+	_score_bar_track.color = DARK
+	_score_bar_track.set_anchors_preset(Control.PRESET_FULL_RECT)
+	track_wrapper.add_child(_score_bar_track)
+
+	_score_bar_fill = ColorRect.new()
+	_score_bar_fill.color = GREEN
+	_score_bar_fill.position = Vector2(2, 2)
+	_score_bar_fill.size = Vector2(0, 20)
+	track_wrapper.add_child(_score_bar_fill)
+
+	_score_bar_label = _make_pixel_label("0/" + str(GameManager.target_score), 16, DARK)
+	_score_bar_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar_container.add_child(_score_bar_label)
 
 
 func _build_dice_tray(parent: VBoxContainer) -> void:
@@ -219,13 +323,75 @@ func _build_result_overlay() -> void:
 	vbox.add_child(menu_btn)
 
 
+func _build_pause_overlay() -> void:
+	_pause_overlay = ColorRect.new()
+	_pause_overlay.color = Color(0, 0, 0, 0.85)
+	_pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pause_overlay.visible = false
+	_pause_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_pause_overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pause_overlay.add_child(center)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 24)
+	center.add_child(vbox)
+
+	var title := _make_pixel_label("PAUSED", 36, GOLD)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 20)
+	vbox.add_child(spacer)
+
+	var resume_btn := _make_colored_button("RESUME", Vector2(280, 60), GREEN, GREEN.lightened(0.15), 16)
+	resume_btn.pressed.connect(_on_resume_pressed)
+	vbox.add_child(resume_btn)
+
+	var quit_btn := _make_pixel_button("QUIT TO MENU", Vector2(280, 60), 14)
+	quit_btn.pressed.connect(_on_pause_quit_pressed)
+	vbox.add_child(quit_btn)
+
+
+func _on_pause_pressed() -> void:
+	if _result_overlay.visible:
+		return
+	get_tree().paused = true
+	PokiSDK.gameplay_stop()
+	_pause_overlay.visible = true
+
+
+func _on_resume_pressed() -> void:
+	_pause_overlay.visible = false
+	get_tree().paused = false
+	PokiSDK.gameplay_start()
+
+
+func _on_pause_quit_pressed() -> void:
+	_pause_overlay.visible = false
+	get_tree().paused = false
+	_go_to_main_menu()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if _pause_overlay.visible:
+			_on_resume_pressed()
+		elif not _result_overlay.visible:
+			_on_pause_pressed()
+
+
 # -- Drawing helpers -----------------------------------------------------------
 
-func _draw_score_panel_shadow() -> void:
-	if not is_instance_valid(_score_panel) or not _score_panel.visible:
+func _draw_panel_shadow(panel: Control, offset: Vector2) -> void:
+	if not is_instance_valid(panel) or not panel.visible:
 		return
-	var gp := _score_panel.global_position - global_position
-	draw_rect(Rect2(gp + Vector2(8, 8), _score_panel.size), SHADOW_COLOR)
+	var gp := panel.global_position - global_position
+	draw_rect(Rect2(gp + offset, panel.size), SHADOW_COLOR)
 
 
 # -- HUD updates --------------------------------------------------------------
@@ -234,9 +400,27 @@ func _update_rerolls_display() -> void:
 	var remaining := combat_mgr.rerolls_remaining
 	if _reroll_btn:
 		_reroll_btn.disabled = not combat_mgr.can_roll()
-		_reroll_btn.text = "REROLL\n%d left" % remaining
+		_reroll_btn.text = "REROLL (%d)" % remaining
 	if _end_turn_btn:
 		_end_turn_btn.disabled = not combat_mgr.can_score()
+
+
+func _update_hand_display() -> void:
+	if _hand_info_label:
+		var current_hand := _total_hands - combat_mgr.hands_remaining + 1
+		_hand_info_label.text = "HAND %d/%d" % [current_hand, _total_hands]
+
+
+func _update_score_bar() -> void:
+	if not _score_bar_fill or not _score_bar_label or not _score_bar_track:
+		return
+	var running := combat_mgr.running_score
+	var target := combat_mgr.target_score
+	_score_bar_label.text = "%d/%d" % [running, target]
+
+	var track_w := _score_bar_track.size.x - 4
+	var ratio := clampf(float(running) / float(target), 0.0, 1.0)
+	_score_bar_fill.size = Vector2(track_w * ratio, 20)
 
 
 # -- Signal handlers -----------------------------------------------------------
@@ -253,9 +437,15 @@ func _on_die_held(index: int, held: bool) -> void:
 	var btn := _dice_visuals[index]
 
 	if held:
-		btn.add_theme_stylebox_override("normal", _make_style(Color.TRANSPARENT, GOLD))
+		var locked_style := _make_style(Color.TRANSPARENT, GOLD)
+		btn.add_theme_stylebox_override("normal", locked_style)
+		btn.add_theme_stylebox_override("hover", locked_style)
+		btn.add_theme_stylebox_override("pressed", locked_style)
 	else:
-		btn.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+		var empty := StyleBoxEmpty.new()
+		btn.add_theme_stylebox_override("normal", empty)
+		btn.add_theme_stylebox_override("hover", empty)
+		btn.add_theme_stylebox_override("pressed", empty)
 
 	if index < _lock_labels.size():
 		var die_name := _die_color_names[index] if index < _die_color_names.size() else ""
@@ -322,7 +512,9 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_show_combo(combo)
 	else:
 		_combo_name_label.text = ""
-		_score_pts_label.text = "NO COMBO"
+		_score_value_label.text = "NO COMBO"
+		_score_pts_suffix.text = ""
+		_score_breakdown_label.text = ""
 
 	_update_rerolls_display()
 
@@ -349,8 +541,11 @@ func _show_combo(combo: Dictionary) -> void:
 	var dice_sum := 0
 	for v in combat_mgr.current_roll:
 		dice_sum += v
-	var pts: int = (base + dice_sum) * mult
-	_score_pts_label.text = "%d PTS" % pts
+	var total_base := base + dice_sum
+	var pts: int = total_base * mult
+	_score_value_label.text = str(pts)
+	_score_pts_suffix.text = "PTS"
+	_score_breakdown_label.text = "%d BASE  x%d MULT" % [total_base, mult]
 
 	_score_panel.scale = Vector2(0.8, 0.8)
 	var tween := create_tween()
@@ -377,8 +572,13 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 
 	tween.tween_callback(func():
 		_combo_name_label.text = combo.get("name", "").to_upper()
-		_score_pts_label.text = "+%d PTS" % total
-		_score_pts_label.add_theme_color_override("font_color", GREEN)
+		_score_value_label.text = "+%d" % total
+		_score_value_label.add_theme_color_override("font_color", GREEN)
+		_score_pts_suffix.text = "PTS"
+		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
+		_score_breakdown_label.text = ""
+		_update_score_bar()
+		_update_hand_display()
 	)
 	tween.tween_interval(0.5)
 
@@ -388,7 +588,8 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	tween.tween_interval(1.0)
 
 	tween.tween_callback(func():
-		_score_pts_label.add_theme_color_override("font_color", DARK)
+		_score_value_label.add_theme_color_override("font_color", DARK)
+		_score_pts_suffix.add_theme_color_override("font_color", DARK)
 		_reset_for_next_hand()
 	)
 
@@ -398,7 +599,9 @@ func _reset_for_next_hand() -> void:
 		return
 
 	_combo_name_label.text = ""
-	_score_pts_label.text = "ROLL!"
+	_score_value_label.text = "ROLL!"
+	_score_pts_suffix.text = ""
+	_score_breakdown_label.text = ""
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0
@@ -415,6 +618,10 @@ func _reset_for_next_hand() -> void:
 
 func _on_rerolls_changed(_remaining: int) -> void:
 	_update_rerolls_display()
+
+
+func _on_hands_changed(_remaining: int) -> void:
+	_update_hand_display()
 
 
 func _on_combat_ended(final_score: int, target_beaten: bool) -> void:

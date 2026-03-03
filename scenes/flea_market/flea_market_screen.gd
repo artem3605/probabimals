@@ -85,9 +85,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	coin_hbox.add_theme_constant_override("separation", 8)
 	coin_panel.add_child(coin_hbox)
 
-	var coin_icon := ColorRect.new()
-	coin_icon.custom_minimum_size = Vector2(20, 20)
-	coin_icon.color = Color("b8960a")
+	var coin_icon := _create_coin_icon()
 	coin_hbox.add_child(coin_icon)
 
 	_coin_label = _make_pixel_label("", 16)
@@ -178,6 +176,41 @@ func _draw_shop_card_shadows() -> void:
 				Rect2(gp + Vector2(4, 4), btn.size),
 				SHADOW_COLOR
 			)
+
+
+func _create_coin_icon() -> TextureRect:
+	var s := 16
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	var gold := Color("ffd700")
+	var highlight := Color("fff176")
+	var shadow := Color("b8860b")
+	var outline := Color("1a1a1a")
+
+	var cx := 7.5
+	var cy := 7.5
+	for x in s:
+		for y in s:
+			var dx := x - cx
+			var dy := y - cy
+			var dist := sqrt(dx * dx + dy * dy)
+			if dist <= 5.0:
+				if dx + dy < -3.0:
+					img.set_pixel(x, y, highlight)
+				elif dx + dy > 3.0:
+					img.set_pixel(x, y, shadow)
+				else:
+					img.set_pixel(x, y, gold)
+			elif dist <= 6.5:
+				img.set_pixel(x, y, outline)
+
+	var tex := ImageTexture.create_from_image(img)
+	var rect := TextureRect.new()
+	rect.texture = tex
+	rect.custom_minimum_size = Vector2(24, 24)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	return rect
 
 
 # -- Coin display --------------------------------------------------------------
