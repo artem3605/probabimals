@@ -1,12 +1,11 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const CombatDice = preload("res://scripts/ui/combat_dice.gd")
+
 var combat_mgr: CombatManager
-var _dice_visuals: Array[Button] = []
+var _dice_cards: Array = []
 var _current_values: Array[int] = []
-var _lock_labels: Array[Label] = []
-var _die_color_names: Array[String] = []
 var _dice_face_textures: Array[AtlasTexture] = []
-var _dice_sprites: Array[TextureRect] = []
 
 var _menu_btn: Button
 var _combo_name_label: Label
@@ -17,6 +16,9 @@ var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _dice_container: HBoxContainer
+var _desc_panel: PanelContainer
+var _desc_title: Label
+var _desc_body: Label
 
 var _hand_info_label: Label
 var _target_label: Label
@@ -70,14 +72,8 @@ func _setup_combat() -> void:
 	)
 
 	_current_values.clear()
-	_die_color_names.clear()
 	for d in dice:
 		_current_values.append(0)
-		_die_color_names.append(DIE_NAMES.get(d.color, "BASIC"))
-
-	for i in range(_lock_labels.size()):
-		if i < _die_color_names.size():
-			_lock_labels[i].text = _die_color_names[i]
 
 	_total_hands = GameManager.hands_per_round
 
@@ -109,6 +105,7 @@ func _build_ui() -> void:
 	_build_top_bar(content)
 	_build_score_panel(content)
 	_build_dice_tray(content)
+	_build_description_panel(content)
 
 	_build_score_bar(action_bar)
 
@@ -241,49 +238,47 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 	_dice_container.add_theme_constant_override("separation", 24)
 	center.add_child(_dice_container)
 
-	_dice_visuals.clear()
-	_lock_labels.clear()
-	for i in range(5):
-		var col := VBoxContainer.new()
-		col.add_theme_constant_override("separation", 8)
-		_dice_container.add_child(col)
-
-		var die_btn := _create_die_button(i)
-		col.add_child(die_btn)
-		_dice_visuals.append(die_btn)
-
-		var lock_lbl := _make_pixel_label("", 12)
-		lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lock_lbl.custom_minimum_size = Vector2(128, 18)
-		col.add_child(lock_lbl)
-		_lock_labels.append(lock_lbl)
-
-
-func _create_die_button(index: int) -> Button:
-	var btn := _make_icon_button(Vector2(128, 128))
-
-	var sprite := TextureRect.new()
-	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
-	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sprite.visible = false
-	btn.add_child(sprite)
-	_dice_sprites.append(sprite)
-
-	btn.pressed.connect(_on_die_clicked.bind(index))
-	return btn
+	_dice_cards.clear()
+	var all_dice: Array[Die] = GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	for i in range(all_dice.size()):
+		var die: Die = all_dice[i]
+		var card := CombatDice.new()
+		card.setup(die, _pixel_font, _dice_face_textures)
+		card.card_pressed.connect(_on_die_clicked.bind(i))
+		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
+		card.card_hover_exited.connect(_on_card_hover_exit)
+		_dice_container.add_child(card)
+		_dice_cards.append(card)
 
 
 func _set_die_face(index: int, value: int) -> void:
-	if index < 0 or index >= _dice_sprites.size():
+	if index < 0 or index >= _dice_cards.size():
 		return
-	var sprite := _dice_sprites[index]
-	if value <= 0 or value > 6:
-		sprite.visible = false
-		return
-	sprite.texture = _dice_face_textures[value - 1]
-	sprite.visible = true
+	_dice_cards[index].set_face(value)
+
+
+func _build_description_panel(parent: VBoxContainer) -> void:
+	var center := CenterContainer.new()
+	parent.add_child(center)
+
+	_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_desc_panel.visible = false
+	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(_desc_panel)
+
+	var desc_vbox := VBoxContainer.new()
+	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_panel.add_child(desc_vbox)
+
+	_desc_title = _make_pixel_label("", 14, GOLD)
+	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_vbox.add_child(_desc_title)
+
+	_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_vbox.add_child(_desc_body)
 
 
 func _build_result_overlay() -> void:
@@ -432,26 +427,12 @@ func _on_die_clicked(index: int) -> void:
 
 
 func _on_die_held(index: int, held: bool) -> void:
-	if index < 0 or index >= _dice_visuals.size():
+	if index < 0 or index >= _dice_cards.size():
 		return
-	var btn := _dice_visuals[index]
+	var card: Control = _dice_cards[index]
+	card.set_held(held)
 
-	if held:
-		var locked_style := _make_style(Color.TRANSPARENT, GOLD)
-		btn.add_theme_stylebox_override("normal", locked_style)
-		btn.add_theme_stylebox_override("hover", locked_style)
-		btn.add_theme_stylebox_override("pressed", locked_style)
-	else:
-		var empty := StyleBoxEmpty.new()
-		btn.add_theme_stylebox_override("normal", empty)
-		btn.add_theme_stylebox_override("hover", empty)
-		btn.add_theme_stylebox_override("pressed", empty)
-
-	if index < _lock_labels.size():
-		var die_name := _die_color_names[index] if index < _die_color_names.size() else ""
-		_lock_labels[index].text = "LOCKED" if held else die_name
-		_lock_labels[index].add_theme_color_override("font_color", GOLD if held else DARK)
-
+	var btn: Button = card.main_button
 	var tween := create_tween()
 	tween.tween_property(btn, "scale", Vector2(1.1, 1.1), 0.08)
 	tween.tween_property(btn, "scale", Vector2.ONE, 0.12)
@@ -467,9 +448,9 @@ func _animate_roll() -> void:
 	_reroll_btn.disabled = true
 
 	var tween := create_tween()
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i):
-			var btn := _dice_visuals[i]
+			var btn: Button = _dice_cards[i].main_button
 			tween.parallel().tween_property(btn, "rotation", randf_range(-0.2, 0.2), 0.05)
 			tween.parallel().tween_property(btn, "scale", Vector2(0.85, 0.85), 0.05)
 
@@ -481,9 +462,9 @@ func _animate_roll() -> void:
 	tween.tween_callback(_emit_roll_particles)
 	tween.tween_interval(0.05)
 
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i):
-			var btn := _dice_visuals[i]
+			var btn: Button = _dice_cards[i].main_button
 			tween.parallel().tween_property(btn, "rotation", 0.0, 0.15)
 			tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.15)
 
@@ -491,7 +472,7 @@ func _animate_roll() -> void:
 
 
 func _show_random_faces() -> void:
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i) and i < _current_values.size():
 			_current_values[i] = randi_range(1, 6)
 			_set_die_face(i, _current_values[i])
@@ -605,19 +586,25 @@ func _reset_for_next_hand() -> void:
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0
-		_set_die_face(i, 0)
-	for i in range(_dice_visuals.size()):
-		_dice_visuals[i].add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-
-	for i in range(_lock_labels.size()):
-		_lock_labels[i].text = _die_color_names[i] if i < _die_color_names.size() else ""
-		_lock_labels[i].add_theme_color_override("font_color", DARK)
+	for i in range(_dice_cards.size()):
+		_dice_cards[i].reset_die()
 
 	_update_rerolls_display()
 
 
 func _on_rerolls_changed(_remaining: int) -> void:
 	_update_rerolls_display()
+
+
+func _on_card_hover_enter(card: Control) -> void:
+	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.text = card.hover_name
+	_desc_body.text = card.hover_description
+	_desc_panel.visible = true
+
+
+func _on_card_hover_exit() -> void:
+	_desc_panel.visible = false
 
 
 func _on_hands_changed(_remaining: int) -> void:

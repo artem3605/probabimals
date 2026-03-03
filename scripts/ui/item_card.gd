@@ -74,14 +74,15 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	add_child(bottom_control)
 
 
-func _setup_card(card_color: Color, label_text: String, pixel_font: Font) -> void:
+func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
+		card_size: Vector2 = Vector2(96, 96)) -> void:
 	add_theme_constant_override("separation", 8)
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	_card_color = card_color
 	var text_color := _get_text_color(card_color)
 
 	main_button = Button.new()
-	main_button.custom_minimum_size = Vector2(96, 96)
+	main_button.custom_minimum_size = card_size
 	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, 4, 4))
 	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, 4, 4))
 	main_button.add_theme_font_override("font", pixel_font)
@@ -93,6 +94,12 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font) -> voi
 	main_button.mouse_entered.connect(func(): card_hover_entered.emit())
 	main_button.mouse_exited.connect(func(): card_hover_exited.emit())
 	add_child(main_button)
+
+
+func set_bottom_text(text: String, color: Color = DARK) -> void:
+	if bottom_control is Label:
+		(bottom_control as Label).text = text
+		(bottom_control as Label).add_theme_color_override("font_color", color)
 
 
 func set_selected(selected: bool) -> void:
