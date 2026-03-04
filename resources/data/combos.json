@@ -2,64 +2,55 @@
   {
     "name": "High Card",
     "type": "high_card",
-    "base_score": 5,
-    "multiplier": 1,
+    "combo_mult": 1.0,
     "priority": 0
   },
   {
     "name": "Pair",
     "type": "pair",
-    "base_score": 10,
-    "multiplier": 1,
+    "combo_mult": 1.5,
     "priority": 1
   },
   {
     "name": "Two Pair",
     "type": "two_pair",
-    "base_score": 20,
-    "multiplier": 1,
+    "combo_mult": 2.0,
     "priority": 2
   },
   {
     "name": "Three of a Kind",
     "type": "three_of_a_kind",
-    "base_score": 30,
-    "multiplier": 2,
+    "combo_mult": 3.0,
     "priority": 3
   },
   {
     "name": "Small Straight",
     "type": "small_straight",
-    "base_score": 40,
-    "multiplier": 3,
+    "combo_mult": 3.5,
     "priority": 4
   },
   {
     "name": "Full House",
     "type": "full_house",
-    "base_score": 50,
-    "multiplier": 3,
+    "combo_mult": 4.0,
     "priority": 5
   },
   {
     "name": "Large Straight",
     "type": "large_straight",
-    "base_score": 60,
-    "multiplier": 4,
+    "combo_mult": 5.0,
     "priority": 6
   },
   {
     "name": "Four of a Kind",
     "type": "four_of_a_kind",
-    "base_score": 80,
-    "multiplier": 5,
+    "combo_mult": 7.0,
     "priority": 7
   },
   {
     "name": "Yahtzee",
     "type": "yahtzee",
-    "base_score": 100,
-    "multiplier": 8,
+    "combo_mult": 10.0,
     "priority": 8
   }
 ]

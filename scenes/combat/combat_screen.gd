@@ -1,12 +1,11 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const CombatDice = preload("res://scripts/ui/combat_dice.gd")
+
 var combat_mgr: CombatManager
-var _dice_visuals: Array[Button] = []
+var _dice_cards: Array = []
 var _current_values: Array[int] = []
-var _lock_labels: Array[Label] = []
-var _die_color_names: Array[String] = []
 var _dice_face_textures: Array[AtlasTexture] = []
-var _dice_sprites: Array[TextureRect] = []
 
 var _menu_btn: Button
 var _combo_name_label: Label
@@ -17,6 +16,9 @@ var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _dice_container: HBoxContainer
+var _desc_panel: PanelContainer
+var _desc_title: Label
+var _desc_body: Label
 
 var _hand_info_label: Label
 var _target_label: Label
@@ -31,6 +33,12 @@ var _total_hands: int = 4
 var _result_overlay: ColorRect
 var _result_score_label: Label
 var _result_message: Label
+var _result_sub_label: Label
+var _result_coins_label: Label
+var _result_next_btn: Button
+var _result_menu_btn: Button
+var _result_final_score: int = 0
+var _result_target_beaten: bool = false
 
 var _pause_overlay: ColorRect
 
@@ -70,14 +78,8 @@ func _setup_combat() -> void:
 	)
 
 	_current_values.clear()
-	_die_color_names.clear()
 	for d in dice:
 		_current_values.append(0)
-		_die_color_names.append(DIE_NAMES.get(d.color, "BASIC"))
-
-	for i in range(_lock_labels.size()):
-		if i < _die_color_names.size():
-			_lock_labels[i].text = _die_color_names[i]
 
 	_total_hands = GameManager.hands_per_round
 
@@ -109,6 +111,7 @@ func _build_ui() -> void:
 	_build_top_bar(content)
 	_build_score_panel(content)
 	_build_dice_tray(content)
+	_build_description_panel(content)
 
 	_build_score_bar(action_bar)
 
@@ -241,49 +244,47 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 	_dice_container.add_theme_constant_override("separation", 24)
 	center.add_child(_dice_container)
 
-	_dice_visuals.clear()
-	_lock_labels.clear()
-	for i in range(5):
-		var col := VBoxContainer.new()
-		col.add_theme_constant_override("separation", 8)
-		_dice_container.add_child(col)
-
-		var die_btn := _create_die_button(i)
-		col.add_child(die_btn)
-		_dice_visuals.append(die_btn)
-
-		var lock_lbl := _make_pixel_label("", 12)
-		lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lock_lbl.custom_minimum_size = Vector2(128, 18)
-		col.add_child(lock_lbl)
-		_lock_labels.append(lock_lbl)
-
-
-func _create_die_button(index: int) -> Button:
-	var btn := _make_icon_button(Vector2(128, 128))
-
-	var sprite := TextureRect.new()
-	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
-	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sprite.visible = false
-	btn.add_child(sprite)
-	_dice_sprites.append(sprite)
-
-	btn.pressed.connect(_on_die_clicked.bind(index))
-	return btn
+	_dice_cards.clear()
+	var all_dice: Array[Die] = GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	for i in range(all_dice.size()):
+		var die: Die = all_dice[i]
+		var card := CombatDice.new()
+		card.setup(die, _pixel_font, _dice_face_textures)
+		card.card_pressed.connect(_on_die_clicked.bind(i))
+		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
+		card.card_hover_exited.connect(_on_card_hover_exit)
+		_dice_container.add_child(card)
+		_dice_cards.append(card)
 
 
 func _set_die_face(index: int, value: int) -> void:
-	if index < 0 or index >= _dice_sprites.size():
+	if index < 0 or index >= _dice_cards.size():
 		return
-	var sprite := _dice_sprites[index]
-	if value <= 0 or value > 6:
-		sprite.visible = false
-		return
-	sprite.texture = _dice_face_textures[value - 1]
-	sprite.visible = true
+	_dice_cards[index].set_face(value)
+
+
+func _build_description_panel(parent: VBoxContainer) -> void:
+	var center := CenterContainer.new()
+	parent.add_child(center)
+
+	_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_desc_panel.visible = false
+	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(_desc_panel)
+
+	var desc_vbox := VBoxContainer.new()
+	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_panel.add_child(desc_vbox)
+
+	_desc_title = _make_pixel_label("", 14, GOLD)
+	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_vbox.add_child(_desc_title)
+
+	_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_vbox.add_child(_desc_body)
 
 
 func _build_result_overlay() -> void:
@@ -299,7 +300,7 @@ func _build_result_overlay() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 20)
+	vbox.add_theme_constant_override("separation", 16)
 	center.add_child(vbox)
 
 	_result_message = _make_pixel_label("", 36)
@@ -310,17 +311,27 @@ func _build_result_overlay() -> void:
 	_result_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_result_score_label)
 
-	var target_info := _make_pixel_label("Target: " + str(GameManager.target_score), 16, Color("aaaaaa"))
-	target_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(target_info)
+	_result_sub_label = _make_pixel_label("", 16, Color("aaaaaa"))
+	_result_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_result_sub_label)
+
+	_result_coins_label = _make_pixel_label("", 20, GOLD)
+	_result_coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_result_coins_label)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 20)
+	spacer.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer)
 
-	var menu_btn := _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
-	menu_btn.pressed.connect(_go_to_main_menu)
-	vbox.add_child(menu_btn)
+	_result_next_btn = _make_pixel_button("NEXT ROUND", Vector2(280, 60), 16)
+	_result_next_btn.pressed.connect(_on_next_round_pressed)
+	_result_next_btn.visible = false
+	vbox.add_child(_result_next_btn)
+
+	_result_menu_btn = _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
+	_result_menu_btn.pressed.connect(_go_to_main_menu)
+	_result_menu_btn.visible = false
+	vbox.add_child(_result_menu_btn)
 
 
 func _build_pause_overlay() -> void:
@@ -374,6 +385,8 @@ func _on_resume_pressed() -> void:
 func _on_pause_quit_pressed() -> void:
 	_pause_overlay.visible = false
 	get_tree().paused = false
+	_result_final_score = combat_mgr.running_score
+	_result_target_beaten = false
 	_go_to_main_menu()
 
 
@@ -432,26 +445,12 @@ func _on_die_clicked(index: int) -> void:
 
 
 func _on_die_held(index: int, held: bool) -> void:
-	if index < 0 or index >= _dice_visuals.size():
+	if index < 0 or index >= _dice_cards.size():
 		return
-	var btn := _dice_visuals[index]
+	var card: Control = _dice_cards[index]
+	card.set_held(held)
 
-	if held:
-		var locked_style := _make_style(Color.TRANSPARENT, GOLD)
-		btn.add_theme_stylebox_override("normal", locked_style)
-		btn.add_theme_stylebox_override("hover", locked_style)
-		btn.add_theme_stylebox_override("pressed", locked_style)
-	else:
-		var empty := StyleBoxEmpty.new()
-		btn.add_theme_stylebox_override("normal", empty)
-		btn.add_theme_stylebox_override("hover", empty)
-		btn.add_theme_stylebox_override("pressed", empty)
-
-	if index < _lock_labels.size():
-		var die_name := _die_color_names[index] if index < _die_color_names.size() else ""
-		_lock_labels[index].text = "LOCKED" if held else die_name
-		_lock_labels[index].add_theme_color_override("font_color", GOLD if held else DARK)
-
+	var btn: Button = card.main_button
 	var tween := create_tween()
 	tween.tween_property(btn, "scale", Vector2(1.1, 1.1), 0.08)
 	tween.tween_property(btn, "scale", Vector2.ONE, 0.12)
@@ -467,9 +466,9 @@ func _animate_roll() -> void:
 	_reroll_btn.disabled = true
 
 	var tween := create_tween()
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i):
-			var btn := _dice_visuals[i]
+			var btn: Button = _dice_cards[i].main_button
 			tween.parallel().tween_property(btn, "rotation", randf_range(-0.2, 0.2), 0.05)
 			tween.parallel().tween_property(btn, "scale", Vector2(0.85, 0.85), 0.05)
 
@@ -481,9 +480,9 @@ func _animate_roll() -> void:
 	tween.tween_callback(_emit_roll_particles)
 	tween.tween_interval(0.05)
 
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i):
-			var btn := _dice_visuals[i]
+			var btn: Button = _dice_cards[i].main_button
 			tween.parallel().tween_property(btn, "rotation", 0.0, 0.15)
 			tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.15)
 
@@ -491,7 +490,7 @@ func _animate_roll() -> void:
 
 
 func _show_random_faces() -> void:
-	for i in range(5):
+	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i) and i < _current_values.size():
 			_current_values[i] = randi_range(1, 6)
 			_set_die_face(i, _current_values[i])
@@ -536,16 +535,22 @@ func _show_combo(combo: Dictionary) -> void:
 		8:
 			_combo_name_label.add_theme_color_override("font_color", PINK)
 
-	var base: int = combo.get("base_score", 0)
-	var mult: int = combo.get("multiplier", 1)
-	var dice_sum := 0
-	for v in combat_mgr.current_roll:
-		dice_sum += v
-	var total_base := base + dice_sum
-	var pts: int = total_base * mult
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	var preview := combat_mgr.scoring_engine.calculate_score(
+		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+
+	var face_sum: int = int(preview.get("face_sum", 0))
+	var mult: float = preview.get("mult", 1.0)
+	var x_mult: float = preview.get("x_mult", 1.0)
+	var pts: int = preview.get("total", 0)
+
 	_score_value_label.text = str(pts)
 	_score_pts_suffix.text = "PTS"
-	_score_breakdown_label.text = "%d BASE  x%d MULT" % [total_base, mult]
+
+	if x_mult > 1.0:
+		_score_breakdown_label.text = "%d SUM  x%.1f MULT  x%.1f" % [face_sum, mult, x_mult]
+	else:
+		_score_breakdown_label.text = "%d SUM  x%.1f MULT" % [face_sum, mult]
 
 	_score_panel.scale = Vector2(0.8, 0.8)
 	var tween := create_tween()
@@ -605,13 +610,8 @@ func _reset_for_next_hand() -> void:
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0
-		_set_die_face(i, 0)
-	for i in range(_dice_visuals.size()):
-		_dice_visuals[i].add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-
-	for i in range(_lock_labels.size()):
-		_lock_labels[i].text = _die_color_names[i] if i < _die_color_names.size() else ""
-		_lock_labels[i].add_theme_color_override("font_color", DARK)
+	for i in range(_dice_cards.size()):
+		_dice_cards[i].reset_die()
 
 	_update_rerolls_display()
 
@@ -620,12 +620,24 @@ func _on_rerolls_changed(_remaining: int) -> void:
 	_update_rerolls_display()
 
 
+func _on_card_hover_enter(card: Control) -> void:
+	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.text = card.hover_name
+	_desc_body.text = card.hover_description
+	_desc_panel.visible = true
+
+
+func _on_card_hover_exit() -> void:
+	_desc_panel.visible = false
+
+
 func _on_hands_changed(_remaining: int) -> void:
 	_update_hand_display()
 
 
 func _on_combat_ended(final_score: int, target_beaten: bool) -> void:
-	GameManager.end_combat(final_score)
+	_result_final_score = final_score
+	_result_target_beaten = target_beaten
 	_show_result_overlay(final_score, target_beaten)
 
 
@@ -636,11 +648,21 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_score_label.text = str(final_score) + " PTS"
 
 	if target_beaten:
-		_result_message.text = "VICTORY!"
+		_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
 		_result_message.add_theme_color_override("font_color", GOLD)
+		_result_sub_label.text = "Target: %d" % GameManager.target_score
+		var reward := GameManager.get_round_reward()
+		_result_coins_label.text = "+%d coins" % reward
+		_result_coins_label.visible = true
+		_result_next_btn.visible = true
+		_result_menu_btn.visible = false
 	else:
-		_result_message.text = "DEFEAT"
+		_result_message.text = "GAME OVER"
 		_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
+		_result_sub_label.text = "Reached Round %d" % GameManager.current_round
+		_result_coins_label.visible = false
+		_result_next_btn.visible = false
+		_result_menu_btn.visible = true
 
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
@@ -709,7 +731,12 @@ func _emit_roll_particles() -> void:
 
 # -- Navigation ----------------------------------------------------------------
 
+func _on_next_round_pressed() -> void:
+	var tween := create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
+
 func _go_to_main_menu() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(GameManager.go_to_main_menu)
+	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, false))

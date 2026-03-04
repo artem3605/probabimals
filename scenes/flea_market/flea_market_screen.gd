@@ -15,6 +15,14 @@ var _desc_title: Label
 var _desc_body: Label
 var _all_buttons: Array = []
 
+var _face_swap_overlay: ColorRect
+var _face_swap_title: Label
+var _face_swap_cards: HBoxContainer
+var _face_swap_action_btn: Button
+var _pending_face_item: Dictionary = {}
+var _pending_shop_index: int = -1
+var _selected_die_index: int = -1
+
 
 func _ready() -> void:
 	super._ready()
@@ -53,6 +61,8 @@ func _build_ui() -> void:
 	action_bar.add_child(_ready_btn)
 	_all_buttons.append(_ready_btn)
 
+	_build_face_swap_overlay()
+
 
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
@@ -68,7 +78,11 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	bar.add_child(_make_title_bar("FLEA MARKET"))
+	var title_vbox := _make_title_bar("ROUND %d  --  FLEA MARKET" % GameManager.current_round)
+	var target_lbl := _make_pixel_label("Target: %d" % GameManager.target_score, 14, Color("aaaaaa"))
+	target_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_vbox.add_child(target_lbl)
+	bar.add_child(title_vbox)
 
 	var spacer2 := Control.new()
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -156,7 +170,7 @@ func _refresh_shop_display() -> void:
 		var item := _shop_offerings[i]
 		var card := ItemCard.new()
 		card.setup_as_shop_item(item, _pixel_font)
-		card.card_pressed.connect(_on_shop_item_clicked.bind(item))
+		card.card_pressed.connect(_on_shop_item_clicked.bind(i))
 		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_card_hover_exit)
 		_shop_container.add_child(card)
@@ -242,34 +256,23 @@ func _on_my_dice_hover_enter() -> void:
 	var dice := GameManager.dice_bag.get_all()
 	var groups: Dictionary = {}
 	for d: Die in dice:
-		var key := d.die_name
+		var vals := d.get_face_values().duplicate()
+		vals.sort()
+		var faces_str := "(%s)" % ",".join(vals.map(func(f: int) -> String: return str(f)))
+		var key := "%s %s" % [d.die_name, faces_str]
 		if not groups.has(key):
-			groups[key] = { "faces": d.faces.duplicate(), "count": 0 }
-		groups[key]["count"] += 1
-
-	var max_name := 0
-	var max_faces := 0
-	var entries: Array[Dictionary] = []
-	for key: String in groups:
-		var g: Dictionary = groups[key]
-		var faces_str := "(%s)" % ",".join(g["faces"].map(func(f: int) -> String: return str(f)))
-		if key.length() > max_name:
-			max_name = key.length()
-		if faces_str.length() > max_faces:
-			max_faces = faces_str.length()
-		entries.append({ "name": key, "faces": faces_str, "count": g["count"] })
+			groups[key] = 0
+		groups[key] += 1
 
 	_desc_title.text = "MY DICE"
 	_desc_title.add_theme_color_override("font_color", GOLD)
 	var lines := ""
-	for e: Dictionary in entries:
-		var padded_name: String = e["name"]
-		while padded_name.length() < max_name:
-			padded_name += " "
-		var padded_faces: String = e["faces"]
-		while padded_faces.length() < max_faces:
-			padded_faces += " "
-		lines += "%s %s x%d\n" % [padded_name, padded_faces, e["count"]]
+	for key: String in groups:
+		var count: int = groups[key]
+		if count > 1:
+			lines += "%s x%d\n" % [key, count]
+		else:
+			lines += "%s\n" % key
 	_desc_body.text = lines.strip_edges()
 	_desc_panel.visible = true
 
@@ -292,9 +295,25 @@ func _on_card_hover_exit() -> void:
 	_desc_panel.visible = false
 
 
-func _on_shop_item_clicked(item: Dictionary) -> void:
+func _on_shop_item_clicked(index: int) -> void:
+	if index < 0 or index >= _shop_offerings.size():
+		return
+	var item := _shop_offerings[index]
+
+	if item.get("category", "") == "face":
+		if GameManager.coins < item.get("cost", 0):
+			_desc_title.text = "Not enough coins!"
+			_desc_title.add_theme_color_override("font_color", Color("ff4444"))
+			_desc_body.text = ""
+			_desc_panel.visible = true
+			return
+		_show_die_picker(item, index)
+		return
+
 	var success := GameManager.buy_item(item)
 	if success:
+		_shop_offerings.remove_at(index)
+		_refresh_shop_display()
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("font_color", GREEN)
 		_desc_body.text = item.get("name", "")
@@ -305,3 +324,153 @@ func _on_shop_item_clicked(item: Dictionary) -> void:
 		_desc_title.add_theme_color_override("font_color", Color("ff4444"))
 		_desc_body.text = ""
 		_desc_panel.visible = true
+
+
+# -- Face swap overlay ---------------------------------------------------------
+
+func _build_face_swap_overlay() -> void:
+	_face_swap_overlay = ColorRect.new()
+	_face_swap_overlay.color = Color(0, 0, 0, 0.85)
+	_face_swap_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_face_swap_overlay.visible = false
+	add_child(_face_swap_overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_face_swap_overlay.add_child(center)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 32)
+	center.add_child(vbox)
+
+	_face_swap_title = _make_pixel_label("", 24, GOLD)
+	_face_swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_face_swap_title)
+
+	var cards_center := CenterContainer.new()
+	vbox.add_child(cards_center)
+
+	_face_swap_cards = HBoxContainer.new()
+	_face_swap_cards.add_theme_constant_override("separation", 24)
+	cards_center.add_child(_face_swap_cards)
+
+	var btn_center := CenterContainer.new()
+	vbox.add_child(btn_center)
+
+	_face_swap_action_btn = _make_colored_button("CANCEL", Vector2(200, 56), PINK, PINK.lightened(0.15), 14)
+	_face_swap_action_btn.pressed.connect(_on_face_swap_cancel)
+	btn_center.add_child(_face_swap_action_btn)
+
+
+func _show_die_picker(item: Dictionary, shop_index: int) -> void:
+	_pending_face_item = item
+	_pending_shop_index = shop_index
+	_selected_die_index = -1
+
+	var new_value: int = item.get("params", {}).get("value", 0)
+	_face_swap_title.text = "CHOOSE A DIE\nNew face: %d" % new_value
+
+	_clear_swap_cards()
+	var all_dice := GameManager.dice_bag.get_all()
+	for i in all_dice.size():
+		var die: Die = all_dice[i]
+		var card := ItemCard.new()
+		card.setup_as_dice_item(die, _pixel_font)
+		card.card_pressed.connect(_on_swap_die_selected.bind(i))
+		_face_swap_cards.add_child(card)
+
+	_face_swap_action_btn.text = "CANCEL"
+	_reconnect_swap_btn(_on_face_swap_cancel)
+
+	_face_swap_overlay.visible = true
+
+
+func _show_face_picker(die_index: int) -> void:
+	_selected_die_index = die_index
+	var die := GameManager.dice_bag.get_die(die_index)
+	if die == null:
+		return
+
+	var new_value: int = _pending_face_item.get("params", {}).get("value", 0)
+	_face_swap_title.text = "%s\nReplace which face? (new: %d)" % [die.die_name.to_upper(), new_value]
+
+	_clear_swap_cards()
+	for i in range(die.faces.size()):
+		var face: DiceFace = die.faces[i]
+		var label_text := str(face.value)
+		if face.face_type != DiceFace.Type.BASIC:
+			match face.face_type:
+				DiceFace.Type.PIP:
+					label_text += "\n+%d" % int(face.effect_value)
+				DiceFace.Type.MULT:
+					label_text += "\n+%dM" % int(face.effect_value)
+				DiceFace.Type.XMULT:
+					label_text += "\nx%s" % str(face.effect_value)
+				DiceFace.Type.WILD:
+					label_text = "W"
+
+		var btn := _make_pixel_button(label_text, Vector2(96, 96), 20)
+		btn.pressed.connect(_on_swap_face_selected.bind(i))
+		_face_swap_cards.add_child(btn)
+
+	_face_swap_action_btn.text = "BACK"
+	_reconnect_swap_btn(_on_face_swap_back)
+
+
+func _on_swap_die_selected(die_index: int) -> void:
+	_show_face_picker(die_index)
+
+
+func _on_swap_face_selected(face_index: int) -> void:
+	var params: Dictionary = _pending_face_item.get("params", {})
+	var face_id: String = params.get("face_id", "")
+	var face_value: int = int(params.get("value", 1))
+	var cost: int = _pending_face_item.get("cost", 0)
+
+	var new_face := DataManager.get_dice_face(face_id)
+	if new_face == null:
+		new_face = DiceFace.make_basic(face_value)
+
+	var success := GameManager.buy_face_swap(_selected_die_index, face_index, new_face, cost)
+	if success:
+		_shop_offerings.remove_at(_pending_shop_index)
+		_refresh_shop_display()
+		_close_face_swap()
+		_desc_title.text = "Purchased!"
+		_desc_title.add_theme_color_override("font_color", GREEN)
+		_desc_body.text = _pending_face_item.get("name", "")
+		_desc_panel.visible = true
+		_update_coins()
+	else:
+		_close_face_swap()
+		_desc_title.text = "Not enough coins!"
+		_desc_title.add_theme_color_override("font_color", Color("ff4444"))
+		_desc_body.text = ""
+		_desc_panel.visible = true
+
+
+func _on_face_swap_cancel() -> void:
+	_close_face_swap()
+
+
+func _on_face_swap_back() -> void:
+	_show_die_picker(_pending_face_item, _pending_shop_index)
+
+
+func _close_face_swap() -> void:
+	_face_swap_overlay.visible = false
+	_pending_face_item = {}
+	_pending_shop_index = -1
+	_selected_die_index = -1
+
+
+func _reconnect_swap_btn(target: Callable) -> void:
+	for conn in _face_swap_action_btn.pressed.get_connections():
+		_face_swap_action_btn.pressed.disconnect(conn["callable"])
+	_face_swap_action_btn.pressed.connect(target)
+
+
+func _clear_swap_cards() -> void:
+	for child in _face_swap_cards.get_children():
+		child.queue_free()

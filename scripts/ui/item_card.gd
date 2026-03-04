@@ -39,6 +39,11 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 	hover_name = item.get("name", "")
 	hover_description = item.get("description", "")
 	hover_cost = item.get("cost", 0)
+	if item.get("category", "") == "die":
+		var params: Dictionary = item.get("params", {})
+		var face_vals: Array = params.get("faces", [1, 2, 3, 4, 5, 6])
+		var faces_str := ",".join(face_vals.map(func(f: Variant) -> String: return str(int(f))))
+		hover_description += "\nFaces: (%s)" % faces_str
 	var card_color := _get_item_color(item)
 	var label_text := _get_card_label(item)
 	_setup_card(card_color, label_text, pixel_font)
@@ -58,8 +63,10 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
+	var vals := die.get_face_values()
+	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
 	hover_name = die.die_name
-	hover_description = die.description
+	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	_setup_card(card_color, "D", pixel_font)
 
@@ -74,14 +81,15 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	add_child(bottom_control)
 
 
-func _setup_card(card_color: Color, label_text: String, pixel_font: Font) -> void:
+func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
+		card_size: Vector2 = Vector2(96, 96)) -> void:
 	add_theme_constant_override("separation", 8)
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	_card_color = card_color
 	var text_color := _get_text_color(card_color)
 
 	main_button = Button.new()
-	main_button.custom_minimum_size = Vector2(96, 96)
+	main_button.custom_minimum_size = card_size
 	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, 4, 4))
 	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, 4, 4))
 	main_button.add_theme_font_override("font", pixel_font)
@@ -93,6 +101,12 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font) -> voi
 	main_button.mouse_entered.connect(func(): card_hover_entered.emit())
 	main_button.mouse_exited.connect(func(): card_hover_exited.emit())
 	add_child(main_button)
+
+
+func set_bottom_text(text: String, color: Color = DARK) -> void:
+	if bottom_control is Label:
+		(bottom_control as Label).text = text
+		(bottom_control as Label).add_theme_color_override("font_color", color)
 
 
 func set_selected(selected: bool) -> void:
