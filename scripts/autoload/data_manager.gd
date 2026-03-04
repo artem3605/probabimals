@@ -26,8 +26,9 @@ func _load_json(path: String) -> Variant:
 func _load_faces() -> void:
 	var data = _load_json("res://resources/data/faces.json")
 	if data is Array:
-		for face in data:
-			_faces[face["id"]] = face
+		for entry in data:
+			var face := _dict_to_face(entry)
+			_faces[face.id] = face
 
 func _load_shop_catalogue() -> void:
 	var data = _load_json("res://resources/data/dice_shop.json")
@@ -39,8 +40,21 @@ func _load_combo_rules() -> void:
 	if data is Array:
 		_combo_rules = data
 
-func get_face(id: String) -> Dictionary:
-	return _faces.get(id, {})
+func _dict_to_face(d: Dictionary) -> DiceFace:
+	return DiceFace.new(
+		str(d.get("id", "")),
+		int(d.get("value", 0)),
+		DiceFace.type_from_string(str(d.get("face_type", "basic"))),
+		float(d.get("effect_value", 0.0)),
+		str(d.get("rarity", "common")),
+		int(d.get("cost", 0)),
+	)
+
+func get_dice_face(id: String) -> DiceFace:
+	var face = _faces.get(id)
+	if face is DiceFace:
+		return face.duplicate_face()
+	return null
 
 func get_all_faces() -> Dictionary:
 	return _faces
@@ -50,3 +64,13 @@ func get_shop_catalogue() -> Array:
 
 func get_combo_rules() -> Array:
 	return _combo_rules
+
+func create_basic_faces() -> Array[DiceFace]:
+	var result: Array[DiceFace] = []
+	for v in [1, 2, 3, 4, 5, 6]:
+		var face := get_dice_face("face_%d" % v)
+		if face:
+			result.append(face)
+		else:
+			result.append(DiceFace.make_basic(v))
+	return result

@@ -24,7 +24,9 @@ func setup(die: Die, pixel_font: Font, textures: Array[AtlasTexture]) -> void:
 	main_button.add_child(_face_sprite)
 
 	hover_name = die.die_name
-	hover_description = die.description
+	var vals := die.get_face_values()
+	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
+	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
 
 	var name_label := Label.new()
 	name_label.text = _display_name

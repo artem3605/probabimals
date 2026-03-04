@@ -39,6 +39,11 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 	hover_name = item.get("name", "")
 	hover_description = item.get("description", "")
 	hover_cost = item.get("cost", 0)
+	if item.get("category", "") == "die":
+		var params: Dictionary = item.get("params", {})
+		var face_vals: Array = params.get("faces", [1, 2, 3, 4, 5, 6])
+		var faces_str := ",".join(face_vals.map(func(f: Variant) -> String: return str(int(f))))
+		hover_description += "\nFaces: (%s)" % faces_str
 	var card_color := _get_item_color(item)
 	var label_text := _get_card_label(item)
 	_setup_card(card_color, label_text, pixel_font)
@@ -58,8 +63,10 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
+	var vals := die.get_face_values()
+	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
 	hover_name = die.die_name
-	hover_description = die.description
+	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	_setup_card(card_color, "D", pixel_font)
 

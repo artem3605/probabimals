@@ -33,6 +33,12 @@ var _total_hands: int = 4
 var _result_overlay: ColorRect
 var _result_score_label: Label
 var _result_message: Label
+var _result_sub_label: Label
+var _result_coins_label: Label
+var _result_next_btn: Button
+var _result_menu_btn: Button
+var _result_final_score: int = 0
+var _result_target_beaten: bool = false
 
 var _pause_overlay: ColorRect
 
@@ -294,7 +300,7 @@ func _build_result_overlay() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 20)
+	vbox.add_theme_constant_override("separation", 16)
 	center.add_child(vbox)
 
 	_result_message = _make_pixel_label("", 36)
@@ -305,17 +311,27 @@ func _build_result_overlay() -> void:
 	_result_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_result_score_label)
 
-	var target_info := _make_pixel_label("Target: " + str(GameManager.target_score), 16, Color("aaaaaa"))
-	target_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(target_info)
+	_result_sub_label = _make_pixel_label("", 16, Color("aaaaaa"))
+	_result_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_result_sub_label)
+
+	_result_coins_label = _make_pixel_label("", 20, GOLD)
+	_result_coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_result_coins_label)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 20)
+	spacer.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer)
 
-	var menu_btn := _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
-	menu_btn.pressed.connect(_go_to_main_menu)
-	vbox.add_child(menu_btn)
+	_result_next_btn = _make_pixel_button("NEXT ROUND", Vector2(280, 60), 16)
+	_result_next_btn.pressed.connect(_on_next_round_pressed)
+	_result_next_btn.visible = false
+	vbox.add_child(_result_next_btn)
+
+	_result_menu_btn = _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
+	_result_menu_btn.pressed.connect(_go_to_main_menu)
+	_result_menu_btn.visible = false
+	vbox.add_child(_result_menu_btn)
 
 
 func _build_pause_overlay() -> void:
@@ -369,6 +385,8 @@ func _on_resume_pressed() -> void:
 func _on_pause_quit_pressed() -> void:
 	_pause_overlay.visible = false
 	get_tree().paused = false
+	_result_final_score = combat_mgr.running_score
+	_result_target_beaten = false
 	_go_to_main_menu()
 
 
@@ -517,16 +535,22 @@ func _show_combo(combo: Dictionary) -> void:
 		8:
 			_combo_name_label.add_theme_color_override("font_color", PINK)
 
-	var base: int = combo.get("base_score", 0)
-	var mult: int = combo.get("multiplier", 1)
-	var dice_sum := 0
-	for v in combat_mgr.current_roll:
-		dice_sum += v
-	var total_base := base + dice_sum
-	var pts: int = total_base * mult
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	var preview := combat_mgr.scoring_engine.calculate_score(
+		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+
+	var face_sum: int = int(preview.get("face_sum", 0))
+	var mult: float = preview.get("mult", 1.0)
+	var x_mult: float = preview.get("x_mult", 1.0)
+	var pts: int = preview.get("total", 0)
+
 	_score_value_label.text = str(pts)
 	_score_pts_suffix.text = "PTS"
-	_score_breakdown_label.text = "%d BASE  x%d MULT" % [total_base, mult]
+
+	if x_mult > 1.0:
+		_score_breakdown_label.text = "%d SUM  x%.1f MULT  x%.1f" % [face_sum, mult, x_mult]
+	else:
+		_score_breakdown_label.text = "%d SUM  x%.1f MULT" % [face_sum, mult]
 
 	_score_panel.scale = Vector2(0.8, 0.8)
 	var tween := create_tween()
@@ -612,7 +636,8 @@ func _on_hands_changed(_remaining: int) -> void:
 
 
 func _on_combat_ended(final_score: int, target_beaten: bool) -> void:
-	GameManager.end_combat(final_score)
+	_result_final_score = final_score
+	_result_target_beaten = target_beaten
 	_show_result_overlay(final_score, target_beaten)
 
 
@@ -623,11 +648,21 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_score_label.text = str(final_score) + " PTS"
 
 	if target_beaten:
-		_result_message.text = "VICTORY!"
+		_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
 		_result_message.add_theme_color_override("font_color", GOLD)
+		_result_sub_label.text = "Target: %d" % GameManager.target_score
+		var reward := GameManager.get_round_reward()
+		_result_coins_label.text = "+%d coins" % reward
+		_result_coins_label.visible = true
+		_result_next_btn.visible = true
+		_result_menu_btn.visible = false
 	else:
-		_result_message.text = "DEFEAT"
+		_result_message.text = "GAME OVER"
 		_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
+		_result_sub_label.text = "Reached Round %d" % GameManager.current_round
+		_result_coins_label.visible = false
+		_result_next_btn.visible = false
+		_result_menu_btn.visible = true
 
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
@@ -696,7 +731,12 @@ func _emit_roll_particles() -> void:
 
 # -- Navigation ----------------------------------------------------------------
 
+func _on_next_round_pressed() -> void:
+	var tween := create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
+
 func _go_to_main_menu() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(GameManager.go_to_main_menu)
+	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, false))

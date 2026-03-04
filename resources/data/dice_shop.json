@@ -12,7 +12,7 @@
   {
     "id": "loaded_die",
     "name": "Loaded Die",
-    "description": "A die weighted toward high rolls: faces 1, 5, 5, 6, 6, 6",
+    "description": "A die weighted toward high rolls",
     "category": "die",
     "cost": 25,
     "params": {
@@ -23,7 +23,7 @@
   {
     "id": "balanced_die",
     "name": "Balanced Die",
-    "description": "A die with balanced mid-range faces: 3, 3, 4, 4, 5, 5",
+    "description": "A die with balanced mid-range faces",
     "category": "die",
     "cost": 20,
     "params": {
@@ -89,25 +89,25 @@
   {
     "id": "pair_boost",
     "name": "Pair Boost",
-    "description": "Pairs score double",
+    "description": "+4 mult on Pairs or better",
     "category": "modifier",
     "cost": 12,
     "params": {
-      "effect": "multiply_combo",
-      "target_combo": "pair",
-      "value": 2.0
+      "effect": "add_mult",
+      "condition": "pair",
+      "value": 4.0
     }
   },
   {
     "id": "full_house_master",
     "name": "Full House Master",
-    "description": "Full houses score x3",
+    "description": "+8 mult on Full Houses",
     "category": "modifier",
     "cost": 18,
     "params": {
-      "effect": "multiply_combo",
-      "target_combo": "full_house",
-      "value": 3.0
+      "effect": "add_mult",
+      "condition": "full_house",
+      "value": 8.0
     }
   },
   {
@@ -124,13 +124,13 @@
   {
     "id": "yahtzee_hunter",
     "name": "Yahtzee Hunter",
-    "description": "Yahtzee scores x2 extra",
+    "description": "x3 on Yahtzees",
     "category": "modifier",
     "cost": 22,
     "params": {
-      "effect": "multiply_combo",
-      "target_combo": "yahtzee",
-      "value": 2.0
+      "effect": "x_mult",
+      "condition": "yahtzee",
+      "value": 3.0
     }
   }
 ]

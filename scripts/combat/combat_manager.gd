@@ -1,7 +1,7 @@
 class_name CombatManager
 extends Node
 
-signal dice_rolled(results: Array[int])
+signal dice_rolled(values: Array[int])
 signal die_held(index: int, held: bool)
 signal hand_scored(combo: Dictionary, score_data: Dictionary)
 signal combat_ended(final_score: int, target_beaten: bool)
@@ -10,7 +10,7 @@ signal hands_changed(remaining: int)
 
 var hands_remaining: int = 4
 var rerolls_remaining: int = 2
-var current_roll: Array[int] = []
+var current_roll: Array[DiceFace] = []
 var held_dice: Array[bool] = [false, false, false, false, false]
 var running_score: int = 0
 var target_score: int = 150
@@ -28,6 +28,7 @@ func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int) -> vo
 	current_roll.clear()
 	has_rolled = false
 	_reset_held()
+	combo_detector.set_combo_rules(DataManager.get_combo_rules())
 
 func roll_dice() -> void:
 	if rerolls_remaining <= 0:
@@ -38,12 +39,19 @@ func roll_dice() -> void:
 
 	for i in range(active_dice.size()):
 		if not held_dice[i]:
+			var face := active_dice[i].roll()
 			if i < current_roll.size():
-				current_roll[i] = active_dice[i].roll()
+				current_roll[i] = face
 			else:
-				current_roll.append(active_dice[i].roll())
+				current_roll.append(face)
 
-	dice_rolled.emit(current_roll.duplicate())
+	dice_rolled.emit(current_roll_values())
+
+func current_roll_values() -> Array[int]:
+	var vals: Array[int] = []
+	for f in current_roll:
+		vals.append(f.value)
+	return vals
 
 func hold_die(index: int) -> void:
 	if index >= 0 and index < held_dice.size() and has_rolled:
@@ -74,7 +82,9 @@ func score_hand(modifiers: Array) -> Dictionary:
 	var combo := get_current_combo()
 	if combo.is_empty():
 		return {}
-	var score_data := scoring_engine.calculate_score(combo, current_roll, modifiers)
+
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	var score_data := scoring_engine.calculate_score(combo, current_roll, in_combo, modifiers)
 	running_score += score_data["total"]
 	hands_remaining -= 1
 	hands_changed.emit(hands_remaining)
@@ -82,7 +92,7 @@ func score_hand(modifiers: Array) -> Dictionary:
 	var result := {
 		"combo": combo,
 		"score_data": score_data,
-		"running_score": running_score
+		"running_score": running_score,
 	}
 	hand_scored.emit(combo, score_data)
 

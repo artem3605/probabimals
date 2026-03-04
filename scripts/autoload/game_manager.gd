@@ -17,12 +17,15 @@ var target_score: int = 150
 var hands_per_round: int = 4
 var rerolls_per_hand: int = 3
 var selected_dice: Array[Die] = []
+var current_round: int = 1
+const BASE_TARGET: int = 150
 
 func start_game() -> void:
 	delete_save()
 	coins = 50
 	total_score = 0
-	target_score = 150
+	current_round = 1
+	target_score = BASE_TARGET
 	modifiers.clear()
 	dice_bag = DiceBag.new()
 	for i in range(5):
@@ -42,17 +45,17 @@ func buy_item(item: Dictionary) -> bool:
 	var category: String = item.get("category", "")
 	match category:
 		"die":
-			var faces_arr: Array[int] = []
 			var params = item.get("params", {})
-			if params.has("faces"):
-				for f in params["faces"]:
-					faces_arr.append(int(f))
-			else:
-				faces_arr = [1, 2, 3, 4, 5, 6]
 			var die_color: String = params.get("color", "colorless")
-			var die_name: String = item.get("name", "Basic Die")
+			var die_name_str: String = item.get("name", "Basic Die")
 			var die_desc: String = item.get("description", "A standard six-sided die")
-			dice_bag.add_die(Die.new(faces_arr, die_color, die_name, die_desc))
+			if params.has("faces"):
+				var int_faces: Array[int] = []
+				for f in params["faces"]:
+					int_faces.append(int(f))
+				dice_bag.add_die(Die.from_values(int_faces, die_color, die_name_str, die_desc))
+			else:
+				dice_bag.add_die(Die.new([], die_color, die_name_str, die_desc))
 		"face":
 			pass
 		"modifier":
@@ -66,15 +69,25 @@ func buy_item(item: Dictionary) -> bool:
 					"name": item.get("name", ""),
 					"effect": effect,
 					"value": params.get("value", 1.0),
-					"target_combo": params.get("target_combo", "all"),
+					"condition": params.get("condition", ""),
 				}
 				modifiers.append(mod)
 	return true
 
-func swap_face(die_index: int, face_index: int, new_value: int) -> void:
+func buy_face_swap(die_index: int, face_index: int, new_face: DiceFace, cost: int) -> bool:
+	if coins < cost:
+		return false
+	coins -= cost
+	coins_changed.emit(coins)
 	var die := dice_bag.get_die(die_index)
 	if die != null:
-		die.swap_face(face_index, new_value)
+		die.swap_face(face_index, new_face)
+	return true
+
+func swap_face(die_index: int, face_index: int, new_face: DiceFace) -> void:
+	var die := dice_bag.get_die(die_index)
+	if die != null:
+		die.swap_face(face_index, new_face)
 
 func go_to_combat() -> void:
 	_change_phase(Phase.COMBAT)
@@ -88,10 +101,26 @@ func go_to_main_menu() -> void:
 func go_to_dice_select() -> void:
 	_change_phase(Phase.DICE_SELECT)
 
-func end_combat(final_score: int) -> void:
+func end_combat(final_score: int, target_beaten: bool) -> void:
 	total_score = final_score
 	score_changed.emit(total_score)
 	PokiSDK.gameplay_stop()
+	if target_beaten:
+		advance_round()
+	else:
+		go_to_main_menu()
+
+func advance_round() -> void:
+	var reward := 10 + 5 * current_round
+	coins += reward
+	coins_changed.emit(coins)
+	current_round += 1
+	target_score = int(floor(BASE_TARGET * pow(1.5, current_round - 1)))
+	selected_dice.clear()
+	_change_phase(Phase.FLEA_MARKET)
+
+func get_round_reward() -> int:
+	return 10 + 5 * current_round
 
 func _change_phase(new_phase: Phase) -> void:
 	var old_phase := current_phase
@@ -126,8 +155,18 @@ func has_save() -> bool:
 func save_game() -> void:
 	var dice_arr: Array = []
 	for d in dice_bag.get_all():
-		dice_arr.append({"faces": Array(d.faces), "color": d.color,
-			"name": d.die_name, "description": d.description})
+		var face_data: Array = []
+		for f in d.faces:
+			face_data.append({
+				"id": f.id, "value": f.value,
+				"face_type": DiceFace.Type.keys()[f.face_type].to_lower(),
+				"effect_value": f.effect_value,
+				"rarity": f.rarity, "cost": f.cost,
+			})
+		dice_arr.append({
+			"faces": face_data, "color": d.color,
+			"name": d.die_name, "description": d.description,
+		})
 
 	var save_phase := current_phase
 	if save_phase == Phase.COMBAT:
@@ -140,6 +179,7 @@ func save_game() -> void:
 		"target_score": target_score,
 		"hands_per_round": hands_per_round,
 		"rerolls_per_hand": rerolls_per_hand,
+		"current_round": current_round,
 		"dice_bag": dice_arr,
 		"modifiers": modifiers,
 	}
@@ -163,16 +203,28 @@ func load_game() -> void:
 	target_score = int(data.get("target_score", 150))
 	hands_per_round = int(data.get("hands_per_round", 4))
 	rerolls_per_hand = int(data.get("rerolls_per_hand", 3))
+	current_round = int(data.get("current_round", 1))
 
 	dice_bag = DiceBag.new()
 	var dice_arr: Array = data.get("dice_bag", [])
 	for d in dice_arr:
-		var faces: Array[int] = []
-		for f in d.get("faces", [1, 2, 3, 4, 5, 6]):
-			faces.append(int(f))
-		var die_name: String = str(d.get("name", "Basic Die"))
+		var die_faces: Array[DiceFace] = []
+		var raw_faces: Array = d.get("faces", [])
+		for f in raw_faces:
+			if f is Dictionary and f.has("face_type"):
+				die_faces.append(DiceFace.new(
+					str(f.get("id", "")),
+					int(f.get("value", 0)),
+					DiceFace.type_from_string(str(f.get("face_type", "basic"))),
+					float(f.get("effect_value", 0.0)),
+					str(f.get("rarity", "common")),
+					int(f.get("cost", 0)),
+				))
+			else:
+				die_faces.append(DiceFace.make_basic(int(f)))
+		var die_name_str: String = str(d.get("name", "Basic Die"))
 		var die_desc: String = str(d.get("description", "A standard six-sided die"))
-		dice_bag.add_die(Die.new(faces, str(d.get("color", "colorless")), die_name, die_desc))
+		dice_bag.add_die(Die.new(die_faces, str(d.get("color", "colorless")), die_name_str, die_desc))
 
 	modifiers.clear()
 	var mods: Array = data.get("modifiers", [])
