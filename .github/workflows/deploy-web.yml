@@ -25,9 +25,17 @@ jobs:
 
       - name: Setup export templates
         run: |
-          mkdir -p /root/.local/share/godot/export_templates/4.6.stable
-          mv /root/.local/share/godot/templates/web* /root/.local/share/godot/export_templates/4.6.stable/ || true
-          ls /root/.local/share/godot/export_templates/4.6.stable/
+          TEMPLATES_HOME="$HOME/.local/share/godot/export_templates/4.6.stable"
+          mkdir -p "$TEMPLATES_HOME"
+          if [ -d "/root/.local/share/godot/export_templates/4.6.stable" ]; then
+            cp -r /root/.local/share/godot/export_templates/4.6.stable/* "$TEMPLATES_HOME/" || true
+          fi
+          if [ -d "/root/.local/share/godot/templates" ]; then
+            cp /root/.local/share/godot/templates/* "$TEMPLATES_HOME/" || true
+          fi
+          echo "HOME=$HOME"
+          echo "Templates dir contents:"
+          ls -la "$TEMPLATES_HOME/"
 
       - name: Import project
         run: godot --headless --import 2>&1 || true
