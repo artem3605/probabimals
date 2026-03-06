@@ -11,6 +11,7 @@ const SHADOW_COLOR := Color(0, 0, 0, 0.5)
 const PINK := Color("ff69b4")
 const GREEN := Color("9acd32")
 const BLUE := Color("4a9eff")
+const CARD_BG := Color("c8e6f5")
 const DISABLED_BG := Color("99a1af")
 const DISABLED_TEXT := Color("4a5565")
 
@@ -85,7 +86,7 @@ func _apply_dark_button_style(btn: Button, border_width: int = 4, margin: int = 
 
 ## Create a StyleBoxFlat with pixel-art defaults (0 corner radius).
 func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK,
-		border_width: int = 4, margin: int = 18) -> StyleBoxFlat:
+		border_width: int = 4, margin: int = 20) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg_color
 	sb.border_color = border_color

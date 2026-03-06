@@ -8,6 +8,11 @@ var _current_values: Array[int] = []
 var _dice_face_textures: Array[AtlasTexture] = []
 
 var _menu_btn: Button
+var _combo_name_label: Label
+var _score_value_label: Label
+var _score_pts_suffix: Label
+var _score_breakdown_label: Label
+var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _dice_container: HBoxContainer
@@ -52,6 +57,7 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	_draw_all_bg()
 	_draw_button_shadows([_menu_btn], Vector2(4, 4))
+	_draw_panel_shadow(_score_panel, Vector2(8, 8))
 	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
 	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
 
@@ -94,6 +100,7 @@ func _build_ui() -> void:
 
 	_build_top_bar(content)
 	_build_hand_subtitle(content)
+	_build_score_panel(content)
 	_build_dice_tray(content)
 	_build_description_panel(content)
 
@@ -148,6 +155,42 @@ func _build_hand_subtitle(parent: VBoxContainer) -> void:
 	_hand_info_label = _make_pixel_label("", 14)
 	_hand_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(_hand_info_label)
+
+
+func _build_score_panel(parent: VBoxContainer) -> void:
+	var center := CenterContainer.new()
+	parent.add_child(center)
+
+	_score_panel = _make_panel(CARD_BG, CARD_BG, Vector2(620, 56), 12)
+	center.add_child(_score_panel)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 0)
+	_score_panel.add_child(row)
+
+	_combo_name_label = _make_pixel_label("", 16, DARK)
+	_combo_name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_combo_name_label)
+
+	var pts_row := HBoxContainer.new()
+	pts_row.add_theme_constant_override("separation", 6)
+	pts_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	pts_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pts_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(pts_row)
+
+	_score_value_label = _make_pixel_label("ROLL!", 18, DARK)
+	_score_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pts_row.add_child(_score_value_label)
+
+	_score_pts_suffix = _make_pixel_label("", 16, DARK)
+	_score_pts_suffix.size_flags_vertical = Control.SIZE_SHRINK_END
+	_score_pts_suffix.visible = false
+	pts_row.add_child(_score_pts_suffix)
+
+	_score_breakdown_label = _make_pixel_label("", 14, DARK)
+	_score_breakdown_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_score_breakdown_label)
 
 
 func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
@@ -351,6 +394,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # -- Drawing helpers -----------------------------------------------------------
 
+func _draw_panel_shadow(panel: Control, offset: Vector2) -> void:
+	if not is_instance_valid(panel) or not panel.visible:
+		return
+	var gp := panel.global_position - global_position
+	draw_rect(Rect2(gp + offset, panel.size), SHADOW_COLOR)
+
+
 # -- HUD updates --------------------------------------------------------------
 
 func _update_rerolls_display() -> void:
@@ -378,6 +428,49 @@ func _update_score_bar() -> void:
 	var track_w := _score_bar_track.size.x - 4
 	var ratio := clampf(float(running) / float(target), 0.0, 1.0)
 	_score_bar_fill.size = Vector2(track_w * ratio, 20)
+
+
+func _show_combo(combo: Dictionary) -> void:
+	var combo_name: String = combo.get("name", "")
+	_combo_name_label.text = combo_name.to_upper()
+
+	var priority: int = combo.get("priority", 0)
+	match priority:
+		0, 1:
+			_combo_name_label.add_theme_color_override("font_color", Color("888888"))
+		2, 3:
+			_combo_name_label.add_theme_color_override("font_color", Color("ff6b4a"))
+		4, 5:
+			_combo_name_label.add_theme_color_override("font_color", BLUE)
+		6, 7:
+			_combo_name_label.add_theme_color_override("font_color", GOLD)
+		8:
+			_combo_name_label.add_theme_color_override("font_color", PINK)
+
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	var preview := combat_mgr.scoring_engine.calculate_score(
+		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+
+	var face_sum: int = int(preview.get("face_sum", 0))
+	var mult: float = preview.get("mult", 1.0)
+	var x_mult: float = preview.get("x_mult", 1.0)
+	var pts: int = preview.get("total", 0)
+
+	_score_value_label.add_theme_font_size_override("font_size", 28)
+	_score_value_label.text = str(pts)
+	_score_pts_suffix.text = "PTS"
+	_score_pts_suffix.visible = true
+
+	if x_mult > 1.0:
+		_score_breakdown_label.text = "%d SUM x%.1f MULT x%.1f" % [face_sum, mult, x_mult]
+	else:
+		_score_breakdown_label.text = "%d SUM x%.1f MULT" % [face_sum, mult]
+
+	_score_panel.scale = Vector2(0.8, 0.8)
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.tween_property(_score_panel, "scale", Vector2.ONE, 0.25)
 
 
 # -- Signal handlers -----------------------------------------------------------
@@ -450,6 +543,17 @@ func _on_dice_rolled(results: Array[int]) -> void:
 			_current_values[i] = results[i]
 			_set_die_face(i, results[i])
 
+	var combo := combat_mgr.get_current_combo()
+	if not combo.is_empty():
+		_show_combo(combo)
+	else:
+		_combo_name_label.text = ""
+		_score_value_label.add_theme_font_size_override("font_size", 18)
+		_score_value_label.text = "NO COMBO"
+		_score_pts_suffix.text = ""
+		_score_pts_suffix.visible = false
+		_score_breakdown_label.text = ""
+
 	_update_rerolls_display()
 
 
@@ -470,6 +574,13 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	var tween := create_tween()
 
 	tween.tween_callback(func():
+		_combo_name_label.text = combo.get("name", "").to_upper()
+		_score_value_label.text = "+%d" % total
+		_score_value_label.add_theme_color_override("font_color", GREEN)
+		_score_pts_suffix.text = "PTS"
+		_score_pts_suffix.visible = true
+		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
+		_score_breakdown_label.text = ""
 		_update_score_bar()
 		_update_hand_display()
 	)
@@ -480,12 +591,23 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	)
 	tween.tween_interval(1.0)
 
-	tween.tween_callback(_reset_for_next_hand)
+	tween.tween_callback(func():
+		_score_value_label.add_theme_color_override("font_color", DARK)
+		_score_pts_suffix.add_theme_color_override("font_color", DARK)
+		_reset_for_next_hand()
+	)
 
 
 func _reset_for_next_hand() -> void:
 	if combat_mgr.hands_remaining <= 0:
 		return
+
+	_combo_name_label.text = ""
+	_score_value_label.add_theme_font_size_override("font_size", 18)
+	_score_value_label.text = "ROLL!"
+	_score_pts_suffix.text = ""
+	_score_pts_suffix.visible = false
+	_score_breakdown_label.text = ""
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0

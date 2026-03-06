@@ -23,7 +23,7 @@
   {
     "id": "balanced_die",
     "name": "Balanced Die",
-    "description": "A die with balanced mid-range faces",
+    "description": "A die with mid-range faces",
     "category": "die",
     "cost": 20,
     "params": {

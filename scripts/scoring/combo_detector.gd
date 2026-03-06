@@ -2,9 +2,15 @@ class_name ComboDetector
 extends RefCounted
 
 var _combo_rules: Array = []
+var _rules_by_type: Dictionary = {}
 
 func set_combo_rules(rules: Array) -> void:
 	_combo_rules = rules
+	_rules_by_type.clear()
+	for rule in rules:
+		var t: String = rule.get("type", "")
+		if t != "":
+			_rules_by_type[t] = rule
 
 func detect_best_combo(faces: Array[DiceFace]) -> Dictionary:
 	if faces.size() == 0:
@@ -66,30 +72,47 @@ func _detect_from_values(values: Array[int], faces: Array[DiceFace]) -> Dictiona
 	var sorted_values := values.duplicate()
 	sorted_values.sort()
 
+	var checks: Array[String] = []
 	if _is_yahtzee(freq):
-		return _make_combo_with_in_combo("Yahtzee", "yahtzee", 10.0, 8, values)
+		checks.append("yahtzee")
 	if _is_four_of_a_kind(freq):
-		return _make_combo_with_in_combo("Four of a Kind", "four_of_a_kind", 7.0, 7, values)
+		checks.append("four_of_a_kind")
 	if _is_large_straight(sorted_values):
-		return _make_combo_with_in_combo("Large Straight", "large_straight", 5.0, 6, values)
+		checks.append("large_straight")
 	if _is_full_house(freq):
-		return _make_combo_with_in_combo("Full House", "full_house", 4.0, 5, values)
+		checks.append("full_house")
 	if _is_small_straight(sorted_values):
-		return _make_combo_with_in_combo("Small Straight", "small_straight", 3.5, 4, values)
+		checks.append("small_straight")
 	if _is_three_of_a_kind(freq):
-		return _make_combo_with_in_combo("Three of a Kind", "three_of_a_kind", 3.0, 3, values)
+		checks.append("three_same")
 	if _is_two_pair(freq):
-		return _make_combo_with_in_combo("Two Pair", "two_pair", 2.0, 2, values)
+		checks.append("two_pair")
 	if _is_pair(freq):
-		return _make_combo_with_in_combo("Pair", "pair", 1.5, 1, values)
+		checks.append("pair")
+	checks.append("high_card")
 
-	return _make_combo_with_in_combo("High Card", "high_card", 1.0, 0, values)
+	var best_type := checks[0]
+	var best_prio := _get_rule_priority(best_type)
+	for t in checks:
+		var p := _get_rule_priority(t)
+		if p > best_prio:
+			best_prio = p
+			best_type = t
+	return _make_combo_from_rule(best_type, values)
 
-func _make_combo_with_in_combo(combo_name: String, combo_type: String,
-		mult: float, prio: int, values: Array[int]) -> Dictionary:
-	var in_combo := _compute_in_combo(values, {
-		"type": combo_type, "priority": prio
-	})
+
+func _get_rule_priority(combo_type: String) -> int:
+	if _rules_by_type.has(combo_type):
+		return int(_rules_by_type[combo_type].get("priority", -1))
+	return -1
+
+
+func _make_combo_from_rule(combo_type: String, values: Array[int]) -> Dictionary:
+	var rule: Dictionary = _rules_by_type.get(combo_type, {})
+	var combo_name: String = rule.get("name", combo_type)
+	var mult: float = float(rule.get("combo_mult", 1.0))
+	var prio: int = int(rule.get("priority", 0))
+	var in_combo := _compute_in_combo(values, {"type": combo_type, "priority": prio})
 	return _make_combo(combo_name, combo_type, mult, prio, in_combo)
 
 func _compute_in_combo(values: Array[int], combo: Dictionary) -> Array[bool]:

@@ -18,8 +18,8 @@
     "priority": 2
   },
   {
-    "name": "Three of a Kind",
-    "type": "three_of_a_kind",
+    "name": "Three Same",
+    "type": "three_same",
     "combo_mult": 3.0,
     "priority": 3
   },
