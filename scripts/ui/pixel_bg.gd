@@ -85,7 +85,7 @@ func _apply_dark_button_style(btn: Button, border_width: int = 4, margin: int = 
 
 ## Create a StyleBoxFlat with pixel-art defaults (0 corner radius).
 func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK,
-		border_width: int = 4, margin: int = 8) -> StyleBoxFlat:
+		border_width: int = 4, margin: int = 18) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg_color
 	sb.border_color = border_color
@@ -104,9 +104,9 @@ func _make_colored_button(text: String, min_size: Vector2, bg_color: Color,
 	btn.add_theme_font_override("font", _pixel_font)
 	btn.add_theme_font_size_override("font_size", font_size)
 
-	btn.add_theme_stylebox_override("normal", _make_style(bg_color))
-	btn.add_theme_stylebox_override("hover", _make_style(hover_color))
-	btn.add_theme_stylebox_override("disabled", _make_style(DISABLED_BG))
+	btn.add_theme_stylebox_override("normal", _make_style(bg_color, BORDER_BLACK, 4, 18))
+	btn.add_theme_stylebox_override("hover", _make_style(hover_color, BORDER_BLACK, 4, 18))
+	btn.add_theme_stylebox_override("disabled", _make_style(DISABLED_BG, BORDER_BLACK, 4, 18))
 
 	btn.add_theme_color_override("font_color", DARK)
 	btn.add_theme_color_override("font_hover_color", DARK)

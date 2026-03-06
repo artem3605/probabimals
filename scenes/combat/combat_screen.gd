@@ -8,11 +8,6 @@ var _current_values: Array[int] = []
 var _dice_face_textures: Array[AtlasTexture] = []
 
 var _menu_btn: Button
-var _combo_name_label: Label
-var _score_value_label: Label
-var _score_pts_suffix: Label
-var _score_breakdown_label: Label
-var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _dice_container: HBoxContainer
@@ -21,8 +16,6 @@ var _desc_title: Label
 var _desc_body: Label
 
 var _hand_info_label: Label
-var _target_label: Label
-var _target_panel: PanelContainer
 
 var _score_bar_fill: ColorRect
 var _score_bar_track: ColorRect
@@ -59,8 +52,6 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	_draw_all_bg()
 	_draw_button_shadows([_menu_btn], Vector2(4, 4))
-	_draw_panel_shadow(_target_panel, Vector2(4, 4))
-	_draw_panel_shadow(_score_panel, Vector2(8, 8))
 	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
 	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
 
@@ -101,25 +92,20 @@ func _build_ui() -> void:
 	var content: VBoxContainer = layout["content"]
 	var action_bar: HBoxContainer = layout["action_bar"]
 
-	var center_wrap := action_bar.get_parent()
-	var outer := center_wrap.get_parent()
-	center_wrap.remove_child(action_bar)
-	outer.remove_child(center_wrap)
-	center_wrap.queue_free()
-	outer.add_child(action_bar)
-
 	_build_top_bar(content)
-	_build_score_panel(content)
+	_build_hand_subtitle(content)
 	_build_dice_tray(content)
 	_build_description_panel(content)
 
-	_build_score_bar(action_bar)
+	var outer := content.get_parent()
+	var action_center := action_bar.get_parent()
+	_build_score_bar(outer, action_center)
 
-	_reroll_btn = _make_colored_button("REROLL (3)", Vector2(200, 48), PINK, PINK.lightened(0.15), 14)
+	_reroll_btn = _make_colored_button("", Vector2(152, 68), PINK, PINK.lightened(0.15), 14)
 	_reroll_btn.pressed.connect(_on_roll_pressed)
 	action_bar.add_child(_reroll_btn)
 
-	_end_turn_btn = _make_colored_button("END TURN", Vector2(200, 48), GREEN, GREEN.lightened(0.15), 16)
+	_end_turn_btn = _make_colored_button("", Vector2(168, 68), GREEN, GREEN.lightened(0.15), 16)
 	_end_turn_btn.pressed.connect(_on_score_pressed)
 	action_bar.add_child(_end_turn_btn)
 
@@ -135,79 +121,44 @@ func _build_ui() -> void:
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 16)
+	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
 	_menu_btn = _make_menu_button()
-	_menu_btn.custom_minimum_size.y = 40
 	_menu_btn.pressed.disconnect(_go_to_main_menu)
 	_menu_btn.pressed.connect(_on_pause_pressed)
 	bar.add_child(_menu_btn)
 
-	_hand_info_label = _make_pixel_label("", 14, DARK)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer)
+
+	bar.add_child(_make_title_bar("COMBAT"))
+
+	var spacer2 := Control.new()
+	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(spacer2)
+
+	var right_placeholder := Control.new()
+	right_placeholder.custom_minimum_size = Vector2(96, 0)
+	bar.add_child(right_placeholder)
+
+
+func _build_hand_subtitle(parent: VBoxContainer) -> void:
+	_hand_info_label = _make_pixel_label("", 14)
 	_hand_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hand_info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_hand_info_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_child(_hand_info_label)
-
-	_target_panel = _make_panel(DARK, BORDER_BLACK, Vector2(142, 42), 8)
-	var target_style: StyleBoxFlat = _target_panel.get_theme_stylebox("panel")
-	target_style.content_margin_left = 12
-	target_style.content_margin_right = 12
-	_target_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	bar.add_child(_target_panel)
-
-	var target_hbox := HBoxContainer.new()
-	target_hbox.add_theme_constant_override("separation", 8)
-	target_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_target_panel.add_child(target_hbox)
-
-	var target_text := _make_pixel_label("TARGET", 14, Color.WHITE)
-	target_hbox.add_child(target_text)
-
-	_target_label = _make_pixel_label(str(GameManager.target_score), 20, GOLD)
-	target_hbox.add_child(_target_label)
+	parent.add_child(_hand_info_label)
 
 
-func _build_score_panel(parent: VBoxContainer) -> void:
+func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 	var center := CenterContainer.new()
-	parent.add_child(center)
+	outer.add_child(center)
+	outer.move_child(center, before.get_index())
 
-	_score_panel = _make_panel(Color.WHITE, BORDER_BLACK, Vector2(244, 124), 16)
-	center.add_child(_score_panel)
-
-	var score_vbox := VBoxContainer.new()
-	score_vbox.add_theme_constant_override("separation", 6)
-	score_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_score_panel.add_child(score_vbox)
-
-	_combo_name_label = _make_pixel_label("", 18, Color("ff6b4a"))
-	_combo_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	score_vbox.add_child(_combo_name_label)
-
-	var pts_row := HBoxContainer.new()
-	pts_row.add_theme_constant_override("separation", 8)
-	pts_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	score_vbox.add_child(pts_row)
-
-	_score_value_label = _make_pixel_label("ROLL!", 32)
-	_score_value_label.size_flags_vertical = Control.SIZE_SHRINK_END
-	pts_row.add_child(_score_value_label)
-
-	_score_pts_suffix = _make_pixel_label("", 18)
-	_score_pts_suffix.size_flags_vertical = Control.SIZE_SHRINK_END
-	pts_row.add_child(_score_pts_suffix)
-
-	_score_breakdown_label = _make_pixel_label("", 14, Color("4a9ebb"))
-	_score_breakdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	score_vbox.add_child(_score_breakdown_label)
-
-
-func _build_score_bar(parent: HBoxContainer) -> void:
 	var bar_container := HBoxContainer.new()
 	bar_container.add_theme_constant_override("separation", 12)
-	bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar_container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	parent.add_child(bar_container)
+	bar_container.custom_minimum_size = Vector2(500, 0)
+	center.add_child(bar_container)
 
 	var score_label := _make_pixel_label("SCORE", 14, DARK)
 	score_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -400,28 +351,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # -- Drawing helpers -----------------------------------------------------------
 
-func _draw_panel_shadow(panel: Control, offset: Vector2) -> void:
-	if not is_instance_valid(panel) or not panel.visible:
-		return
-	var gp := panel.global_position - global_position
-	draw_rect(Rect2(gp + offset, panel.size), SHADOW_COLOR)
-
-
 # -- HUD updates --------------------------------------------------------------
 
 func _update_rerolls_display() -> void:
-	var remaining := combat_mgr.rerolls_remaining
 	if _reroll_btn:
+		_reroll_btn.text = "ROLL DICE (%d left)" % combat_mgr.rerolls_remaining
 		_reroll_btn.disabled = not combat_mgr.can_roll()
-		_reroll_btn.text = "REROLL (%d)" % remaining
 	if _end_turn_btn:
+		_end_turn_btn.text = "END TURN"
 		_end_turn_btn.disabled = not combat_mgr.can_score()
 
 
 func _update_hand_display() -> void:
 	if _hand_info_label:
 		var current_hand := _total_hands - combat_mgr.hands_remaining + 1
-		_hand_info_label.text = "HAND %d/%d" % [current_hand, _total_hands]
+		_hand_info_label.text = "Hand %d/%d" % [current_hand, _total_hands]
 
 
 func _update_score_bar() -> void:
@@ -506,57 +450,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 			_current_values[i] = results[i]
 			_set_die_face(i, results[i])
 
-	var combo := combat_mgr.get_current_combo()
-	if not combo.is_empty():
-		_show_combo(combo)
-	else:
-		_combo_name_label.text = ""
-		_score_value_label.text = "NO COMBO"
-		_score_pts_suffix.text = ""
-		_score_breakdown_label.text = ""
-
 	_update_rerolls_display()
-
-
-func _show_combo(combo: Dictionary) -> void:
-	var combo_name: String = combo.get("name", "")
-	_combo_name_label.text = combo_name.to_upper()
-
-	var priority: int = combo.get("priority", 0)
-	match priority:
-		0, 1:
-			_combo_name_label.add_theme_color_override("font_color", Color("888888"))
-		2, 3:
-			_combo_name_label.add_theme_color_override("font_color", Color("ff6b4a"))
-		4, 5:
-			_combo_name_label.add_theme_color_override("font_color", BLUE)
-		6, 7:
-			_combo_name_label.add_theme_color_override("font_color", GOLD)
-		8:
-			_combo_name_label.add_theme_color_override("font_color", PINK)
-
-	var in_combo: Array[bool] = combo.get("in_combo", [])
-	var preview := combat_mgr.scoring_engine.calculate_score(
-		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
-
-	var face_sum: int = int(preview.get("face_sum", 0))
-	var mult: float = preview.get("mult", 1.0)
-	var x_mult: float = preview.get("x_mult", 1.0)
-	var pts: int = preview.get("total", 0)
-
-	_score_value_label.text = str(pts)
-	_score_pts_suffix.text = "PTS"
-
-	if x_mult > 1.0:
-		_score_breakdown_label.text = "%d SUM  x%.1f MULT  x%.1f" % [face_sum, mult, x_mult]
-	else:
-		_score_breakdown_label.text = "%d SUM  x%.1f MULT" % [face_sum, mult]
-
-	_score_panel.scale = Vector2(0.8, 0.8)
-	var tween := create_tween()
-	tween.set_ease(Tween.EASE_OUT)
-	tween.set_trans(Tween.TRANS_BACK)
-	tween.tween_property(_score_panel, "scale", Vector2.ONE, 0.25)
 
 
 func _on_score_pressed() -> void:
@@ -576,12 +470,6 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	var tween := create_tween()
 
 	tween.tween_callback(func():
-		_combo_name_label.text = combo.get("name", "").to_upper()
-		_score_value_label.text = "+%d" % total
-		_score_value_label.add_theme_color_override("font_color", GREEN)
-		_score_pts_suffix.text = "PTS"
-		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
-		_score_breakdown_label.text = ""
 		_update_score_bar()
 		_update_hand_display()
 	)
@@ -592,21 +480,12 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	)
 	tween.tween_interval(1.0)
 
-	tween.tween_callback(func():
-		_score_value_label.add_theme_color_override("font_color", DARK)
-		_score_pts_suffix.add_theme_color_override("font_color", DARK)
-		_reset_for_next_hand()
-	)
+	tween.tween_callback(_reset_for_next_hand)
 
 
 func _reset_for_next_hand() -> void:
 	if combat_mgr.hands_remaining <= 0:
 		return
-
-	_combo_name_label.text = ""
-	_score_value_label.text = "ROLL!"
-	_score_pts_suffix.text = ""
-	_score_breakdown_label.text = ""
 
 	for i in range(_current_values.size()):
 		_current_values[i] = 0

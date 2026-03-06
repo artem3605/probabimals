@@ -53,12 +53,26 @@ func _build_ui() -> void:
 	_build_shop_row(content)
 	_build_description_panel(content)
 
-	_reroll_btn = _make_colored_button("REROLL\n%d coins" % REROLL_COST, Vector2(152, 68), PINK, PINK.lightened(0.15), 14)
+	_reroll_btn = _make_colored_button("", Vector2(220, 68), PINK, PINK.lightened(0.15), 16)
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rtl.set_anchors_preset(Control.PRESET_CENTER)
+	rtl.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	rtl.grow_vertical = Control.GROW_DIRECTION_BOTH
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rtl.add_theme_font_override("normal_font", _pixel_font)
+	rtl.add_theme_font_size_override("normal_font_size", 16)
+	rtl.add_theme_color_override("default_color", DARK)
+	rtl.text = "[center]REFRESH [img=24]res://assets/art/ui/coin.png[/img]%d[/center]" % REROLL_COST
+	_reroll_btn.add_child(rtl)
 	_reroll_btn.pressed.connect(_on_reroll_pressed)
 	action_bar.add_child(_reroll_btn)
 	_all_buttons.append(_reroll_btn)
 
-	_ready_btn = _make_colored_button("READY!", Vector2(168, 68), GREEN, GREEN.lightened(0.15), 16)
+	_ready_btn = _make_colored_button("READY!", Vector2(0, 68), GREEN, GREEN.lightened(0.15), 16)
 	_ready_btn.pressed.connect(_on_ready_pressed)
 	action_bar.add_child(_ready_btn)
 	_all_buttons.append(_ready_btn)
@@ -72,23 +86,24 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
+	var left_box := HBoxContainer.new()
+	left_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(left_box)
 	var menu_btn := _make_menu_button()
-	bar.add_child(menu_btn)
+	menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	left_box.add_child(menu_btn)
 	_all_buttons.append(menu_btn)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(spacer)
 
 	bar.add_child(_make_title_bar("FLEA MARKET"))
 
-	var spacer2 := Control.new()
-	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(spacer2)
+	var right_wrapper := HBoxContainer.new()
+	right_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_wrapper.alignment = BoxContainer.ALIGNMENT_END
+	bar.add_child(right_wrapper)
 
 	var right_vbox := VBoxContainer.new()
 	right_vbox.add_theme_constant_override("separation", 12)
-	bar.add_child(right_vbox)
+	right_wrapper.add_child(right_vbox)
 
 	var coin_panel := _make_panel(GOLD, BORDER_BLACK, Vector2(124, 48))
 	right_vbox.add_child(coin_panel)
@@ -104,7 +119,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	_coin_label = _make_pixel_label("", 16)
 	coin_hbox.add_child(_coin_label)
 
-	_my_dice_btn = _make_colored_button("MY DICE", Vector2(124, 44), BLUE, BLUE.lightened(0.15), 12)
+	_my_dice_btn = _make_colored_button("MY BAG", Vector2(124, 44), BLUE, BLUE.lightened(0.15), 12)
 	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
 	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
 	right_vbox.add_child(_my_dice_btn)
@@ -251,7 +266,7 @@ func _on_my_dice_hover_enter() -> void:
 			groups[key] = 0
 		groups[key] += 1
 
-	_desc_title.text = "MY DICE"
+	_desc_title.text = "MY BAG"
 	_desc_title.add_theme_color_override("font_color", GOLD)
 	var lines := ""
 	for key: String in groups:
