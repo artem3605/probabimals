@@ -1,10 +1,12 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
+const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := 7
 
 var _shop_offerings: Array[Dictionary] = []
+var _sold: Array[bool] = []
 var _coin_label: Label
 var _shop_container: HBoxContainer
 var _reroll_btn: Button
@@ -78,11 +80,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	var title_vbox := _make_title_bar("ROUND %d  --  FLEA MARKET" % GameManager.current_round)
-	var target_lbl := _make_pixel_label("Target: %d" % GameManager.target_score, 14, Color("aaaaaa"))
-	target_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_vbox.add_child(target_lbl)
-	bar.add_child(title_vbox)
+	bar.add_child(_make_title_bar("FLEA MARKET"))
 
 	var spacer2 := Control.new()
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -97,6 +95,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 
 	var coin_hbox := HBoxContainer.new()
 	coin_hbox.add_theme_constant_override("separation", 8)
+	coin_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	coin_panel.add_child(coin_hbox)
 
 	var coin_icon := _create_coin_icon()
@@ -149,6 +148,7 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 
 func _generate_offerings() -> void:
 	_shop_offerings.clear()
+	_sold.clear()
 	var catalogue := DataManager.get_shop_catalogue()
 	if catalogue.is_empty():
 		return
@@ -158,6 +158,7 @@ func _generate_offerings() -> void:
 	var count := mini(SHOP_SLOTS, shuffled.size())
 	for i in count:
 		_shop_offerings.append(shuffled[i])
+		_sold.append(false)
 
 	_refresh_shop_display()
 
@@ -168,58 +169,30 @@ func _refresh_shop_display() -> void:
 
 	for i in _shop_offerings.size():
 		var item := _shop_offerings[i]
-		var card := ItemCard.new()
+		var card := ShopItemCard.new()
 		card.setup_as_shop_item(item, _pixel_font)
-		card.card_pressed.connect(_on_shop_item_clicked.bind(i))
+		card.buy_pressed.connect(_on_shop_item_buy.bind(i))
 		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_card_hover_exit)
 		_shop_container.add_child(card)
 
+	_update_buy_buttons()
+
 
 func _draw_shop_card_shadows() -> void:
 	for child in _shop_container.get_children():
-		if not child is ItemCard:
+		if not child is ItemCard or not child.visible:
 			continue
-		var card: Control = child
-		if card.get("main_button") == null:
-			continue
-		var btn: Button = card.get("main_button")
-		if is_instance_valid(btn) and btn.visible:
-			var gp: Vector2 = btn.global_position - global_position
-			draw_rect(
-				Rect2(gp + Vector2(4, 4), btn.size),
-				SHADOW_COLOR
-			)
+		var gp: Vector2 = child.global_position - global_position
+		draw_rect(
+			Rect2(gp + Vector2(4, 4), child.size),
+			SHADOW_COLOR
+		)
 
 
 func _create_coin_icon() -> TextureRect:
-	var s := 16
-	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
-	var gold := Color("ffd700")
-	var highlight := Color("fff176")
-	var shadow := Color("b8860b")
-	var outline := Color("1a1a1a")
-
-	var cx := 7.5
-	var cy := 7.5
-	for x in s:
-		for y in s:
-			var dx := x - cx
-			var dy := y - cy
-			var dist := sqrt(dx * dx + dy * dy)
-			if dist <= 5.0:
-				if dx + dy < -3.0:
-					img.set_pixel(x, y, highlight)
-				elif dx + dy > 3.0:
-					img.set_pixel(x, y, shadow)
-				else:
-					img.set_pixel(x, y, gold)
-			elif dist <= 6.5:
-				img.set_pixel(x, y, outline)
-
-	var tex := ImageTexture.create_from_image(img)
 	var rect := TextureRect.new()
-	rect.texture = tex
+	rect.texture = preload("res://assets/art/ui/coin.png")
 	rect.custom_minimum_size = Vector2(24, 24)
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -234,6 +207,20 @@ func _update_coins() -> void:
 		_coin_label.text = str(GameManager.coins)
 	if _reroll_btn:
 		_reroll_btn.disabled = GameManager.coins < REROLL_COST
+	_update_buy_buttons()
+
+
+func _update_buy_buttons() -> void:
+	var cards := _shop_container.get_children()
+	for i in mini(cards.size(), _shop_offerings.size()):
+		var card = cards[i]
+		if card is ShopItemCard:
+			if _sold[i]:
+				card.set_buy_status("sold")
+			elif GameManager.coins < _shop_offerings[i].get("cost", 0):
+				card.set_buy_status("no_money")
+			else:
+				card.set_buy_status("buy")
 
 
 # -- Callbacks -----------------------------------------------------------------
@@ -295,35 +282,25 @@ func _on_card_hover_exit() -> void:
 	_desc_panel.visible = false
 
 
-func _on_shop_item_clicked(index: int) -> void:
-	if index < 0 or index >= _shop_offerings.size():
+func _on_shop_item_buy(index: int) -> void:
+	if index < 0 or index >= _shop_offerings.size() or _sold[index]:
 		return
 	var item := _shop_offerings[index]
 
 	if item.get("category", "") == "face":
 		if GameManager.coins < item.get("cost", 0):
-			_desc_title.text = "Not enough coins!"
-			_desc_title.add_theme_color_override("font_color", Color("ff4444"))
-			_desc_body.text = ""
-			_desc_panel.visible = true
 			return
 		_show_die_picker(item, index)
 		return
 
 	var success := GameManager.buy_item(item)
 	if success:
-		_shop_offerings.remove_at(index)
-		_refresh_shop_display()
+		_sold[index] = true
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("font_color", GREEN)
 		_desc_body.text = item.get("name", "")
 		_desc_panel.visible = true
 		_update_coins()
-	else:
-		_desc_title.text = "Not enough coins!"
-		_desc_title.add_theme_color_override("font_color", Color("ff4444"))
-		_desc_body.text = ""
-		_desc_panel.visible = true
 
 
 # -- Face swap overlay ---------------------------------------------------------
@@ -369,7 +346,7 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 	_selected_die_index = -1
 
 	var new_value: int = item.get("params", {}).get("value", 0)
-	_face_swap_title.text = "CHOOSE A DIE\nNew face: %d" % new_value
+	_face_swap_title.text = "Choose a die to replace a face with %d" % new_value
 
 	_clear_swap_cards()
 	var all_dice := GameManager.dice_bag.get_all()
@@ -393,9 +370,10 @@ func _show_face_picker(die_index: int) -> void:
 		return
 
 	var new_value: int = _pending_face_item.get("params", {}).get("value", 0)
-	_face_swap_title.text = "%s\nReplace which face? (new: %d)" % [die.die_name.to_upper(), new_value]
+	_face_swap_title.text = "%s\nReplace which face with %d?" % [die.die_name.to_upper(), new_value]
 
 	_clear_swap_cards()
+	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	for i in range(die.faces.size()):
 		var face: DiceFace = die.faces[i]
 		var label_text := str(face.value)
@@ -410,9 +388,10 @@ func _show_face_picker(die_index: int) -> void:
 				DiceFace.Type.WILD:
 					label_text = "W"
 
-		var btn := _make_pixel_button(label_text, Vector2(96, 96), 20)
-		btn.pressed.connect(_on_swap_face_selected.bind(i))
-		_face_swap_cards.add_child(btn)
+		var card := ItemCard.new()
+		card._setup_card(card_color, label_text, _pixel_font)
+		card.card_pressed.connect(_on_swap_face_selected.bind(i))
+		_face_swap_cards.add_child(card)
 
 	_face_swap_action_btn.text = "BACK"
 	_reconnect_swap_btn(_on_face_swap_back)
@@ -427,27 +406,22 @@ func _on_swap_face_selected(face_index: int) -> void:
 	var face_id: String = params.get("face_id", "")
 	var face_value: int = int(params.get("value", 1))
 	var cost: int = _pending_face_item.get("cost", 0)
+	var shop_idx := _pending_shop_index
+	var item_name: String = _pending_face_item.get("name", "")
 
 	var new_face := DataManager.get_dice_face(face_id)
 	if new_face == null:
 		new_face = DiceFace.make_basic(face_value)
 
 	var success := GameManager.buy_face_swap(_selected_die_index, face_index, new_face, cost)
+	_close_face_swap()
 	if success:
-		_shop_offerings.remove_at(_pending_shop_index)
-		_refresh_shop_display()
-		_close_face_swap()
+		_sold[shop_idx] = true
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("font_color", GREEN)
-		_desc_body.text = _pending_face_item.get("name", "")
+		_desc_body.text = item_name
 		_desc_panel.visible = true
 		_update_coins()
-	else:
-		_close_face_swap()
-		_desc_title.text = "Not enough coins!"
-		_desc_title.add_theme_color_override("font_color", Color("ff4444"))
-		_desc_body.text = ""
-		_desc_panel.visible = true
 
 
 func _on_face_swap_cancel() -> void:

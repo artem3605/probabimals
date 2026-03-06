@@ -36,7 +36,7 @@ func setup(die: Die, pixel_font: Font, textures: Array[AtlasTexture]) -> void:
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.custom_minimum_size = Vector2(COMBAT_CARD_SIZE.x, 18)
 	bottom_control = name_label
-	add_child(bottom_control)
+	_vbox.add_child(bottom_control)
 
 
 func set_face(value: int) -> void:

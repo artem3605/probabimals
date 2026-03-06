@@ -62,21 +62,25 @@ func _make_pixel_button(text: String, min_size: Vector2, font_size: int = 16) ->
 	btn.custom_minimum_size = min_size
 	btn.add_theme_font_override("font", _pixel_font)
 	btn.add_theme_font_size_override("font_size", font_size)
+	_apply_dark_button_style(btn)
+	return btn
 
-	btn.add_theme_stylebox_override("normal", _make_style(DARK))
-	btn.add_theme_stylebox_override("hover", _make_style(Color("2a2a2a")))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color("0a0a0a")))
 
-	var focus := _make_style(DARK, GOLD)
-	focus.bg_color = Color(0, 0, 0, 0)
+func _apply_dark_button_style(btn: Button, border_width: int = 4, margin: int = 8) -> void:
+	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, border_width, margin))
+	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), border_width, margin))
+	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, border_width, margin))
+	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), border_width, margin))
+
+	var focus := _make_style(Color(0, 0, 0, 0), GOLD, border_width, margin)
+	focus.draw_center = false
 	btn.add_theme_stylebox_override("focus", focus)
 
 	btn.add_theme_color_override("font_color", GOLD)
 	btn.add_theme_color_override("font_hover_color", GOLD)
-	btn.add_theme_color_override("font_pressed_color", Color("ccaa00"))
+	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
 	btn.add_theme_color_override("font_focus_color", GOLD)
-
-	return btn
+	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
 
 
 ## Create a StyleBoxFlat with pixel-art defaults (0 corner radius).
@@ -167,7 +171,7 @@ func _make_screen_margin() -> MarginContainer:
 	return margin
 
 
-## Create a centered title label with a dark underline bar beneath it.
+## Create a centered title label with a dark underline bar and round/target subtitle.
 func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -180,6 +184,11 @@ func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 	underline.custom_minimum_size = Vector2(296, 4)
 	underline.color = DARK
 	vbox.add_child(underline)
+
+	var sub := _make_pixel_label(
+		"Round %d. Target %d." % [GameManager.current_round, GameManager.target_score], 12, DARK)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(sub)
 
 	return vbox
 
