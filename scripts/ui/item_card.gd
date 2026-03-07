@@ -38,12 +38,21 @@ var _vbox: VBoxContainer
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
+	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
+
 	var vals := die.get_face_values()
 	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
 	hover_name = die.die_name
 	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
-	_setup_card(card_color, "D", pixel_font)
+	_setup_card(card_color, "", pixel_font)
+
+	var face_panel := DiceFacePanel.new()
+	face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main_button.add_child(face_panel)
+	face_panel.set_face_color(card_color)
+	face_panel.set_value(5)
 
 	var name_label := Label.new()
 	name_label.text = DIE_NAMES.get(die.color, "BASIC")
@@ -71,6 +80,7 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
 
 	main_button = Button.new()
 	main_button.custom_minimum_size = card_size
+	main_button.pivot_offset = card_size / 2.0
 	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, 4, 4))
 	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, 4, 4))
 	main_button.add_theme_font_override("font", pixel_font)
@@ -109,6 +119,7 @@ func setup_frame() -> void:
 		main_button.mouse_exited.disconnect(conn["callable"])
 	mouse_entered.connect(_on_frame_hover_in)
 	mouse_exited.connect(_on_frame_hover_out)
+	gui_input.connect(_on_frame_click)
 
 
 func create_action_button(text: String, pixel_font: Font) -> Button:
@@ -183,6 +194,11 @@ func _on_frame_hover_in() -> void:
 func _on_frame_hover_out() -> void:
 	if not get_global_rect().has_point(get_global_mouse_position()):
 		card_hover_exited.emit()
+
+
+func _on_frame_click(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		card_pressed.emit()
 
 
 static func _create_coin_icon(display_size: int = 18) -> TextureRect:

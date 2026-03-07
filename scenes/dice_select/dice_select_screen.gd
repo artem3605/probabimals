@@ -110,15 +110,26 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 func _build_groups() -> void:
 	_groups.clear()
 	var all_dice := GameManager.dice_bag.get_all()
-	var color_order: Array[String] = []
-	var color_map: Dictionary = {}
-	for die: Die in all_dice:
-		if not color_map.has(die.color):
-			color_map[die.color] = {"die": die, "color": die.color, "total": 0, "selected": 0}
-			color_order.append(die.color)
-		color_map[die.color]["total"] += 1
-	for c in color_order:
-		_groups.append(color_map[c])
+	var key_order: Array[String] = []
+	var key_map: Dictionary = {}
+	for i in all_dice.size():
+		var die: Die = all_dice[i]
+		var key := _die_group_key(die)
+		if not key_map.has(key):
+			key_map[key] = {"die": die, "color": die.color, "total": 0, "selected": 0, "indices": []}
+			key_order.append(key)
+		key_map[key]["total"] += 1
+		key_map[key]["indices"].append(i)
+	for k in key_order:
+		_groups.append(key_map[k])
+
+
+func _die_group_key(die: Die) -> String:
+	var parts: Array[String] = []
+	for f: DiceFace in die.faces:
+		parts.append("%d:%d:%.2f" % [f.value, f.face_type, f.effect_value])
+	parts.sort()
+	return "%s|%s" % [die.color, "|".join(parts)]
 
 
 # -- State management ----------------------------------------------------------
@@ -220,14 +231,11 @@ func _on_confirm_pressed() -> void:
 	var selected: Array[Die] = []
 	for g in _groups:
 		var count: int = int(g["selected"])
-		var color: String = g["color"]
 		if count <= 0:
 			continue
-		var picked := 0
-		for die: Die in all_dice:
-			if die.color == color and picked < count:
-				selected.append(die)
-				picked += 1
+		var indices: Array = g["indices"]
+		for j in count:
+			selected.append(all_dice[indices[j]])
 
 	GameManager.selected_dice = selected
 	GameManager.go_to_combat()

@@ -8,6 +8,8 @@ var buy_button: Button
 
 
 func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
+	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
+
 	_font = pixel_font
 	hover_name = item.get("name", "")
 	hover_description = item.get("description", "")
@@ -22,6 +24,15 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 	var label_text := _get_card_label(item)
 
 	_setup_card(card_color, label_text, pixel_font)
+
+	if item.get("category", "") == "die":
+		var face_panel := DiceFacePanel.new()
+		face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		main_button.add_child(face_panel)
+		face_panel.set_face_color(card_color)
+		face_panel.set_value(5)
+
 	setup_frame()
 
 	_build_price_panel(item, pixel_font)
@@ -92,7 +103,7 @@ func _get_card_label(item: Dictionary) -> String:
 	var category: String = item.get("category", "")
 	match category:
 		"die":
-			return "D"
+			return ""
 		"face":
 			var val: int = item.get("params", {}).get("value", 0)
 			return str(val)

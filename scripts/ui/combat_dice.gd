@@ -1,27 +1,24 @@
 extends "res://scripts/ui/item_card.gd"
-## Combat-specific dice card with face sprite overlay, hold state, and roll helpers.
+## Combat-specific dice card with procedurally drawn face, hold state, and roll helpers.
 
-var _face_sprite: TextureRect
-var _face_textures: Array[AtlasTexture] = []
+const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
+
+var _face_panel: Control
 var _display_name: String = ""
-
 const COMBAT_CARD_SIZE := Vector2(110, 110)
 
 
-func setup(die: Die, pixel_font: Font, textures: Array[AtlasTexture]) -> void:
-	_face_textures = textures
+func setup(die: Die, pixel_font: Font) -> void:
 	_display_name = DIE_NAMES.get(die.color, "BASIC")
 
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
-	_setup_card(card_color, "D", pixel_font, COMBAT_CARD_SIZE)
+	_setup_card(card_color, "", pixel_font, COMBAT_CARD_SIZE)
 
-	_face_sprite = TextureRect.new()
-	_face_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_face_sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_face_sprite.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_face_sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_face_sprite.visible = false
-	main_button.add_child(_face_sprite)
+	_face_panel = DiceFacePanel.new()
+	_face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_face_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main_button.add_child(_face_panel)
+	_face_panel.set_face_color(card_color)
 
 	hover_name = die.die_name
 	var vals := die.get_face_values()
@@ -40,13 +37,7 @@ func setup(die: Die, pixel_font: Font, textures: Array[AtlasTexture]) -> void:
 
 
 func set_face(value: int) -> void:
-	if value <= 0 or value > 6:
-		_face_sprite.visible = false
-		main_button.text = "D"
-		return
-	_face_sprite.texture = _face_textures[value - 1]
-	_face_sprite.visible = true
-	main_button.text = ""
+	_face_panel.set_value(value)
 
 
 func set_held(held: bool) -> void:
@@ -63,4 +54,4 @@ func reset_die() -> void:
 
 
 func get_display_name() -> String:
-	return _display_name
+	return _display_name	

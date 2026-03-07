@@ -21,6 +21,9 @@ var _face_swap_overlay: ColorRect
 var _face_swap_title: Label
 var _face_swap_cards: HBoxContainer
 var _face_swap_action_btn: Button
+var _swap_desc_panel: PanelContainer
+var _swap_desc_title: Label
+var _swap_desc_body: Label
 var _pending_face_item: Dictionary = {}
 var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
@@ -327,30 +330,59 @@ func _build_face_swap_overlay() -> void:
 	_face_swap_overlay.visible = false
 	add_child(_face_swap_overlay)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_face_swap_overlay.add_child(center)
+	var margin := _make_screen_margin()
+	_face_swap_overlay.add_child(margin)
 
-	var vbox := VBoxContainer.new()
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 32)
-	center.add_child(vbox)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 32)
+	margin.add_child(outer)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 32)
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(content)
+
+	var top_spacer := Control.new()
+	top_spacer.custom_minimum_size = Vector2(0, 80)
+	content.add_child(top_spacer)
 
 	_face_swap_title = _make_pixel_label("", 24, GOLD)
 	_face_swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_face_swap_title)
+	content.add_child(_face_swap_title)
 
 	var cards_center := CenterContainer.new()
-	vbox.add_child(cards_center)
+	content.add_child(cards_center)
 
 	_face_swap_cards = HBoxContainer.new()
 	_face_swap_cards.add_theme_constant_override("separation", 24)
 	cards_center.add_child(_face_swap_cards)
 
-	var btn_center := CenterContainer.new()
-	vbox.add_child(btn_center)
+	var desc_center := CenterContainer.new()
+	content.add_child(desc_center)
 
-	_face_swap_action_btn = _make_colored_button("CANCEL", Vector2(200, 56), PINK, PINK.lightened(0.15), 14)
+	_swap_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_swap_desc_panel.visible = false
+	_swap_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_center.add_child(_swap_desc_panel)
+
+	var desc_vbox := VBoxContainer.new()
+	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_swap_desc_panel.add_child(desc_vbox)
+
+	_swap_desc_title = _make_pixel_label("", 14, GOLD)
+	_swap_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	desc_vbox.add_child(_swap_desc_title)
+
+	_swap_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_swap_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_swap_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_vbox.add_child(_swap_desc_body)
+
+	var btn_center := CenterContainer.new()
+	outer.add_child(btn_center)
+
+	_face_swap_action_btn = _make_colored_button("CANCEL", Vector2(200, 68), PINK, PINK.lightened(0.15), 16)
 	_face_swap_action_btn.pressed.connect(_on_face_swap_cancel)
 	btn_center.add_child(_face_swap_action_btn)
 
@@ -364,12 +396,15 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 	_face_swap_title.text = "Choose a die to replace a face with %d" % new_value
 
 	_clear_swap_cards()
+	_swap_desc_panel.visible = false
 	var all_dice := GameManager.dice_bag.get_all()
 	for i in all_dice.size():
 		var die: Die = all_dice[i]
 		var card := ItemCard.new()
 		card.setup_as_dice_item(die, _pixel_font)
 		card.card_pressed.connect(_on_swap_die_selected.bind(i))
+		card.card_hover_entered.connect(_on_swap_card_hover_enter.bind(card))
+		card.card_hover_exited.connect(_on_swap_card_hover_exit)
 		_face_swap_cards.add_child(card)
 
 	_face_swap_action_btn.text = "CANCEL"
@@ -387,24 +422,44 @@ func _show_face_picker(die_index: int) -> void:
 	var new_value: int = _pending_face_item.get("params", {}).get("value", 0)
 	_face_swap_title.text = "%s\nReplace which face with %d?" % [die.die_name.to_upper(), new_value]
 
+	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 	_clear_swap_cards()
+	_swap_desc_panel.visible = false
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	for i in range(die.faces.size()):
 		var face: DiceFace = die.faces[i]
-		var label_text := str(face.value)
-		if face.face_type != DiceFace.Type.BASIC:
-			match face.face_type:
-				DiceFace.Type.PIP:
-					label_text += "\n+%d" % int(face.effect_value)
-				DiceFace.Type.MULT:
-					label_text += "\n+%dM" % int(face.effect_value)
-				DiceFace.Type.XMULT:
-					label_text += "\nx%s" % str(face.effect_value)
-				DiceFace.Type.WILD:
-					label_text = "W"
 
 		var card := ItemCard.new()
-		card._setup_card(card_color, label_text, _pixel_font)
+		card._setup_card(card_color, "", _pixel_font)
+
+		var face_panel := DiceFacePanel.new()
+		face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+		face_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.main_button.add_child(face_panel)
+		face_panel.set_face_color(card_color)
+		face_panel.set_value(face.value)
+
+		if face.face_type != DiceFace.Type.BASIC:
+			var effect_text := ""
+			match face.face_type:
+				DiceFace.Type.PIP:
+					effect_text = "+%d" % int(face.effect_value)
+				DiceFace.Type.MULT:
+					effect_text = "+%dM" % int(face.effect_value)
+				DiceFace.Type.XMULT:
+					effect_text = "x%s" % str(face.effect_value)
+				DiceFace.Type.WILD:
+					effect_text = "WILD"
+			var effect_label := Label.new()
+			effect_label.text = effect_text
+			effect_label.add_theme_font_override("font", _pixel_font)
+			effect_label.add_theme_font_size_override("font_size", 10)
+			effect_label.add_theme_color_override("font_color", DARK)
+			effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			effect_label.custom_minimum_size = Vector2(96, 16)
+			card.bottom_control = effect_label
+			card._vbox.add_child(card.bottom_control)
+
 		card.card_pressed.connect(_on_swap_face_selected.bind(i))
 		_face_swap_cards.add_child(card)
 
@@ -449,9 +504,21 @@ func _on_face_swap_back() -> void:
 
 func _close_face_swap() -> void:
 	_face_swap_overlay.visible = false
+	_swap_desc_panel.visible = false
 	_pending_face_item = {}
 	_pending_shop_index = -1
 	_selected_die_index = -1
+
+
+func _on_swap_card_hover_enter(card: Control) -> void:
+	_swap_desc_title.add_theme_color_override("font_color", GOLD)
+	_swap_desc_title.text = card.hover_name
+	_swap_desc_body.text = card.hover_description
+	_swap_desc_panel.visible = true
+
+
+func _on_swap_card_hover_exit() -> void:
+	_swap_desc_panel.visible = false
 
 
 func _reconnect_swap_btn(target: Callable) -> void:

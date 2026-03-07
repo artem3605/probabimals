@@ -33,9 +33,6 @@ const DIE_NAMES := {
 	"purple": "PURPLE",
 }
 
-const DICE_SHEET_COLS := 3
-const DICE_SHEET_ROWS := 2
-
 var _pixel_font: Font
 
 
@@ -206,21 +203,6 @@ func _make_menu_button() -> Button:
 ## Navigate back to the main menu. Override in subclasses for custom transitions.
 func _go_to_main_menu() -> void:
 	GameManager.go_to_main_menu()
-
-
-## Load the 3x2 dice sprite sheet and return an array of AtlasTextures (faces 1-6).
-func _load_dice_sheet() -> Array[AtlasTexture]:
-	var textures: Array[AtlasTexture] = []
-	var sheet: Texture2D = load("res://assets/art/dice/dice_sheet.png")
-	var cell_w := sheet.get_width() / float(DICE_SHEET_COLS)
-	var cell_h := sheet.get_height() / float(DICE_SHEET_ROWS)
-	for row in DICE_SHEET_ROWS:
-		for col in DICE_SHEET_COLS:
-			var atlas := AtlasTexture.new()
-			atlas.atlas = sheet
-			atlas.region = Rect2(col * cell_w, row * cell_h, cell_w, cell_h)
-			textures.append(atlas)
-	return textures
 
 
 ## Create a transparent-background button for displaying dice/card sprites.

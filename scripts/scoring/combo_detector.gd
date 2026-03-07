@@ -76,7 +76,7 @@ func _detect_from_values(values: Array[int], faces: Array[DiceFace]) -> Dictiona
 	if _is_yahtzee(freq):
 		checks.append("yahtzee")
 	if _is_four_of_a_kind(freq):
-		checks.append("four_of_a_kind")
+		checks.append("four_same")
 	if _is_large_straight(sorted_values):
 		checks.append("large_straight")
 	if _is_full_house(freq):
@@ -128,7 +128,7 @@ func _compute_in_combo(values: Array[int], combo: Dictionary) -> Array[bool]:
 		"yahtzee":
 			for i in range(size):
 				in_combo[i] = true
-		"four_of_a_kind":
+		"four_same":
 			_mark_matching(values, 4, in_combo)
 		"full_house":
 			for i in range(size):
@@ -138,7 +138,7 @@ func _compute_in_combo(values: Array[int], combo: Dictionary) -> Array[bool]:
 				in_combo[i] = true
 		"small_straight":
 			_mark_straight(values, 4, in_combo)
-		"three_of_a_kind":
+		"three_same":
 			_mark_matching(values, 3, in_combo)
 		"two_pair":
 			_mark_two_pair(values, in_combo)
