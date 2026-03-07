@@ -4,9 +4,6 @@ extends "res://scripts/ui/item_card.gd"
 
 signal buy_pressed
 
-const FRAME_BG := Color("c8e6f5")
-const FRAME_BORDER := Color("7ab8e0")
-
 var buy_button: Button
 
 
@@ -25,25 +22,12 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 	var label_text := _get_card_label(item)
 
 	_setup_card(card_color, label_text, pixel_font)
-	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, 12))
-
-	# main_button is display-only inside the shop frame: no clicks, no hover style
-	main_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var normal_style := _make_style(card_color, BORDER_BLACK, 4, 4)
-	main_button.add_theme_stylebox_override("hover", normal_style)
-
-	# Disconnect base-class hover signals (they were connected on main_button)
-	for conn in main_button.mouse_entered.get_connections():
-		main_button.mouse_entered.disconnect(conn["callable"])
-	for conn in main_button.mouse_exited.get_connections():
-		main_button.mouse_exited.disconnect(conn["callable"])
-
-	# Frame-level hover: stays active when mouse moves between children
-	mouse_entered.connect(_on_hover_in)
-	mouse_exited.connect(_on_hover_out)
+	setup_frame()
 
 	_build_price_panel(item, pixel_font)
-	_build_buy_button(pixel_font)
+	buy_button = create_action_button("BUY", pixel_font)
+	buy_button.pressed.connect(func(): buy_pressed.emit())
+	set_buy_status("buy")
 
 
 func _build_price_panel(item: Dictionary, pixel_font: Font) -> void:
@@ -72,22 +56,10 @@ func _build_price_panel(item: Dictionary, pixel_font: Font) -> void:
 	_vbox.add_child(bottom_control)
 
 
-func _build_buy_button(pixel_font: Font) -> void:
-	buy_button = Button.new()
-	buy_button.custom_minimum_size = Vector2(96, 28)
-	buy_button.add_theme_font_override("font", pixel_font)
-	buy_button.add_theme_font_size_override("font_size", 10)
-	buy_button.pressed.connect(func(): buy_pressed.emit())
-	buy_button.mouse_entered.connect(_on_hover_in)
-	buy_button.mouse_exited.connect(_on_hover_out)
-	_vbox.add_child(buy_button)
-	set_buy_status("buy")
-
-
 func set_buy_status(status: String) -> void:
 	if buy_button == null:
 		return
-	_apply_buy_button_style(buy_button)
+	_apply_action_button_style(buy_button)
 	match status:
 		"buy":
 			buy_button.text = "BUY"
@@ -101,28 +73,6 @@ func set_buy_status(status: String) -> void:
 			buy_button.text = "SOLD"
 			buy_button.disabled = true
 			modulate = Color(0.7, 0.7, 0.7, 1)
-
-
-func _apply_buy_button_style(btn: Button) -> void:
-	const BW := 3
-	const MG := 4
-	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, BW, MG))
-	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), BW, MG))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, BW, MG))
-	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), BW, MG))
-	btn.add_theme_color_override("font_color", GOLD)
-	btn.add_theme_color_override("font_hover_color", GOLD)
-	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
-	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
-
-
-func _on_hover_in() -> void:
-	card_hover_entered.emit()
-
-
-func _on_hover_out() -> void:
-	if not get_global_rect().has_point(get_global_mouse_position()):
-		card_hover_exited.emit()
 
 
 func _get_item_color(item: Dictionary) -> Color:

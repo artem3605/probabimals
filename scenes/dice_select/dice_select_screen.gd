@@ -3,12 +3,11 @@ extends "res://scripts/ui/pixel_bg.gd"
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const MAX_SELECTION := 5
 
-var _selected_indices: Array[int] = []
+var _groups: Array[Dictionary] = []
 var _subtitle_label: Label
 var _confirm_btn: Button
 var _menu_btn: Button
-var _dice_cards: Array[ItemCard] = []
-var _grid_container: GridContainer
+var _dice_container: GridContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
@@ -82,42 +81,80 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_grid_container = GridContainer.new()
-	_grid_container.columns = 4
-	_grid_container.add_theme_constant_override("h_separation", 24)
-	_grid_container.add_theme_constant_override("v_separation", 24)
-	center.add_child(_grid_container)
+	_dice_container = GridContainer.new()
+	_dice_container.columns = 7
+	_dice_container.add_theme_constant_override("h_separation", 32)
+	_dice_container.add_theme_constant_override("v_separation", 24)
+	center.add_child(_dice_container)
 
-	_dice_cards.clear()
-	var all_dice := GameManager.dice_bag.get_all()
-	for i in all_dice.size():
-		var die: Die = all_dice[i]
+	_build_groups()
+
+	for gi in _groups.size():
+		var group: Dictionary = _groups[gi]
+		var die: Die = group["die"]
 		var card := ItemCard.new()
 		card.setup_as_dice_item(die, _pixel_font)
-		card.card_pressed.connect(_on_die_card_pressed.bind(i))
+		card.setup_frame()
 		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_card_hover_exit)
-		_grid_container.add_child(card)
-		_dice_cards.append(card)
+		var counter := card.create_counter_row(_pixel_font)
+		counter["minus_btn"].pressed.connect(_on_minus_pressed.bind(gi))
+		counter["plus_btn"].pressed.connect(_on_plus_pressed.bind(gi))
+		group["card"] = card
+		group["counter_label"] = counter["label"]
+		group["minus_btn"] = counter["minus_btn"]
+		group["plus_btn"] = counter["plus_btn"]
+		_dice_container.add_child(card)
+
+
+func _build_groups() -> void:
+	_groups.clear()
+	var all_dice := GameManager.dice_bag.get_all()
+	var color_order: Array[String] = []
+	var color_map: Dictionary = {}
+	for die: Die in all_dice:
+		if not color_map.has(die.color):
+			color_map[die.color] = {"die": die, "color": die.color, "total": 0, "selected": 0}
+			color_order.append(die.color)
+		color_map[die.color]["total"] += 1
+	for c in color_order:
+		_groups.append(color_map[c])
 
 
 # -- State management ----------------------------------------------------------
 
+func _total_selected() -> int:
+	var total := 0
+	for g in _groups:
+		total += int(g["selected"])
+	return total
+
+
 func _update_state() -> void:
-	_subtitle_label.text = "Choose 5 dice (%d/%d)" % [_selected_indices.size(), MAX_SELECTION]
-	_update_card_visuals()
+	_subtitle_label.text = "Choose %d dice (%d/%d)" % [MAX_SELECTION, _total_selected(), MAX_SELECTION]
+	_update_counter_visuals()
 	_update_confirm_button()
 
 
-func _update_card_visuals() -> void:
-	for i in _dice_cards.size():
-		_dice_cards[i].set_selected(i in _selected_indices)
+func _update_counter_visuals() -> void:
+	var ts := _total_selected()
+	for g in _groups:
+		var sel: int = int(g["selected"])
+		var total: int = int(g["total"])
+		var lbl: Label = g["counter_label"]
+		lbl.text = "%d/%d" % [sel, total]
+		var minus_btn: Button = g["minus_btn"]
+		minus_btn.disabled = sel <= 0
+		var plus_btn: Button = g["plus_btn"]
+		plus_btn.disabled = sel >= total or ts >= MAX_SELECTION
+		var card: ItemCard = g["card"]
+		card.set_selected(sel > 0)
 
 
 func _update_confirm_button() -> void:
 	if _confirm_btn == null:
 		return
-	_confirm_btn.disabled = _selected_indices.size() != MAX_SELECTION
+	_confirm_btn.disabled = _total_selected() != MAX_SELECTION
 
 
 func _build_description_panel(parent: VBoxContainer) -> void:
@@ -161,25 +198,36 @@ func _on_card_hover_exit() -> void:
 	_desc_panel.visible = false
 
 
-func _on_die_card_pressed(index: int) -> void:
-	if index in _selected_indices:
-		_selected_indices.erase(index)
-	else:
-		if _selected_indices.size() >= MAX_SELECTION:
-			return
-		_selected_indices.append(index)
+func _on_plus_pressed(group_index: int) -> void:
+	var g := _groups[group_index]
+	if int(g["selected"]) < int(g["total"]) and _total_selected() < MAX_SELECTION:
+		g["selected"] = int(g["selected"]) + 1
+	_update_state()
+
+
+func _on_minus_pressed(group_index: int) -> void:
+	var g := _groups[group_index]
+	if int(g["selected"]) > 0:
+		g["selected"] = int(g["selected"]) - 1
 	_update_state()
 
 
 func _on_confirm_pressed() -> void:
-	if _selected_indices.size() != MAX_SELECTION:
+	if _total_selected() != MAX_SELECTION:
 		return
 
 	var all_dice := GameManager.dice_bag.get_all()
 	var selected: Array[Die] = []
-	for idx in _selected_indices:
-		if idx >= 0 and idx < all_dice.size():
-			selected.append(all_dice[idx])
+	for g in _groups:
+		var count: int = int(g["selected"])
+		var color: String = g["color"]
+		if count <= 0:
+			continue
+		var picked := 0
+		for die: Die in all_dice:
+			if die.color == color and picked < count:
+				selected.append(die)
+				picked += 1
 
 	GameManager.selected_dice = selected
 	GameManager.go_to_combat()

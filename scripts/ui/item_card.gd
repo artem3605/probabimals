@@ -97,6 +97,94 @@ func set_selected(selected: bool) -> void:
 		main_button.add_theme_stylebox_override("normal", _make_style(_card_color, BORDER_BLACK, 4, 4))
 
 
+const FRAME_BG := Color("c8e6f5")
+
+func setup_frame() -> void:
+	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, 12))
+	main_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main_button.add_theme_stylebox_override("hover", _make_style(_card_color, BORDER_BLACK, 4, 4))
+	for conn in main_button.mouse_entered.get_connections():
+		main_button.mouse_entered.disconnect(conn["callable"])
+	for conn in main_button.mouse_exited.get_connections():
+		main_button.mouse_exited.disconnect(conn["callable"])
+	mouse_entered.connect(_on_frame_hover_in)
+	mouse_exited.connect(_on_frame_hover_out)
+
+
+func create_action_button(text: String, pixel_font: Font) -> Button:
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(96, 28)
+	btn.add_theme_font_override("font", pixel_font)
+	btn.add_theme_font_size_override("font_size", 10)
+	btn.text = text
+	btn.mouse_entered.connect(_on_frame_hover_in)
+	btn.mouse_exited.connect(_on_frame_hover_out)
+	_apply_action_button_style(btn)
+	_vbox.add_child(btn)
+	return btn
+
+
+func create_counter_row(pixel_font: Font) -> Dictionary:
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 0)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.mouse_filter = Control.MOUSE_FILTER_PASS
+	hbox.mouse_entered.connect(_on_frame_hover_in)
+	hbox.mouse_exited.connect(_on_frame_hover_out)
+
+	var minus_btn := Button.new()
+	minus_btn.custom_minimum_size = Vector2(28, 28)
+	minus_btn.add_theme_font_override("font", pixel_font)
+	minus_btn.add_theme_font_size_override("font_size", 12)
+	minus_btn.text = "-"
+	_apply_action_button_style(minus_btn)
+	hbox.add_child(minus_btn)
+
+	var count_label := Label.new()
+	count_label.custom_minimum_size = Vector2(40, 28)
+	count_label.add_theme_font_override("font", pixel_font)
+	count_label.add_theme_font_size_override("font_size", 10)
+	count_label.add_theme_color_override("font_color", DARK)
+	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	count_label.text = "0"
+	count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(count_label)
+
+	var plus_btn := Button.new()
+	plus_btn.custom_minimum_size = Vector2(28, 28)
+	plus_btn.add_theme_font_override("font", pixel_font)
+	plus_btn.add_theme_font_size_override("font_size", 12)
+	plus_btn.text = "+"
+	_apply_action_button_style(plus_btn)
+	hbox.add_child(plus_btn)
+
+	_vbox.add_child(hbox)
+	return {"minus_btn": minus_btn, "label": count_label, "plus_btn": plus_btn}
+
+
+func _apply_action_button_style(btn: Button) -> void:
+	const BW := 3
+	const MG := 4
+	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, BW, MG))
+	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), BW, MG))
+	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, BW, MG))
+	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), BW, MG))
+	btn.add_theme_color_override("font_color", GOLD)
+	btn.add_theme_color_override("font_hover_color", GOLD)
+	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
+	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
+
+
+func _on_frame_hover_in() -> void:
+	card_hover_entered.emit()
+
+
+func _on_frame_hover_out() -> void:
+	if not get_global_rect().has_point(get_global_mouse_position()):
+		card_hover_exited.emit()
+
+
 static func _create_coin_icon(display_size: int = 18) -> TextureRect:
 	var rect := TextureRect.new()
 	rect.texture = preload("res://assets/art/ui/coin.png")

@@ -42,8 +42,8 @@
     "priority": 6
   },
   {
-    "name": "Four of a Kind",
-    "type": "four_of_a_kind",
+    "name": "Four Same",
+    "type": "four_same",
     "combo_mult": 7.0,
     "priority": 7
   },
