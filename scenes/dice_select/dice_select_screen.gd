@@ -17,6 +17,7 @@ func _ready() -> void:
 	super._ready()
 	_build_ui()
 	_update_state()
+	AudioManager.play_music(&"menu")
 
 
 func _process(_delta: float) -> void:
@@ -100,6 +101,8 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 		var counter := card.create_counter_row(_pixel_font)
 		counter["minus_btn"].pressed.connect(_on_minus_pressed.bind(gi))
 		counter["plus_btn"].pressed.connect(_on_plus_pressed.bind(gi))
+		_connect_button_sfx(counter["minus_btn"])
+		_connect_button_sfx(counter["plus_btn"])
 		group["card"] = card
 		group["counter_label"] = counter["label"]
 		group["minus_btn"] = counter["minus_btn"]

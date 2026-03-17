@@ -61,6 +61,7 @@ func _make_pixel_button(text: String, min_size: Vector2, font_size: int = 16) ->
 	btn.add_theme_font_override("font", _pixel_font)
 	btn.add_theme_font_size_override("font_size", font_size)
 	_apply_dark_button_style(btn)
+	_connect_button_sfx(btn)
 	return btn
 
 
@@ -110,6 +111,7 @@ func _make_colored_button(text: String, min_size: Vector2, bg_color: Color,
 	btn.add_theme_color_override("font_hover_color", DARK)
 	btn.add_theme_color_override("font_disabled_color", DISABLED_TEXT)
 
+	_connect_button_sfx(btn)
 	return btn
 
 
@@ -217,6 +219,11 @@ func _make_icon_button(min_size: Vector2) -> Button:
 	btn.add_theme_stylebox_override("focus", empty)
 	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	return btn
+
+
+## Wire up click SFX for a button via AudioManager.
+func _connect_button_sfx(btn: Button) -> void:
+	btn.pressed.connect(func(): AudioManager.play_sfx(&"ui_click"))
 
 
 ## Draw drop-shadow rectangles behind a list of buttons.

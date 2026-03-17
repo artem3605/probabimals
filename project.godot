@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 DataManager="*res://scripts/autoload/data_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 PokiSDK="*res://addons/poki-sdk/pokisdk.gd"
+AudioManager="*res://scripts/autoload/audio_manager.gd"
 
 [display]
 

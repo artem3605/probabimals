@@ -35,6 +35,7 @@ func _ready() -> void:
 	_generate_offerings()
 	_update_coins()
 	GameManager.coins_changed.connect(func(_a: int): _update_coins())
+	AudioManager.play_music(&"menu")
 
 
 func _process(_delta: float) -> void:
@@ -314,6 +315,7 @@ func _on_shop_item_buy(index: int) -> void:
 
 	var success := GameManager.buy_item(item)
 	if success:
+		AudioManager.play_sfx(&"purchase")
 		_sold[index] = true
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("font_color", GREEN)
@@ -487,6 +489,7 @@ func _on_swap_face_selected(face_index: int) -> void:
 	var success := GameManager.buy_face_swap(_selected_die_index, face_index, new_face, cost)
 	_close_face_swap()
 	if success:
+		AudioManager.play_sfx(&"purchase")
 		_sold[shop_idx] = true
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("font_color", GREEN)

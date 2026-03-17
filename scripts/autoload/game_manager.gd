@@ -31,8 +31,10 @@ func start_game() -> void:
 	for i in range(5):
 		dice_bag.add_die(Die.new())
 	selected_dice.clear()
+	AudioManager.pause_for_ad()
 	PokiSDK.commercial_break()
 	await PokiSDK.commercial_break_done
+	AudioManager.resume_after_ad()
 	_change_phase(Phase.FLEA_MARKET)
 
 func buy_item(item: Dictionary) -> bool:
@@ -130,8 +132,10 @@ func _change_phase(new_phase: Phase) -> void:
 		save_game()
 
 	if new_phase == Phase.MAIN_MENU and old_phase != Phase.MAIN_MENU:
+		AudioManager.pause_for_ad()
 		PokiSDK.commercial_break()
 		await PokiSDK.commercial_break_done
+		AudioManager.resume_after_ad()
 
 	match new_phase:
 		Phase.MAIN_MENU:
@@ -233,8 +237,10 @@ func load_game() -> void:
 
 	selected_dice.clear()
 
+	AudioManager.pause_for_ad()
 	PokiSDK.commercial_break()
 	await PokiSDK.commercial_break_done
+	AudioManager.resume_after_ad()
 
 	var phase_name: String = data.get("phase", "FLEA_MARKET")
 	var phase_idx := Phase.keys().find(phase_name)

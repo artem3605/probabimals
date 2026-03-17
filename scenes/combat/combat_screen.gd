@@ -46,6 +46,7 @@ func _ready() -> void:
 	super._ready()
 	_build_ui()
 	_setup_combat()
+	AudioManager.play_music(&"menu")
 
 
 func _process(_delta: float) -> void:
@@ -463,6 +464,8 @@ func _show_combo(combo: Dictionary) -> void:
 	else:
 		_score_breakdown_label.text = "%d SUM x%.1f MULT" % [face_sum, mult]
 
+	AudioManager.play_sfx(&"combo_detect")
+
 	_score_panel.scale = Vector2(0.8, 0.8)
 	_animating = true
 	var tween := create_tween()
@@ -483,6 +486,7 @@ func _on_die_clicked(index: int) -> void:
 func _on_die_held(index: int, held: bool) -> void:
 	if index < 0 or index >= _dice_cards.size():
 		return
+	AudioManager.play_sfx(&"dice_hold" if held else &"dice_release")
 	var card: Control = _dice_cards[index]
 	card.set_held(held)
 
@@ -503,6 +507,7 @@ func _on_roll_pressed() -> void:
 func _animate_roll() -> void:
 	_reroll_btn.disabled = true
 	_animating = true
+	AudioManager.play_sfx(&"dice_roll")
 
 	var tween := create_tween()
 
@@ -600,6 +605,7 @@ func _on_score_pressed() -> void:
 
 func _animate_score(combo: Dictionary, total: int) -> void:
 	_animating = true
+	AudioManager.play_sfx(&"score_tick")
 	var tween := create_tween()
 
 	tween.tween_callback(func():
@@ -672,6 +678,7 @@ func _on_combat_ended(final_score: int, target_beaten: bool) -> void:
 func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_overlay.visible = true
 	_result_overlay.modulate.a = 0.0
+	AudioManager.play_sfx(&"round_win" if target_beaten else &"game_over")
 
 	_result_score_label.text = str(final_score) + " PTS"
 
