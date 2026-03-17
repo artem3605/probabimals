@@ -183,6 +183,7 @@ func _generate_offerings() -> void:
 
 func _refresh_shop_display() -> void:
 	for child in _shop_container.get_children():
+		_shop_container.remove_child(child)
 		child.queue_free()
 
 	for i in _shop_offerings.size():
