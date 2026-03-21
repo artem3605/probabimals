@@ -1,5 +1,6 @@
 # Godot 4.x
 .godot/
+.godot-home/
 
 # Godot export
 *.translation

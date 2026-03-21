@@ -1,0 +1,33 @@
+name: Run Tests
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  gut-tests:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.6
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import project
+        run: godot --headless --import 2>&1 || true
+        timeout-minutes: 3
+
+      - name: Run GUT tests
+        run: |
+          mkdir -p build/test-results
+          GUT_JUNIT_XML=build/test-results/gut.xml bash scripts/test/run_gut.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut-test-results
+          path: build/test-results
