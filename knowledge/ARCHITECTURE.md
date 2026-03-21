@@ -159,11 +159,16 @@ Control root → Background → MarginContainer → MainVBox:
 
 ### Combat
 Control root → Background → MarginContainer → VBoxContainer:
-- HUD: CombatTitle, ScoreLabel, HandsRemainingLabel, RerollsLabel
+- TopBar: MenuButton, "COMBAT" title, CombosButton (opens combo info overlay)
+- HandInfoLabel: "Hand X/Y" subtitle
+- ScorePanel: combo name, score value, breakdown
 - DiceTray: HBoxContainer of 5 DieVisuals (clickable to hold/unhold)
-- ActionBar: RollButton, ScoreHandButton, EndCombatButton
-- ComboLabel: displays detected combo name
-- ResultOverlay (ColorRect, initially hidden): FinalScoreLabel, MenuButton
+- DescPanel: hover tooltip for dice
+- ScoreBar: progress bar toward target score
+- ActionBar: RollButton, EndTurnButton
+- ResultOverlay (ColorRect, initially hidden): final score, next round / menu buttons
+- PauseOverlay (ColorRect, initially hidden): resume / quit buttons
+- ComboOverlay (ColorRect, initially hidden): 9 combo rows with pattern colors and effective multipliers, current combo highlighted
 
 ---
 

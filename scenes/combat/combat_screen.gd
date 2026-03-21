@@ -39,6 +39,10 @@ var _result_target_beaten: bool = false
 
 var _pause_overlay: ColorRect
 
+var _combo_overlay: ColorRect
+var _combo_btn: Button
+var _combo_row_panels: Array = []
+
 var _animating: bool = false
 
 
@@ -56,7 +60,7 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	_draw_all_bg()
-	_draw_button_shadows([_menu_btn], Vector2(4, 4))
+	_draw_button_shadows([_menu_btn, _combo_btn], Vector2(4, 4))
 	_draw_panel_shadow(_score_panel, Vector2(8, 8))
 	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
 	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
@@ -118,6 +122,7 @@ func _build_ui() -> void:
 
 	_build_result_overlay()
 	_build_pause_overlay()
+	_build_combo_overlay()
 	modulate.a = 0.0
 	_animating = true
 	var tween := create_tween()
@@ -146,9 +151,10 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer2)
 
-	var right_placeholder := Control.new()
-	right_placeholder.custom_minimum_size = Vector2(96, 0)
-	bar.add_child(right_placeholder)
+	_combo_btn = _make_pixel_button("COMBOS", Vector2(96, 56), 10)
+	_combo_btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_combo_btn.pressed.connect(_on_combo_btn_pressed)
+	bar.add_child(_combo_btn)
 
 
 func _build_hand_subtitle(parent: VBoxContainer) -> void:
@@ -362,9 +368,55 @@ func _build_pause_overlay() -> void:
 	vbox.add_child(quit_btn)
 
 
+func _build_combo_overlay() -> void:
+	_combo_overlay = ColorRect.new()
+	_combo_overlay.color = Color(0, 0, 0, 0.85)
+	_combo_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_combo_overlay.visible = false
+	add_child(_combo_overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_combo_overlay.add_child(center)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 6)
+	center.add_child(vbox)
+
+	var title := _make_pixel_label("COMBOS", 20, GOLD)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 8)
+	vbox.add_child(spacer)
+
+	_combo_row_panels.clear()
+	var combos := DataManager.get_combo_rules()
+	for combo in combos:
+		var row_data := _make_combo_row(combo)
+		vbox.add_child(row_data["panel"])
+		_combo_row_panels.append({
+			"panel": row_data["panel"],
+			"type": combo.get("type", ""),
+			"default_style": row_data["default_style"],
+		})
+
+	var spacer2 := Control.new()
+	spacer2.custom_minimum_size = Vector2(0, 12)
+	vbox.add_child(spacer2)
+
+	var close_btn := _make_colored_button("CLOSE", Vector2(200, 52), GREEN, GREEN.lightened(0.15), 14)
+	close_btn.pressed.connect(func(): _combo_overlay.visible = false)
+	vbox.add_child(close_btn)
+
+
 func _on_pause_pressed() -> void:
 	if _result_overlay.visible:
 		return
+	if _combo_overlay.visible:
+		_combo_overlay.visible = false
 	get_tree().paused = true
 	PokiSDK.gameplay_stop()
 	_pause_overlay.visible = true
@@ -386,7 +438,9 @@ func _on_pause_quit_pressed() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if _pause_overlay.visible:
+		if _combo_overlay.visible:
+			_combo_overlay.visible = false
+		elif _pause_overlay.visible:
 			_on_resume_pressed()
 		elif not _result_overlay.visible:
 			_on_pause_pressed()
@@ -590,6 +644,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_score_breakdown_label.text = ""
 
 	_update_rerolls_display()
+	_update_combo_highlight()
 
 
 func _on_score_pressed() -> void:
@@ -650,6 +705,7 @@ func _reset_for_next_hand() -> void:
 		_dice_cards[i].reset_die()
 
 	_update_rerolls_display()
+	_update_combo_highlight()
 
 
 func _on_rerolls_changed(_remaining: int) -> void:
@@ -705,6 +761,114 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(_result_overlay, "modulate:a", 1.0, 0.5)
+
+
+func _make_combo_row(combo: Dictionary) -> Dictionary:
+	var combo_type: String = combo.get("type", "")
+	var combo_name: String = combo.get("name", "")
+	var priority: int = combo.get("priority", 0)
+
+	var default_style := _make_style(Color(0.1, 0.1, 0.1, 0.6), Color(0.2, 0.2, 0.2, 0.4), 2, 8)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(500, 0)
+	panel.add_theme_stylebox_override("panel", default_style)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	panel.add_child(row)
+
+	var name_label := _make_pixel_label(combo_name.to_upper(), 10, Color.WHITE)
+	name_label.custom_minimum_size = Vector2(180, 0)
+	row.add_child(name_label)
+
+	var pattern_box := HBoxContainer.new()
+	pattern_box.add_theme_constant_override("separation", 4)
+	var colors := _get_pattern_colors(combo_type)
+	for c in colors:
+		var sq := ColorRect.new()
+		sq.custom_minimum_size = Vector2(14, 14)
+		sq.color = c
+		pattern_box.add_child(sq)
+	row.add_child(pattern_box)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+
+	var mult_data := _get_effective_mult(combo)
+	if mult_data["modified"]:
+		var mult_box := HBoxContainer.new()
+		mult_box.add_theme_constant_override("separation", 6)
+		var base_label := _make_pixel_label("x%.1f" % mult_data["base"], 9, Color(0.5, 0.5, 0.5))
+		mult_box.add_child(base_label)
+		var eff_label := _make_pixel_label("x%.1f" % mult_data["effective"], 10, GOLD)
+		mult_box.add_child(eff_label)
+		row.add_child(mult_box)
+	else:
+		var mult_color := Color.WHITE
+		match priority:
+			0, 1: mult_color = Color("888888")
+			2, 3: mult_color = Color("ff6b4a")
+			4, 5: mult_color = BLUE
+			6, 7: mult_color = GOLD
+			8: mult_color = PINK
+		var mult_label := _make_pixel_label("x%.1f" % mult_data["base"], 10, mult_color)
+		row.add_child(mult_label)
+
+	return { "panel": panel, "default_style": default_style }
+
+
+func _get_pattern_colors(combo_type: String) -> Array:
+	var a := BLUE
+	var b := PINK
+	var g := Color("888888")
+	var s := [GREEN.darkened(0.3), GREEN.darkened(0.15), GREEN, GREEN.lightened(0.15), GREEN.lightened(0.3)]
+
+	match combo_type:
+		"high_card":      return [a, g, g, g, g]
+		"pair":           return [a, a, g, g, g]
+		"two_pair":       return [a, a, b, b, g]
+		"three_same":     return [a, a, a, g, g]
+		"small_straight": return [s[0], s[1], s[2], s[3], g]
+		"full_house":     return [a, a, a, b, b]
+		"large_straight": return [s[0], s[1], s[2], s[3], s[4]]
+		"four_same":      return [a, a, a, a, g]
+		"yahtzee":        return [a, a, a, a, a]
+		_:                return [g, g, g, g, g]
+
+
+func _get_effective_mult(combo: Dictionary) -> Dictionary:
+	var base: float = combo.get("combo_mult", 1.0)
+	var effective: float = base
+	var combo_type: String = combo.get("type", "")
+	for mod in GameManager.modifiers:
+		if mod.get("effect", "") == "add_mult":
+			var condition: String = mod.get("condition", "")
+			if condition.is_empty() or condition == "always" or condition == combo_type:
+				effective += mod.get("value", 0.0)
+	return { "base": base, "effective": effective, "modified": not is_equal_approx(base, effective) }
+
+
+func _on_combo_btn_pressed() -> void:
+	if _result_overlay.visible or _pause_overlay.visible:
+		return
+	_combo_overlay.visible = not _combo_overlay.visible
+	if _combo_overlay.visible:
+		_update_combo_highlight()
+
+
+func _update_combo_highlight() -> void:
+	var current_type := ""
+	if combat_mgr and combat_mgr.has_rolled:
+		var combo := combat_mgr.get_current_combo()
+		current_type = combo.get("type", "")
+
+	var highlight_style := _make_style(Color(0.29, 0.62, 1.0, 0.2), BLUE, 2, 8)
+	for entry in _combo_row_panels:
+		if entry["type"] == current_type and not current_type.is_empty():
+			entry["panel"].add_theme_stylebox_override("panel", highlight_style)
+		else:
+			entry["panel"].add_theme_stylebox_override("panel", entry["default_style"])
 
 
 # -- Navigation ----------------------------------------------------------------
