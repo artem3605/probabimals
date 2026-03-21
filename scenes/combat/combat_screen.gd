@@ -71,6 +71,8 @@ func _setup_combat() -> void:
 		dice,
 		GameManager.target_score,
 		GameManager.hands_per_round,
+		GameManager.rerolls_per_hand,
+		DataManager.get_combo_rules(),
 		GameManager.rerolls_per_hand
 	)
 

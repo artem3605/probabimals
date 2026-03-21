@@ -18,17 +18,20 @@ var active_dice: Array[Die] = []
 var combo_detector := ComboDetector.new()
 var scoring_engine := ScoringEngine.new()
 var has_rolled: bool = false
+var _rerolls_reset_value: int = 2
 
-func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int) -> void:
+func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
+		combo_rules: Array = [], reroll_reset_value: int = -1) -> void:
 	active_dice = dice
 	target_score = target
 	hands_remaining = hands
 	rerolls_remaining = rerolls
+	_rerolls_reset_value = reroll_reset_value if reroll_reset_value >= 0 else rerolls
 	running_score = 0
 	current_roll.clear()
 	has_rolled = false
 	_reset_held()
-	combo_detector.set_combo_rules(DataManager.get_combo_rules())
+	combo_detector.set_combo_rules(combo_rules)
 
 func roll_dice() -> void:
 	if rerolls_remaining <= 0:
@@ -97,7 +100,7 @@ func score_hand(modifiers: Array) -> Dictionary:
 	hand_scored.emit(combo, score_data)
 
 	has_rolled = false
-	rerolls_remaining = GameManager.rerolls_per_hand
+	rerolls_remaining = _rerolls_reset_value
 	rerolls_changed.emit(rerolls_remaining)
 	_reset_held()
 	current_roll.clear()
