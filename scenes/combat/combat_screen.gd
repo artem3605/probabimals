@@ -1,6 +1,7 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
 const CombatDice = preload("res://scripts/ui/combat_dice.gd")
+const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 
 var combat_mgr: CombatManager
 var _dice_cards: Array = []
@@ -28,11 +29,13 @@ var _score_bar_label: Label
 var _total_hands: int = 4
 
 var _result_overlay: ColorRect
+var _result_panel: PanelContainer
 var _result_score_label: Label
 var _result_message: Label
 var _result_sub_label: Label
 var _result_coins_label: Label
 var _result_next_btn: Button
+var _result_retry_btn: Button
 var _result_menu_btn: Button
 var _result_final_score: int = 0
 var _result_target_beaten: bool = false
@@ -41,15 +44,23 @@ var _pause_overlay: ColorRect
 
 var _combo_overlay: ColorRect
 var _combo_btn: Button
+var _combo_dialog: VBoxContainer
 var _combo_row_panels: Array = []
 
 var _animating: bool = false
+var _tutorial_overlay: Control
+var _tutorial_rolls_seen: int = 0
 
 
 func _ready() -> void:
 	super._ready()
 	_build_ui()
+	TutorialManager.step_changed.connect(_on_tutorial_step_changed)
+	TutorialManager.state_changed.connect(_refresh_tutorial_ui)
+	if TutorialManager.is_active():
+		TutorialManager.enter_scene(TutorialManager.SCENE_COMBAT)
 	_setup_combat()
+	_refresh_tutorial_ui()
 	AudioManager.play_music(&"menu")
 
 
@@ -71,14 +82,19 @@ func _setup_combat() -> void:
 	add_child(combat_mgr)
 
 	var dice: Array[Die] = GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	var roll_provider := Callable()
+	if TutorialManager.should_use_scripted_rolls():
+		roll_provider = Callable(self, "_provide_tutorial_roll")
 	combat_mgr.start_combat(
 		dice,
 		GameManager.target_score,
 		GameManager.hands_per_round,
 		GameManager.rerolls_per_hand,
 		DataManager.get_combo_rules(),
-		GameManager.rerolls_per_hand
+		GameManager.rerolls_per_hand,
+		roll_provider
 	)
+	_tutorial_rolls_seen = 0
 
 	_current_values.clear()
 	for d in dice:
@@ -95,6 +111,7 @@ func _setup_combat() -> void:
 	_update_rerolls_display()
 	_update_hand_display()
 	_update_score_bar()
+	_refresh_tutorial_dice_accents()
 
 
 func _build_ui() -> void:
@@ -123,6 +140,7 @@ func _build_ui() -> void:
 	_build_result_overlay()
 	_build_pause_overlay()
 	_build_combo_overlay()
+	_build_tutorial_overlay()
 	modulate.a = 0.0
 	_animating = true
 	var tween := create_tween()
@@ -298,25 +316,37 @@ func _build_result_overlay() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_result_overlay.add_child(center)
 
+	_result_panel = _make_panel(Color(0.12, 0.12, 0.12, 0.98), GOLD, Vector2(760, 0), 24)
+	_result_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	center.add_child(_result_panel)
+
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 16)
-	center.add_child(vbox)
+	vbox.add_theme_constant_override("separation", 20)
+	_result_panel.add_child(vbox)
 
-	_result_message = _make_pixel_label("", 36)
+	_result_message = _make_pixel_label("", 32)
 	_result_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_result_message.custom_minimum_size = Vector2(660, 0)
+	_result_message.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_message)
 
-	_result_score_label = _make_pixel_label("", 48, GOLD)
+	_result_score_label = _make_pixel_label("", 40, GOLD)
 	_result_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_score_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_score_label)
 
 	_result_sub_label = _make_pixel_label("", 16, Color("aaaaaa"))
 	_result_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_result_sub_label.custom_minimum_size = Vector2(660, 0)
+	_result_sub_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_sub_label)
 
 	_result_coins_label = _make_pixel_label("", 20, GOLD)
 	_result_coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_coins_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_coins_label)
 
 	var spacer := Control.new()
@@ -324,11 +354,19 @@ func _build_result_overlay() -> void:
 	vbox.add_child(spacer)
 
 	_result_next_btn = _make_pixel_button("NEXT ROUND", Vector2(280, 60), 16)
+	_result_next_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_next_btn.pressed.connect(_on_next_round_pressed)
 	_result_next_btn.visible = false
 	vbox.add_child(_result_next_btn)
 
+	_result_retry_btn = _make_colored_button("RETRY TUTORIAL", Vector2(280, 60), PINK, PINK.lightened(0.15), 14)
+	_result_retry_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_result_retry_btn.pressed.connect(_on_retry_tutorial_pressed)
+	_result_retry_btn.visible = false
+	vbox.add_child(_result_retry_btn)
+
 	_result_menu_btn = _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
+	_result_menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_menu_btn.pressed.connect(_go_to_main_menu)
 	_result_menu_btn.visible = false
 	vbox.add_child(_result_menu_btn)
@@ -379,24 +417,24 @@ func _build_combo_overlay() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_combo_overlay.add_child(center)
 
-	var vbox := VBoxContainer.new()
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 6)
-	center.add_child(vbox)
+	_combo_dialog = VBoxContainer.new()
+	_combo_dialog.alignment = BoxContainer.ALIGNMENT_CENTER
+	_combo_dialog.add_theme_constant_override("separation", 6)
+	center.add_child(_combo_dialog)
 
 	var title := _make_pixel_label("COMBOS", 20, GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	_combo_dialog.add_child(title)
 
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)
-	vbox.add_child(spacer)
+	_combo_dialog.add_child(spacer)
 
 	_combo_row_panels.clear()
 	var combos := DataManager.get_combo_rules()
 	for combo in combos:
 		var row_data := _make_combo_row(combo)
-		vbox.add_child(row_data["panel"])
+		_combo_dialog.add_child(row_data["panel"])
 		_combo_row_panels.append({
 			"panel": row_data["panel"],
 			"type": combo.get("type", ""),
@@ -405,18 +443,18 @@ func _build_combo_overlay() -> void:
 
 	var spacer2 := Control.new()
 	spacer2.custom_minimum_size = Vector2(0, 12)
-	vbox.add_child(spacer2)
+	_combo_dialog.add_child(spacer2)
 
 	var close_btn := _make_colored_button("CLOSE", Vector2(200, 52), GREEN, GREEN.lightened(0.15), 14)
-	close_btn.pressed.connect(func(): _combo_overlay.visible = false)
-	vbox.add_child(close_btn)
+	close_btn.pressed.connect(_on_combo_close_pressed)
+	_combo_dialog.add_child(close_btn)
 
 
 func _on_pause_pressed() -> void:
 	if _result_overlay.visible:
 		return
 	if _combo_overlay.visible:
-		_combo_overlay.visible = false
+		_request_close_combo_overlay()
 	get_tree().paused = true
 	PokiSDK.gameplay_stop()
 	_pause_overlay.visible = true
@@ -439,7 +477,8 @@ func _on_pause_quit_pressed() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if _combo_overlay.visible:
-			_combo_overlay.visible = false
+			if _request_close_combo_overlay():
+				return
 		elif _pause_overlay.visible:
 			_on_resume_pressed()
 		elif not _result_overlay.visible:
@@ -501,9 +540,7 @@ func _show_combo(combo: Dictionary) -> void:
 		8:
 			_combo_name_label.add_theme_color_override("font_color", PINK)
 
-	var in_combo: Array[bool] = combo.get("in_combo", [])
-	var preview := combat_mgr.scoring_engine.calculate_score(
-		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+	var preview := _calculate_combo_preview(combo)
 
 	var face_sum: int = int(preview.get("face_sum", 0))
 	var mult: float = preview.get("mult", 1.0)
@@ -531,11 +568,68 @@ func _show_combo(combo: Dictionary) -> void:
 	tween.tween_callback(func(): _animating = false)
 
 
+func _calculate_combo_preview(combo: Dictionary) -> Dictionary:
+	if combat_mgr == null or combo.is_empty():
+		return {}
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	return combat_mgr.scoring_engine.calculate_score(
+		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+
+
+func _build_combo_tutorial_body() -> String:
+	if combat_mgr == null:
+		return "The highlighted row is the combo you match."
+
+	var combo := combat_mgr.get_current_combo()
+	if combo.is_empty():
+		return "The highlighted row is the combo you match."
+
+	var preview := _calculate_combo_preview(combo)
+	var rolled_values := combat_mgr.current_roll_values()
+	var face_parts: PackedStringArray = []
+	for value in rolled_values:
+		face_parts.append(str(value))
+
+	var combo_name: String = str(combo.get("name", "Combo"))
+	var in_combo: Array[bool] = combo.get("in_combo", [])
+	var matched_values: PackedStringArray = []
+	for i in range(mini(in_combo.size(), rolled_values.size())):
+		if in_combo[i]:
+			matched_values.append(str(rolled_values[i]))
+	var matched_summary := ", ".join(matched_values)
+	if matched_values.size() == 2 and matched_values[0] == matched_values[1]:
+		matched_summary = "two %ss" % matched_values[0]
+
+	var face_sum := int(preview.get("face_sum", 0))
+	var mult := float(preview.get("mult", 1.0))
+	var x_mult := float(preview.get("x_mult", 1.0))
+	var total := int(preview.get("total", 0))
+
+	var body_lines := [
+		"This roll matches %s because %s line up." % [combo_name.to_upper(), matched_summary],
+		"%s = %d face sum." % [" + ".join(face_parts), face_sum],
+		"%d x %s %s mult = %d pts." % [face_sum, _format_tutorial_factor(mult), combo_name.to_lower(), total],
+	]
+	if x_mult > 1.0:
+		body_lines.append("%d x %s X-mult = %d pts total." % [int(floor(face_sum * mult)), _format_tutorial_factor(x_mult), total])
+	else:
+		body_lines.append("That is exactly what you would bank if you scored now.")
+	return "\n".join(body_lines)
+
+
+func _format_tutorial_factor(value: float) -> String:
+	return "%.1f" % value
+
+
 # -- Signal handlers -----------------------------------------------------------
 
 func _on_die_clicked(index: int) -> void:
 	if not combat_mgr.has_rolled:
 		return
+	if TutorialManager.is_active():
+		var held_after_click := _held_indices_after_toggle(index)
+		if not TutorialManager.is_combat_hold_allowed(index, held_after_click):
+			return
 	combat_mgr.toggle_hold(index)
 
 
@@ -545,6 +639,10 @@ func _on_die_held(index: int, held: bool) -> void:
 	AudioManager.play_sfx(&"dice_hold" if held else &"dice_release")
 	var card: Control = _dice_cards[index]
 	card.set_held(held)
+	_refresh_tutorial_dice_accents()
+	if TutorialManager.is_active():
+		TutorialManager.report_action("hold_changed", {"held_indices": _current_held_indices()})
+		_refresh_tutorial_ui()
 
 	var btn: Button = card.main_button
 	_animating = true
@@ -556,6 +654,8 @@ func _on_die_held(index: int, held: bool) -> void:
 
 func _on_roll_pressed() -> void:
 	if not combat_mgr.can_roll():
+		return
+	if TutorialManager.is_active() and not TutorialManager.is_combat_roll_allowed():
 		return
 	_animate_roll()
 
@@ -645,10 +745,17 @@ func _on_dice_rolled(results: Array[int]) -> void:
 
 	_update_rerolls_display()
 	_update_combo_highlight()
+	_refresh_tutorial_dice_accents()
+	if TutorialManager.is_active():
+		TutorialManager.report_action("combat_roll", {"roll_number": _tutorial_rolls_seen})
+		_tutorial_rolls_seen += 1
+		_refresh_tutorial_ui()
 
 
 func _on_score_pressed() -> void:
 	if not combat_mgr.can_score():
+		return
+	if TutorialManager.is_active() and not TutorialManager.is_combat_score_allowed():
 		return
 	var result := combat_mgr.score_hand(GameManager.modifiers)
 	if result.is_empty():
@@ -706,6 +813,7 @@ func _reset_for_next_hand() -> void:
 
 	_update_rerolls_display()
 	_update_combo_highlight()
+	_refresh_tutorial_dice_accents()
 
 
 func _on_rerolls_changed(_remaining: int) -> void:
@@ -728,9 +836,12 @@ func _on_hands_changed(_remaining: int) -> void:
 
 
 func _on_combat_ended(final_score: int, target_beaten: bool) -> void:
+	if TutorialManager.is_active() and target_beaten:
+		TutorialManager.report_action("combat_win")
 	_result_final_score = final_score
 	_result_target_beaten = target_beaten
 	_show_result_overlay(final_score, target_beaten)
+	_refresh_tutorial_ui()
 
 
 func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
@@ -743,19 +854,33 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	if target_beaten:
 		_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
 		_result_message.add_theme_color_override("font_color", GOLD)
-		_result_sub_label.text = "Target: %d" % GameManager.target_score
+		if TutorialManager.is_active():
+			_result_sub_label.text = "You built a better pair, protected it with hold, and converted it into a stronger combo."
+		else:
+			_result_sub_label.text = "Target: %d" % GameManager.target_score
 		var reward := GameManager.get_round_reward()
 		_result_coins_label.text = "+%d coins" % reward
 		_result_coins_label.visible = true
 		_result_next_btn.visible = true
+		_result_retry_btn.visible = false
 		_result_menu_btn.visible = false
 	else:
-		_result_message.text = "GAME OVER"
-		_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
-		_result_sub_label.text = "Reached Round %d" % GameManager.current_round
-		_result_coins_label.visible = false
-		_result_next_btn.visible = false
-		_result_menu_btn.visible = true
+		if TutorialManager.is_active():
+			_result_message.text = "TRY THE LESSON AGAIN"
+			_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
+			_result_sub_label.text = "Tutorial runs are safe to retry until the sequence feels natural."
+			_result_coins_label.visible = false
+			_result_next_btn.visible = false
+			_result_retry_btn.visible = true
+			_result_menu_btn.visible = true
+		else:
+			_result_message.text = "GAME OVER"
+			_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
+			_result_sub_label.text = "Reached Round %d" % GameManager.current_round
+			_result_coins_label.visible = false
+			_result_next_btn.visible = false
+			_result_retry_btn.visible = false
+			_result_menu_btn.visible = true
 
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
@@ -852,9 +977,29 @@ func _get_effective_mult(combo: Dictionary) -> Dictionary:
 func _on_combo_btn_pressed() -> void:
 	if _result_overlay.visible or _pause_overlay.visible:
 		return
-	_combo_overlay.visible = not _combo_overlay.visible
+	if TutorialManager.is_active():
+		if TutorialManager.step_id not in [
+			TutorialManager.STEP_COMBAT_OPEN_COMBOS,
+			TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
+		]:
+			return
+		match TutorialManager.step_id:
+			TutorialManager.STEP_COMBAT_OPEN_COMBOS:
+				if _combo_overlay.visible:
+					return
+				_open_combo_overlay()
+				TutorialManager.report_action("combo_overlay_opened")
+				_refresh_tutorial_ui()
+				return
+			TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
+				if not _combo_overlay.visible:
+					_open_combo_overlay()
+				return
+
 	if _combo_overlay.visible:
-		_update_combo_highlight()
+		_request_close_combo_overlay()
+	else:
+		_open_combo_overlay()
 
 
 func _update_combo_highlight() -> void:
@@ -874,6 +1019,8 @@ func _update_combo_highlight() -> void:
 # -- Navigation ----------------------------------------------------------------
 
 func _on_next_round_pressed() -> void:
+	if TutorialManager.is_active():
+		TutorialManager.report_action("combat_next_round")
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
@@ -882,3 +1029,175 @@ func _go_to_main_menu() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, false))
+
+
+func _build_tutorial_overlay() -> void:
+	_tutorial_overlay = TutorialOverlay.new()
+	add_child(_tutorial_overlay)
+	_tutorial_overlay.setup(_pixel_font)
+	_tutorial_overlay.next_pressed.connect(_on_tutorial_next_pressed)
+
+
+func _refresh_tutorial_ui() -> void:
+	if _tutorial_overlay == null:
+		return
+	_update_tutorial_action_gating()
+	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_COMBAT:
+		_tutorial_overlay.hide_overlay()
+		return
+	if _result_overlay.visible and not _result_target_beaten:
+		_tutorial_overlay.hide_overlay()
+		return
+	if TutorialManager.step_id == TutorialManager.STEP_COMBAT_WIN and not _result_overlay.visible:
+		_tutorial_overlay.hide_overlay()
+		return
+	if TutorialManager.should_restore_combo_overlay() and not _combo_overlay.visible:
+		_open_combo_overlay()
+
+	match TutorialManager.step_id:
+		TutorialManager.STEP_COMBAT_ROLL:
+			_tutorial_overlay.show_step(
+				"ROLL THE HAND",
+				"Start the hand. Your upgraded dice are set up to create an early pair you can build around.",
+				_reroll_btn
+			)
+		TutorialManager.STEP_COMBAT_OPEN_COMBOS:
+			_tutorial_overlay.show_step(
+				"OPEN COMBOS",
+				"Before you hold anything, open the combo list. It shows which patterns score and helps explain why this roll is promising.",
+				_combo_btn
+			)
+		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
+			_tutorial_overlay.show_step(
+				"HOW COMBOS SCORE",
+				_build_combo_tutorial_body(),
+				_find_current_combo_row_panel(),
+				true,
+				"NEXT",
+				_combo_dialog
+			)
+		TutorialManager.STEP_COMBAT_HOLD_PAIR:
+			_tutorial_overlay.show_step(
+				"HOLD BOTH SIXES",
+				"Lock the promising pair first. Then the rest of the hand can reroll without risking that setup.",
+				_find_required_hold_targets()
+			)
+		TutorialManager.STEP_COMBAT_REROLL:
+			_tutorial_overlay.show_step(
+				"REROLL THE REST",
+				"Keep the pair, reroll the other three, and push for a bigger multiple.",
+				_reroll_btn
+			)
+		TutorialManager.STEP_COMBAT_SCORE:
+			_tutorial_overlay.show_step(
+				"SCORE THE HAND",
+				"Bank the combo. Better odds matter only when you cash the result in.",
+				_end_turn_btn
+			)
+		TutorialManager.STEP_COMBAT_WIN:
+			_tutorial_overlay.show_step(
+				"ROUND WON",
+				"Winning pays coins and the run keeps going. After this button, the tutorial is finished.",
+				_result_next_btn
+			)
+		_:
+			_tutorial_overlay.hide_overlay()
+
+
+func _update_tutorial_action_gating() -> void:
+	if _combo_btn == null:
+		return
+	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_COMBAT:
+		_combo_btn.disabled = false
+		return
+	_combo_btn.disabled = TutorialManager.step_id not in [
+		TutorialManager.STEP_COMBAT_OPEN_COMBOS,
+		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
+	]
+
+
+func _refresh_tutorial_dice_accents() -> void:
+	if not TutorialManager.is_active():
+		return
+	for i in range(_dice_cards.size()):
+		var card = _dice_cards[i]
+		if card is CombatDice:
+			(card as CombatDice).set_accent(TutorialManager.required_combat_hold_indices.has(i), BLUE)
+
+
+func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:
+	return TutorialManager.get_scripted_roll_values(roll_number)
+
+
+func _current_held_indices() -> Array[int]:
+	var held_indices: Array[int] = []
+	for i in range(_dice_cards.size()):
+		if combat_mgr.is_held(i):
+			held_indices.append(i)
+	return held_indices
+
+
+func _held_indices_after_toggle(index: int) -> Array[int]:
+	var held_indices := _current_held_indices()
+	if held_indices.has(index):
+		held_indices.erase(index)
+	else:
+		held_indices.append(index)
+	held_indices.sort()
+	return held_indices
+
+
+func _find_required_hold_targets() -> Array[Control]:
+	var targets: Array[Control] = []
+	for i in TutorialManager.required_combat_hold_indices:
+		if i >= 0 and i < _dice_cards.size():
+			targets.append(_dice_cards[i])
+	if targets.is_empty():
+		targets.append(_dice_container)
+	return targets
+
+
+func _find_current_combo_row_panel() -> Control:
+	var combo := combat_mgr.get_current_combo()
+	var combo_type: String = combo.get("type", "")
+	for entry in _combo_row_panels:
+		if entry["type"] == combo_type:
+			return entry["panel"]
+	return _combo_btn
+
+
+func _open_combo_overlay() -> void:
+	_combo_overlay.visible = true
+	_update_combo_highlight()
+
+
+func _request_close_combo_overlay() -> bool:
+	if TutorialManager.is_active() and TutorialManager.step_id in [
+		TutorialManager.STEP_COMBAT_OPEN_COMBOS,
+		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
+	]:
+		return false
+	_combo_overlay.visible = false
+	return true
+
+
+func _on_combo_close_pressed() -> void:
+	_request_close_combo_overlay()
+
+
+func _on_retry_tutorial_pressed() -> void:
+	if TutorialManager.is_replay():
+		GameManager.start_tutorial_replay()
+	else:
+		GameManager.start_game()
+
+
+func _on_tutorial_next_pressed() -> void:
+	if TutorialManager.step_id == TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
+		_combo_overlay.visible = false
+		TutorialManager.report_action("advance_combos_explain")
+		_refresh_tutorial_ui()
+
+
+func _on_tutorial_step_changed(_step: String) -> void:
+	_refresh_tutorial_ui()

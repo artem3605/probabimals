@@ -19,14 +19,19 @@ var combo_detector := ComboDetector.new()
 var scoring_engine := ScoringEngine.new()
 var has_rolled: bool = false
 var _rerolls_reset_value: int = 2
+var _roll_provider: Callable = Callable()
+var _roll_number: int = 0
 
 func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
-		combo_rules: Array = [], reroll_reset_value: int = -1) -> void:
+		combo_rules: Array = [], reroll_reset_value: int = -1,
+		roll_provider: Callable = Callable()) -> void:
 	active_dice = dice
 	target_score = target
 	hands_remaining = hands
 	rerolls_remaining = rerolls
 	_rerolls_reset_value = reroll_reset_value if reroll_reset_value >= 0 else rerolls
+	_roll_provider = roll_provider
+	_roll_number = 0
 	running_score = 0
 	current_roll.clear()
 	has_rolled = false
@@ -39,15 +44,23 @@ func roll_dice() -> void:
 	rerolls_remaining -= 1
 	rerolls_changed.emit(rerolls_remaining)
 	has_rolled = true
+	var scripted_values: Array[int] = []
+	if _roll_provider.is_valid():
+		scripted_values = _to_int_array(_roll_provider.call(_roll_number, held_dice.duplicate()))
 
 	for i in range(active_dice.size()):
 		if not held_dice[i]:
-			var face := active_dice[i].roll()
+			var face: DiceFace
+			if not scripted_values.is_empty() and i < scripted_values.size():
+				face = DiceFace.make_basic(scripted_values[i])
+			else:
+				face = active_dice[i].roll()
 			if i < current_roll.size():
 				current_roll[i] = face
 			else:
 				current_roll.append(face)
 
+	_roll_number += 1
 	dice_rolled.emit(current_roll_values())
 
 func current_roll_values() -> Array[int]:
@@ -121,3 +134,11 @@ func can_score() -> bool:
 
 func _reset_held() -> void:
 	held_dice = [false, false, false, false, false]
+
+
+func _to_int_array(raw: Variant) -> Array[int]:
+	var result: Array[int] = []
+	if raw is Array:
+		for value in raw:
+			result.append(int(value))
+	return result

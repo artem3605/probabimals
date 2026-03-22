@@ -1,6 +1,7 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
+const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const MAX_SELECTION := 5
 
 var _groups: Array[Dictionary] = []
@@ -11,12 +12,18 @@ var _dice_container: GridContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
+var _tutorial_overlay: Control
 
 
 func _ready() -> void:
 	super._ready()
 	_build_ui()
 	_update_state()
+	TutorialManager.step_changed.connect(_on_tutorial_step_changed)
+	TutorialManager.state_changed.connect(_refresh_tutorial_ui)
+	if TutorialManager.is_active():
+		TutorialManager.enter_scene(TutorialManager.SCENE_DICE_SELECT)
+	_refresh_tutorial_ui()
 	AudioManager.play_music(&"menu")
 
 
@@ -39,6 +46,7 @@ func _build_ui() -> void:
 	_build_subtitle(content)
 	_build_dice_grid(content)
 	_build_description_panel(content)
+	_build_tutorial_overlay()
 
 	_confirm_btn = _make_colored_button("CONFIRM", Vector2(216, 64), GREEN, GREEN.lightened(0.15), 16)
 	_confirm_btn.add_theme_stylebox_override("disabled", _make_style(Color("121212"), Color("262626")))
@@ -145,7 +153,12 @@ func _total_selected() -> int:
 
 
 func _update_state() -> void:
-	_subtitle_label.text = "Choose %d dice (%d/%d)" % [MAX_SELECTION, _total_selected(), MAX_SELECTION]
+	if TutorialManager.is_active():
+		_subtitle_label.text = "Choose %d dice. Include the Loaded Die and your upgraded die. (%d/%d)" % [
+			MAX_SELECTION, _total_selected(), MAX_SELECTION
+		]
+	else:
+		_subtitle_label.text = "Choose %d dice (%d/%d)" % [MAX_SELECTION, _total_selected(), MAX_SELECTION]
 	_update_counter_visuals()
 	_update_confirm_button()
 
@@ -162,13 +175,17 @@ func _update_counter_visuals() -> void:
 		var plus_btn: Button = g["plus_btn"]
 		plus_btn.disabled = sel >= total or ts >= MAX_SELECTION
 		var card: ItemCard = g["card"]
+		card.set_accent(_group_is_required(g), BLUE)
 		card.set_selected(sel > 0)
 
 
 func _update_confirm_button() -> void:
 	if _confirm_btn == null:
 		return
-	_confirm_btn.disabled = _total_selected() != MAX_SELECTION
+	if TutorialManager.is_active():
+		_confirm_btn.disabled = not TutorialManager.selection_meets_requirements(_get_selected_indices())
+	else:
+		_confirm_btn.disabled = _total_selected() != MAX_SELECTION
 
 
 func _build_description_panel(parent: VBoxContainer) -> void:
@@ -232,13 +249,77 @@ func _on_confirm_pressed() -> void:
 
 	var all_dice := GameManager.dice_bag.get_all()
 	var selected: Array[Die] = []
+	var selected_indices: Array[int] = []
 	for g in _groups:
 		var count: int = int(g["selected"])
 		if count <= 0:
 			continue
 		var indices: Array = g["indices"]
 		for j in count:
-			selected.append(all_dice[indices[j]])
+			var bag_index := int(indices[j])
+			selected.append(all_dice[bag_index])
+			selected_indices.append(bag_index)
+
+	if TutorialManager.is_active():
+		if not TutorialManager.selection_meets_requirements(selected_indices):
+			return
+		TutorialManager.report_action("confirm_selection", {"selected_indices": selected_indices})
 
 	GameManager.selected_dice = selected
 	GameManager.go_to_combat()
+
+
+func _group_is_required(group: Dictionary) -> bool:
+	if not TutorialManager.is_active():
+		return false
+	var required_indices := TutorialManager.get_required_bag_indices()
+	for bag_index in group["indices"]:
+		if required_indices.has(int(bag_index)):
+			return true
+	return false
+
+
+func _get_selected_indices() -> Array[int]:
+	var indices: Array[int] = []
+	for g in _groups:
+		var count: int = int(g["selected"])
+		if count <= 0:
+			continue
+		var group_indices: Array = g["indices"]
+		for j in count:
+			indices.append(int(group_indices[j]))
+	return indices
+
+
+func _build_tutorial_overlay() -> void:
+	_tutorial_overlay = TutorialOverlay.new()
+	add_child(_tutorial_overlay)
+	_tutorial_overlay.setup(_pixel_font)
+
+
+func _refresh_tutorial_ui() -> void:
+	if _tutorial_overlay == null:
+		return
+	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_DICE_SELECT:
+		_tutorial_overlay.hide_overlay()
+		return
+
+	_tutorial_overlay.show_step(
+		"PICK YOUR COMBAT DICE",
+		"Take five dice into combat. The red Loaded Die and the die you upgraded are required; the other three slots are up to you.",
+		_find_required_group_targets()
+	)
+
+
+func _find_required_group_targets() -> Array[Control]:
+	var targets: Array[Control] = []
+	for g in _groups:
+		if _group_is_required(g):
+			targets.append(g["card"])
+	if targets.is_empty():
+		targets.append(_dice_container)
+	return targets
+
+
+func _on_tutorial_step_changed(_step: String) -> void:
+	_refresh_tutorial_ui()

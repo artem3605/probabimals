@@ -136,7 +136,7 @@ anchor_right = 0.5
 offset_left = -160.0
 offset_top = 270.0
 offset_right = 160.0
-offset_bottom = 610.0
+offset_bottom = 700.0
 grow_horizontal = 2
 theme_override_constants/separation = 16
 

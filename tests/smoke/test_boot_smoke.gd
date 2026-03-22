@@ -6,6 +6,7 @@ func test_autoloads_boot_with_game_data_loaded() -> void:
 	assert_not_null(DataManager)
 	assert_not_null(GameManager)
 	assert_not_null(AudioManager)
+	assert_not_null(TutorialManager)
 	assert_true(DataManager.get_combo_rules().size() > 0)
 	assert_true(DataManager.get_all_faces().size() > 0)
 

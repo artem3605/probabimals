@@ -9,11 +9,15 @@ var _temp_paths: Array[String] = []
 func before_each() -> void:
 	_manager = TestableGameManagerScript.new()
 	autoqfree(_manager)
+	TutorialManager.completed = false
+	TutorialManager.clear_active_tutorial()
 
 func after_each() -> void:
 	for path in _temp_paths:
 		_manager.delete_save(path)
 	_temp_paths.clear()
+	TutorialManager.completed = false
+	TutorialManager.clear_active_tutorial()
 
 func test_buy_item_adds_die_from_catalogue_entry() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "loaded_die")
@@ -65,6 +69,16 @@ func test_build_save_data_normalizes_combat_phase() -> void:
 
 	assert_eq(data["phase"], "FLEA_MARKET")
 
+func test_build_save_data_keeps_combat_phase_for_active_tutorial_checkpoint() -> void:
+	_manager.current_phase = _manager.Phase.COMBAT
+	TutorialManager.start_first_run()
+	TutorialManager.enter_scene(TutorialManager.SCENE_COMBAT)
+
+	var data: Dictionary = _manager.build_save_data()
+
+	assert_eq(data["phase"], "COMBAT")
+	assert_eq(data["tutorial_mode"], TutorialManager.MODE_FIRST_RUN)
+
 func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	_manager.current_phase = _manager.Phase.DICE_SELECT
 	_manager.coins = 37
@@ -85,6 +99,18 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	_manager.modifiers = [
 		TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")
 	]
+	var selected: Array[Die] = [_manager.dice_bag.get_die(0)]
+	_manager.selected_dice = selected
+	TutorialManager.start_replay()
+	TutorialManager.enter_scene(TutorialManager.SCENE_DICE_SELECT)
+	TutorialManager.report_action("advance_intro")
+	TutorialManager.report_action("advance_intro")
+	TutorialManager.report_action("advance_intro")
+	TutorialManager.report_action("buy_item", {"item_id": "loaded_die", "die_index": 0})
+	TutorialManager.report_action("open_face_item", {"item_id": "extra_6"})
+	TutorialManager.report_action("choose_swap_die", {"die_index": 0, "die_color": "colorless"})
+	TutorialManager.report_action("swap_face", {"die_index": 0, "old_value": 1})
+	TutorialManager.report_action("go_to_dice_select")
 
 	var data: Dictionary = _manager.build_save_data()
 	var restored: Variant = TestableGameManagerScript.new()
@@ -100,10 +126,29 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	assert_eq(restored.rerolls_per_hand, 4)
 	assert_eq(restored.current_round, 3)
 	assert_eq(restored.dice_bag.size(), 1)
+	assert_eq(restored.selected_dice.size(), 1)
 	assert_eq(restored.dice_bag.get_die(0).color, "red")
 	assert_eq(restored.dice_bag.get_die(0).get_face(1).id, "pip_6")
 	assert_eq(restored.dice_bag.get_die(0).get_face(2).face_type, DiceFace.Type.MULT)
+	assert_eq(TutorialManager.mode, TutorialManager.MODE_REPLAY)
+	assert_eq(TutorialManager.checkpoint_scene, TutorialManager.SCENE_DICE_SELECT)
 	assert_eq_deep(restored.build_save_data(), data)
+
+func test_start_tutorial_replay_resets_run_and_enters_flea_market() -> void:
+	_manager.coins = 7
+	_manager.current_round = 4
+	_manager.target_score = 999
+	_manager.modifiers = [TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")]
+
+	await _manager.start_tutorial_replay()
+
+	assert_eq(_manager.coins, 50)
+	assert_eq(_manager.current_round, 1)
+	assert_eq(_manager.target_score, _manager.BASE_TARGET)
+	assert_eq(_manager.modifiers.size(), 0)
+	assert_eq(TutorialManager.mode, TutorialManager.MODE_REPLAY)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_INTRO)
+	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
 
 func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	var default_path := "user://gut_default_save_%d.json" % Time.get_ticks_usec()

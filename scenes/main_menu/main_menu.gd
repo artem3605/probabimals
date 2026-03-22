@@ -165,6 +165,11 @@ func _on_settings_close() -> void:
 	AudioManager.save_volume_settings()
 
 
+func _on_settings_tutorial_pressed() -> void:
+	_on_settings_close()
+	GameManager.start_tutorial_replay()
+
+
 func _on_exit_pressed() -> void:
 	get_tree().quit()
 
@@ -203,6 +208,18 @@ func _build_settings_overlay() -> void:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 8)
 	vbox.add_child(spacer)
+
+	var tutorial_divider := ColorRect.new()
+	tutorial_divider.color = GOLD.darkened(0.5)
+	tutorial_divider.custom_minimum_size = Vector2(0, 4)
+	vbox.add_child(tutorial_divider)
+
+	var tutorial_btn_center := CenterContainer.new()
+	vbox.add_child(tutorial_btn_center)
+
+	var tutorial_btn := _make_pixel_button("TUTORIAL", Vector2(240, 56), 14)
+	tutorial_btn.pressed.connect(_on_settings_tutorial_pressed)
+	tutorial_btn_center.add_child(tutorial_btn)
 
 	var btn_center := CenterContainer.new()
 	vbox.add_child(btn_center)
