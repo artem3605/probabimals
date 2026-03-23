@@ -108,8 +108,7 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	TutorialManager.report_action("advance_intro")
 	TutorialManager.report_action("buy_item", {"item_id": "loaded_die", "die_index": 0})
 	TutorialManager.report_action("open_face_item", {"item_id": "extra_6"})
-	TutorialManager.report_action("choose_swap_die", {"die_index": 0, "die_color": "colorless"})
-	TutorialManager.report_action("swap_face", {"die_index": 0, "old_value": 1})
+	TutorialManager.improved_die_index = 0
 	TutorialManager.report_action("go_to_dice_select")
 
 	var data: Dictionary = _manager.build_save_data()

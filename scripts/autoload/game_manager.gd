@@ -35,18 +35,33 @@ func start_game(skip_tutorial_intro: bool = false) -> void:
 	PokiSDK.commercial_break()
 	await PokiSDK.commercial_break_done
 	AudioManager.resume_after_ad()
-	_change_phase(Phase.FLEA_MARKET)
+
+	if TutorialManager.is_active() and TutorialManager.is_intro_step():
+		_setup_intro_combat()
+		_change_phase(Phase.COMBAT)
+	else:
+		_change_phase(Phase.FLEA_MARKET)
 
 
 func start_tutorial_replay() -> void:
 	delete_save()
 	_reset_run_state()
 	TutorialManager.start_replay()
+	_setup_intro_combat()
 	AudioManager.pause_for_ad()
 	PokiSDK.commercial_break()
 	await PokiSDK.commercial_break_done
 	AudioManager.resume_after_ad()
-	_change_phase(Phase.FLEA_MARKET)
+	_change_phase(Phase.COMBAT)
+
+
+func _setup_intro_combat() -> void:
+	current_round = 0
+	target_score = 60
+	coins = 25
+	selected_dice.clear()
+	for die in dice_bag.get_all():
+		selected_dice.append(die)
 
 
 func _reset_run_state() -> void:

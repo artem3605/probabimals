@@ -25,6 +25,8 @@ var _hand_info_label: Label
 var _score_bar_fill: ColorRect
 var _score_bar_track: ColorRect
 var _score_bar_label: Label
+var _score_bar_container: HBoxContainer
+var _title_bar_vbox: VBoxContainer
 
 var _total_hands: int = 4
 
@@ -163,7 +165,8 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
 
-	bar.add_child(_make_title_bar("COMBAT"))
+	_title_bar_vbox = _make_title_bar("COMBAT")
+	bar.add_child(_title_bar_vbox)
 
 	var spacer2 := Control.new()
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -222,21 +225,21 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 	outer.add_child(center)
 	outer.move_child(center, before.get_index())
 
-	var bar_container := HBoxContainer.new()
-	bar_container.add_theme_constant_override("separation", 12)
-	bar_container.custom_minimum_size = Vector2(500, 0)
-	center.add_child(bar_container)
+	_score_bar_container = HBoxContainer.new()
+	_score_bar_container.add_theme_constant_override("separation", 12)
+	_score_bar_container.custom_minimum_size = Vector2(500, 0)
+	center.add_child(_score_bar_container)
 
 	var score_label := _make_pixel_label("SCORE", 14, DARK)
 	score_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar_container.add_child(score_label)
+	_score_bar_container.add_child(score_label)
 
 	var track_wrapper := Control.new()
 	track_wrapper.custom_minimum_size = Vector2(300, 24)
 	track_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	track_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	track_wrapper.clip_contents = true
-	bar_container.add_child(track_wrapper)
+	_score_bar_container.add_child(track_wrapper)
 
 	_score_bar_track = ColorRect.new()
 	_score_bar_track.color = DARK
@@ -251,7 +254,7 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 
 	_score_bar_label = _make_pixel_label("0/" + str(GameManager.target_score), 16, DARK)
 	_score_bar_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar_container.add_child(_score_bar_label)
+	_score_bar_container.add_child(_score_bar_label)
 
 
 func _build_dice_tray(parent: VBoxContainer) -> void:
@@ -508,7 +511,7 @@ func _update_rerolls_display() -> void:
 func _update_hand_display() -> void:
 	if _hand_info_label:
 		var current_hand := _total_hands - combat_mgr.hands_remaining + 1
-		_hand_info_label.text = "Hand %d/%d" % [current_hand, _total_hands]
+		_hand_info_label.text = "Turn %d/%d" % [current_hand, _total_hands]
 
 
 func _update_score_bar() -> void:
@@ -757,6 +760,8 @@ func _on_score_pressed() -> void:
 		return
 	if TutorialManager.is_active() and not TutorialManager.is_combat_score_allowed():
 		return
+	if TutorialManager.is_active():
+		TutorialManager.report_action("combat_score")
 	var result := combat_mgr.score_hand(GameManager.modifiers)
 	if result.is_empty():
 		return
@@ -852,10 +857,15 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_score_label.text = str(final_score) + " PTS"
 
 	if target_beaten:
-		_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
+		if GameManager.current_round == 0:
+			_result_message.text = "ROUND CLEARED!"
+		else:
+			_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
 		_result_message.add_theme_color_override("font_color", GOLD)
-		if TutorialManager.is_active():
-			_result_sub_label.text = "You built a better pair, protected it with hold, and converted it into a stronger combo."
+		if TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN:
+			_result_sub_label.text = "Great start! Now let's head to the Flea Market and upgrade your dice."
+		elif TutorialManager.is_active():
+			_result_sub_label.text = "Great job! You improved your dice, held a strong pair, and turned it into a big combo. You've got the basics down!"
 		else:
 			_result_sub_label.text = "Target: %d" % GameManager.target_score
 		var reward := GameManager.get_round_reward()
@@ -866,9 +876,9 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 		_result_menu_btn.visible = false
 	else:
 		if TutorialManager.is_active():
-			_result_message.text = "TRY THE LESSON AGAIN"
+			_result_message.text = "NOT QUITE!"
 			_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
-			_result_sub_label.text = "Tutorial runs are safe to retry until the sequence feels natural."
+			_result_sub_label.text = "No worries -- give it another shot! The tutorial is here to help you practice."
 			_result_coins_label.visible = false
 			_result_next_btn.visible = false
 			_result_retry_btn.visible = true
@@ -978,24 +988,21 @@ func _on_combo_btn_pressed() -> void:
 	if _result_overlay.visible or _pause_overlay.visible:
 		return
 	if TutorialManager.is_active():
-		if TutorialManager.step_id not in [
-			TutorialManager.STEP_COMBAT_OPEN_COMBOS,
-			TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
+		if TutorialManager.step_id in [TutorialManager.STEP_INTRO_WIN, TutorialManager.STEP_INTRO_FINISH]:
+			pass
+		elif TutorialManager.step_id not in [
+			TutorialManager.STEP_INTRO_PAIR,
 		]:
 			return
 		match TutorialManager.step_id:
-			TutorialManager.STEP_COMBAT_OPEN_COMBOS:
+			TutorialManager.STEP_INTRO_PAIR:
 				if _combo_overlay.visible:
-					return
-				_open_combo_overlay()
-				TutorialManager.report_action("combo_overlay_opened")
+					_combo_overlay.visible = false
+					TutorialManager.report_action("combo_overlay_closed")
+				else:
+					_open_combo_overlay()
 				_refresh_tutorial_ui()
 				return
-			TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
-				if not _combo_overlay.visible:
-					_open_combo_overlay()
-				return
-
 	if _combo_overlay.visible:
 		_request_close_combo_overlay()
 	else:
@@ -1048,60 +1055,21 @@ func _refresh_tutorial_ui() -> void:
 	if _result_overlay.visible and not _result_target_beaten:
 		_tutorial_overlay.hide_overlay()
 		return
-	if TutorialManager.step_id == TutorialManager.STEP_COMBAT_WIN and not _result_overlay.visible:
+	if _combo_overlay.visible and TutorialManager.step_id == TutorialManager.STEP_INTRO_PAIR:
 		_tutorial_overlay.hide_overlay()
 		return
-	if TutorialManager.should_restore_combo_overlay() and not _combo_overlay.visible:
-		_open_combo_overlay()
+	if TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN and not _result_overlay.visible:
+		_tutorial_overlay.hide_overlay()
+		return
 
-	match TutorialManager.step_id:
-		TutorialManager.STEP_COMBAT_ROLL:
-			_tutorial_overlay.show_step(
-				"ROLL THE HAND",
-				"Start the hand. Your upgraded dice are set up to create an early pair you can build around.",
-				_reroll_btn
-			)
-		TutorialManager.STEP_COMBAT_OPEN_COMBOS:
-			_tutorial_overlay.show_step(
-				"OPEN COMBOS",
-				"Before you hold anything, open the combo list. It shows which patterns score and helps explain why this roll is promising.",
-				_combo_btn
-			)
-		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
-			_tutorial_overlay.show_step(
-				"HOW COMBOS SCORE",
-				_build_combo_tutorial_body(),
-				_find_current_combo_row_panel(),
-				true,
-				"NEXT",
-				_combo_dialog
-			)
-		TutorialManager.STEP_COMBAT_HOLD_PAIR:
-			_tutorial_overlay.show_step(
-				"HOLD BOTH SIXES",
-				"Lock the promising pair first. Then the rest of the hand can reroll without risking that setup.",
-				_find_required_hold_targets()
-			)
-		TutorialManager.STEP_COMBAT_REROLL:
-			_tutorial_overlay.show_step(
-				"REROLL THE REST",
-				"Keep the pair, reroll the other three, and push for a bigger multiple.",
-				_reroll_btn
-			)
-		TutorialManager.STEP_COMBAT_SCORE:
-			_tutorial_overlay.show_step(
-				"SCORE THE HAND",
-				"Bank the combo. Better odds matter only when you cash the result in.",
-				_end_turn_btn
-			)
-		TutorialManager.STEP_COMBAT_WIN:
-			_tutorial_overlay.show_step(
-				"ROUND WON",
-				"Winning pays coins and the run keeps going. After this button, the tutorial is finished.",
-				_result_next_btn
-			)
-		_:
-			_tutorial_overlay.hide_overlay()
+	var config := TutorialManager.get_step_text()
+	if config.is_empty():
+		_tutorial_overlay.hide_overlay()
+		return
+
+	var highlight: Variant = _get_tutorial_highlight_target()
+	var avoid: Variant = _get_tutorial_avoid_target()
+	_tutorial_overlay.show_step_from_config(config, highlight, avoid)
 
 
 func _update_tutorial_action_gating() -> void:
@@ -1111,18 +1079,45 @@ func _update_tutorial_action_gating() -> void:
 		_combo_btn.disabled = false
 		return
 	_combo_btn.disabled = TutorialManager.step_id not in [
-		TutorialManager.STEP_COMBAT_OPEN_COMBOS,
-		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
+		TutorialManager.STEP_INTRO_PAIR,
+		TutorialManager.STEP_INTRO_WIN,
 	]
+
+
+func _get_tutorial_highlight_target() -> Variant:
+	match TutorialManager.step_id:
+		TutorialManager.STEP_INTRO_ROLL, TutorialManager.STEP_COMBAT_GOOD_LUCK: return _reroll_btn
+		TutorialManager.STEP_INTRO_HOLD: return _find_required_hold_targets()
+		TutorialManager.STEP_INTRO_REROLL: return _reroll_btn
+		TutorialManager.STEP_INTRO_FINISH: return _end_turn_btn
+		TutorialManager.STEP_INTRO_WIN: return _result_next_btn
+		TutorialManager.STEP_INTRO_WELCOME:
+			var targets: Array[Control] = [_title_bar_vbox, _score_bar_container]
+			return targets
+		TutorialManager.STEP_INTRO_PAIR: return _combo_btn
+		_: return null
+
+
+func _get_tutorial_avoid_target() -> Variant:
+	return null
 
 
 func _refresh_tutorial_dice_accents() -> void:
 	if not TutorialManager.is_active():
 		return
+	var show_accents := TutorialManager.step_id not in [
+		TutorialManager.STEP_INTRO_WELCOME,
+		TutorialManager.STEP_INTRO_ROLL,
+		TutorialManager.STEP_INTRO_PAIR,
+		TutorialManager.STEP_INTRO_FINISH,
+		TutorialManager.STEP_INTRO_WIN,
+		TutorialManager.STEP_COMBAT_GOOD_LUCK,
+	]
 	for i in range(_dice_cards.size()):
 		var card = _dice_cards[i]
 		if card is CombatDice:
-			(card as CombatDice).set_accent(TutorialManager.required_combat_hold_indices.has(i), BLUE)
+			var accent := show_accents and TutorialManager.required_combat_hold_indices.has(i)
+			(card as CombatDice).set_accent(accent, BLUE)
 
 
 func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:
@@ -1172,12 +1167,10 @@ func _open_combo_overlay() -> void:
 
 
 func _request_close_combo_overlay() -> bool:
-	if TutorialManager.is_active() and TutorialManager.step_id in [
-		TutorialManager.STEP_COMBAT_OPEN_COMBOS,
-		TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS,
-	]:
-		return false
 	_combo_overlay.visible = false
+	if TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_INTRO_PAIR:
+		TutorialManager.report_action("combo_overlay_closed")
+		_refresh_tutorial_ui()
 	return true
 
 
@@ -1193,10 +1186,9 @@ func _on_retry_tutorial_pressed() -> void:
 
 
 func _on_tutorial_next_pressed() -> void:
-	if TutorialManager.step_id == TutorialManager.STEP_COMBAT_EXPLAIN_COMBOS:
-		_combo_overlay.visible = false
-		TutorialManager.report_action("advance_combos_explain")
-		_refresh_tutorial_ui()
+	match TutorialManager.step_id:
+		TutorialManager.STEP_INTRO_WELCOME:
+			TutorialManager.report_action("advance_intro")
 
 
 func _on_tutorial_step_changed(_step: String) -> void:

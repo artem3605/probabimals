@@ -15,6 +15,7 @@ var _shop_container: HBoxContainer
 var _reroll_btn: Button
 var _ready_btn: Button
 var _my_dice_btn: Button
+var _stats_vbox: VBoxContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
@@ -115,12 +116,12 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	right_wrapper.alignment = BoxContainer.ALIGNMENT_END
 	bar.add_child(right_wrapper)
 
-	var right_vbox := VBoxContainer.new()
-	right_vbox.add_theme_constant_override("separation", 12)
-	right_wrapper.add_child(right_vbox)
+	_stats_vbox = VBoxContainer.new()
+	_stats_vbox.add_theme_constant_override("separation", 12)
+	right_wrapper.add_child(_stats_vbox)
 
 	_coin_panel = _make_panel(GOLD, BORDER_BLACK, Vector2(124, 48))
-	right_vbox.add_child(_coin_panel)
+	_stats_vbox.add_child(_coin_panel)
 
 	var coin_hbox := HBoxContainer.new()
 	coin_hbox.add_theme_constant_override("separation", 8)
@@ -136,7 +137,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	_my_dice_btn = _make_colored_button("MY BAG", Vector2(124, 44), BLUE, BLUE.lightened(0.15), 12)
 	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
 	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
-	right_vbox.add_child(_my_dice_btn)
+	_stats_vbox.add_child(_my_dice_btn)
 	_all_buttons.append(_my_dice_btn)
 
 
@@ -457,9 +458,8 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 		var die: Die = all_dice[i]
 		var card := ItemCard.new()
 		card.setup_as_dice_item(die, _pixel_font)
-		var allowed := true
-		if TutorialManager.is_active():
-			allowed = TutorialManager.is_swap_die_allowed(die, i)
+		if TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_DIE:
+			var allowed := TutorialManager.is_swap_die_allowed(die, i)
 			card.set_accent(allowed, BLUE)
 			card.modulate = Color(1, 1, 1, 1) if allowed else Color(0.75, 0.75, 0.75, 1)
 		card.card_pressed.connect(_on_swap_die_selected.bind(i))
@@ -522,7 +522,7 @@ func _show_face_picker(die_index: int) -> void:
 			card._vbox.add_child(card.bottom_control)
 
 		card.card_pressed.connect(_on_swap_face_selected.bind(i))
-		if TutorialManager.is_active():
+		if TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_FACE:
 			var allowed := TutorialManager.is_swap_face_allowed(die_index, face)
 			card.set_accent(allowed, BLUE)
 			card.modulate = Color(1, 1, 1, 1) if allowed else Color(0.75, 0.75, 0.75, 1)
@@ -569,10 +569,7 @@ func _on_swap_face_selected(face_index: int) -> void:
 	_close_face_swap()
 	if success:
 		if TutorialManager.is_active():
-			TutorialManager.report_action("swap_face", {
-				"die_index": selected_die_index,
-				"old_value": old_face.value,
-			})
+			TutorialManager.improved_die_index = selected_die_index
 		AudioManager.play_sfx(&"purchase")
 		_sold[shop_idx] = true
 		_desc_title.text = "Purchased!"
@@ -639,66 +636,32 @@ func _refresh_tutorial_ui() -> void:
 		_tutorial_overlay.hide_overlay()
 		return
 
+	if _face_swap_overlay != null and _face_swap_overlay.visible:
+		_tutorial_overlay.hide_overlay()
+		return
+
+	var config := TutorialManager.get_step_text()
+	if config.is_empty():
+		_tutorial_overlay.hide_overlay()
+		return
+
+	_tutorial_overlay.show_step_from_config(config, _get_tutorial_highlight_target())
+
+
+func _get_tutorial_highlight_target() -> Variant:
 	match TutorialManager.step_id:
-		TutorialManager.STEP_MARKET_INTRO:
-			_tutorial_overlay.show_step(
-				"HOW A ROUND WORKS",
-				"Each round has three stops: Flea Market to improve your bag, Select Dice to choose five dice, and Combat to turn those choices into points.",
-				_shop_container,
-				true
-			)
-		TutorialManager.STEP_MARKET_GOAL:
-			_tutorial_overlay.show_step(
-				"WHAT YOU ARE TRYING TO DO",
-				"Combat gives you only a few hands. In each hand you roll, hold what looks promising, reroll the rest, and try to reach the round target before hands run out.",
-				null,
-				true
-			)
-		TutorialManager.STEP_MARKET_SCORE:
-			_tutorial_overlay.show_step(
-				"HOW SCORES AND COINS CONNECT",
-				"Points come from the combo you make plus the values and bonuses on the faces you keep. Clearing the round pays coins, and coins buy better odds back here.",
-				_coin_panel,
-				true
-			)
-		TutorialManager.STEP_BUY_LOADED_DIE:
-			_tutorial_overlay.show_step(
-				"BUY THE LOADED DIE",
-				"The red Loaded Die already leans high. More 5s and 6s means pairs and multiples happen more often.",
-				_find_shop_action_target("loaded_die")
-			)
-		TutorialManager.STEP_BUY_EXTRA_SIX:
-			_tutorial_overlay.show_step(
-				"ADD AN EXTRA SIX",
-				"Now buy Extra Six. We will tune one basic die so it can join the Loaded Die on big rolls.",
-				_find_shop_action_target("extra_6")
-			)
-		TutorialManager.STEP_CHOOSE_SWAP_DIE:
-			_tutorial_overlay.show_step(
-				"UPGRADE A BASIC DIE",
-				"Pick one white basic die to upgrade. Keep the red Loaded Die unchanged.",
-				_find_first_swap_card(true)
-			)
-		TutorialManager.STEP_CHOOSE_SWAP_FACE:
-			_tutorial_overlay.show_step(
-				"REPLACE A WEAK FACE",
-				"Swap out a weak face: 1, 2, or 3. This shifts that die closer to the combo you want.",
-				_find_first_swap_card(true)
-			)
-		TutorialManager.STEP_GO_TO_DICE_SELECT:
-			_tutorial_overlay.show_step(
-				"BAG READY",
-				"You now have one die that starts strong and one die you tuned yourself. Move on and choose your five combat dice.",
-				_ready_btn
-			)
-		_:
-			_tutorial_overlay.hide_overlay()
+		TutorialManager.STEP_MARKET_INTRO: return _shop_container
+		TutorialManager.STEP_MARKET_SCORE: return _stats_vbox
+		TutorialManager.STEP_BUY_LOADED_DIE: return _find_shop_action_target("loaded_die")
+		TutorialManager.STEP_BUY_EXTRA_SIX: return _find_shop_action_target("extra_6")
+		TutorialManager.STEP_GO_TO_DICE_SELECT: return _ready_btn
+		_: return null
 
 
 func _find_shop_action_target(item_id: String) -> Control:
 	for i in range(_shop_offerings.size()):
 		if _shop_offerings[i].get("id", "") == item_id and i < _shop_cards.size():
-			return _shop_cards[i].buy_button
+			return _shop_cards[i]
 	return _shop_container
 
 
@@ -712,7 +675,6 @@ func _find_first_swap_card(allowed: bool) -> Control:
 func _on_tutorial_next_pressed() -> void:
 	if TutorialManager.step_id in [
 		TutorialManager.STEP_MARKET_INTRO,
-		TutorialManager.STEP_MARKET_GOAL,
 		TutorialManager.STEP_MARKET_SCORE,
 	]:
 		TutorialManager.report_action("advance_intro")

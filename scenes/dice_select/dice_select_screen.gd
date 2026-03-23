@@ -161,6 +161,7 @@ func _update_state() -> void:
 		_subtitle_label.text = "Choose %d dice (%d/%d)" % [MAX_SELECTION, _total_selected(), MAX_SELECTION]
 	_update_counter_visuals()
 	_update_confirm_button()
+	_refresh_tutorial_ui()
 
 
 func _update_counter_visuals() -> void:
@@ -175,7 +176,7 @@ func _update_counter_visuals() -> void:
 		var plus_btn: Button = g["plus_btn"]
 		plus_btn.disabled = sel >= total or ts >= MAX_SELECTION
 		var card: ItemCard = g["card"]
-		card.set_accent(_group_is_required(g), BLUE)
+		card.set_accent(false)
 		card.set_selected(sel > 0)
 
 
@@ -304,11 +305,21 @@ func _refresh_tutorial_ui() -> void:
 		_tutorial_overlay.hide_overlay()
 		return
 
-	_tutorial_overlay.show_step(
-		"PICK YOUR COMBAT DICE",
-		"Take five dice into combat. The red Loaded Die and the die you upgraded are required; the other three slots are up to you.",
-		_find_required_group_targets()
-	)
+	var config := TutorialManager.get_step_text()
+	if config.is_empty():
+		_tutorial_overlay.hide_overlay()
+		return
+
+	if _total_selected() == MAX_SELECTION and TutorialManager.selection_meets_requirements(_get_selected_indices()):
+		var ready_config := {
+			"title": "GO TO COMBAT!",
+			"body": "You've picked your five! Hit Confirm to enter the battle.",
+			"panel_width": 710,
+			"panel_anchor": Vector2(0.5, 0.82),
+		}
+		_tutorial_overlay.show_step_from_config(ready_config, _confirm_btn)
+	else:
+		_tutorial_overlay.show_step_from_config(config, _dice_container)
 
 
 func _find_required_group_targets() -> Array[Control]:

@@ -20,13 +20,127 @@ const STEP_CHOOSE_SWAP_DIE := "choose_swap_die"
 const STEP_CHOOSE_SWAP_FACE := "choose_swap_face"
 const STEP_GO_TO_DICE_SELECT := "go_to_dice_select"
 const STEP_SELECT_REQUIRED_DICE := "select_required_dice"
-const STEP_COMBAT_ROLL := "combat_roll"
-const STEP_COMBAT_OPEN_COMBOS := "combat_open_combos"
-const STEP_COMBAT_EXPLAIN_COMBOS := "combat_explain_combos"
-const STEP_COMBAT_HOLD_PAIR := "combat_hold_pair"
-const STEP_COMBAT_REROLL := "combat_reroll"
-const STEP_COMBAT_SCORE := "combat_score"
-const STEP_COMBAT_WIN := "combat_win"
+const STEP_COMBAT_GOOD_LUCK := "combat_good_luck"
+
+const STEP_INTRO_WELCOME := "intro_welcome"
+const STEP_INTRO_ROLL := "intro_roll"
+const STEP_INTRO_HOLD := "intro_hold"
+const STEP_INTRO_REROLL := "intro_reroll"
+const STEP_INTRO_PAIR := "intro_pair"
+const STEP_INTRO_FINISH := "intro_finish"
+const STEP_INTRO_WIN := "intro_win"
+
+const OVERLAY_STYLE := {
+	"panel_width": 420.0,
+	"panel_bg": Color("1a1a1a"),
+	"panel_border": Color("ffd700"),
+	"panel_border_width": 4,
+	"panel_content_margin": 20,
+	"panel_margin_left": 32.0,
+	"panel_margin_right": 32.0,
+	"panel_margin_top": 48.0,
+	"panel_margin_bottom": 24.0,
+	"panel_gap": 24.0,
+	"title_font_size": 18,
+	"body_font_size": 12,
+	"shade_color": Color(0, 0, 0, 0.40),
+	"highlight_fill": Color(0.29, 0.62, 1.0, 0.16),
+	"highlight_border": Color("ffd700"),
+	"highlight_padding": 8.0,
+	"panel_anchor": Vector2(0.0, 1.0),
+	"next_btn_size": Vector2(164, 52),
+	"next_btn_font_size": 14,
+}
+
+const STEP_TEXT := {
+	"intro_welcome": {
+		"title": "WELCOME!",
+		"body": "In this game you will roll dice! Your goal this round: score 60 points. See the target there? Let's go!",
+		"show_next": true,
+		"panel_width": 560,
+		"panel_anchor": Vector2(0.5, 0.5),
+	},
+	"intro_roll": {
+		"title": "ROLL THE DICE!",
+		"body": "Press the Roll button to roll your dice!",
+		"panel_width": 550,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+	"intro_hold": {
+		"title": "NICE, A SIX!",
+		"body": "Wow, 6 is a lot! Tap this die to hold it -- held dice won't be rerolled.",
+		"panel_width": 450,
+		"panel_anchor": Vector2(0.57, 0.5),
+	},
+	"intro_reroll": {
+		"title": "ROLL AGAIN!",
+		"body": "Now press Roll to reroll the rest!",
+		"panel_width": 550,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+	"intro_pair": {
+		"title": "COMBO!",
+		"body": "Two 6s -- that's a Pair! Pairs give bonus points. Tap Combos to see all scoring patterns!",
+		"panel_width": 630,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+	"intro_finish": {
+		"title": "TURNS",
+		"body": "When you're out of rerolls or happy with your result, press Finish Round. One turn might not be enough, but you have several turns and their scores add up!",
+		"panel_width": 630,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+	"intro_win": {
+		"title": "COINS!",
+		"body": "After each round you earn coins! Let's spend them on new dice and upgrades.",
+		"panel_width": 630,
+		"panel_anchor": Vector2(0.5, 0.95),
+	},
+	"market_intro": {
+		"title": "THE FLEA MARKET",
+		"body": "This is where you spend coins on new dice and upgrades.",
+		"show_next": true,
+		"panel_width": 650,
+		"panel_anchor": Vector2(0.5, 0.75),
+	},
+	"market_score": {
+		"title": "YOUR STUFF",
+		"body": "Here's your coin balance and the dice in your bag. Check My Bag to see what you've got!",
+		"show_next": true,
+		"panel_width": 450,
+		"panel_anchor": Vector2(1, 0.37),
+	},
+	"buy_loaded_die": {
+		"title": "GRAB THE LOADED DIE",
+		"body": "See the red one? It already rolls high -- lots of 5s and 6s. That means pairs and triples show up way more often. Go ahead, buy it!",
+		"panel_width": 450,
+		"panel_anchor": Vector2(0.5, 0.5),
+	},
+	"buy_extra_six": {
+		"title": "GET EXTRA SIX",
+		"body": "Nice! Now pick up Extra Six. We'll use it to soup up one of your basic dice.",
+		"panel_width": 450,
+		"panel_anchor": Vector2(0.5, 0.5),
+	},
+	"go_to_dice_select": {
+		"title": "LOOKING GOOD!",
+		"body": "You ran out of money! Hit Ready to go further.",
+		"panel_width": 620,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+	"select_required_dice": {
+		"title": "CHOOSE YOUR FIVE",
+		"body": "Pick five dice to bring into combat. Make sure to include the red Loaded Die and the one you just upgraded!",
+		"panel_width": 730,
+		"panel_anchor": Vector2(0.5, 0.85),
+	},
+	"combat_good_luck": {
+		"title": "GOOD LUCK!",
+		"body": "We're back in combat. You already know the ropes -- roll, hold, and score your way to victory!",
+		"panel_width": 550,
+		"panel_anchor": Vector2(0.5, 0.72),
+	},
+}
 
 const TUTORIAL_SHOP_IDS := [
 	"loaded_die",
@@ -65,19 +179,30 @@ func should_auto_start_on_new_game() -> bool:
 	return not completed
 
 
+func get_step_text(sid: String = step_id) -> Dictionary:
+	return STEP_TEXT.get(sid, {})
+
+
+func is_intro_step() -> bool:
+	return step_id in [STEP_INTRO_WELCOME, STEP_INTRO_ROLL, STEP_INTRO_HOLD,
+		STEP_INTRO_REROLL, STEP_INTRO_PAIR, STEP_INTRO_FINISH, STEP_INTRO_WIN]
+
+
 func start_first_run() -> void:
 	mode = MODE_FIRST_RUN
 	_reset_active_progress()
-	checkpoint_scene = SCENE_FLEA_MARKET
-	_set_step(STEP_MARKET_INTRO)
+	checkpoint_scene = SCENE_COMBAT
+	required_combat_hold_indices = _to_int_array([0])
+	_set_step(STEP_INTRO_WELCOME)
 	_emit_state_changed()
 
 
 func start_replay() -> void:
 	mode = MODE_REPLAY
 	_reset_active_progress()
-	checkpoint_scene = SCENE_FLEA_MARKET
-	_set_step(STEP_MARKET_INTRO)
+	checkpoint_scene = SCENE_COMBAT
+	required_combat_hold_indices = _to_int_array([0])
+	_set_step(STEP_INTRO_WELCOME)
 	_emit_state_changed()
 
 
@@ -103,6 +228,8 @@ func enter_scene(scene_id: String) -> void:
 	if not is_active():
 		return
 	checkpoint_scene = scene_id
+	if scene_id == SCENE_FLEA_MARKET and step_id == STEP_INTRO_WIN:
+		_set_step(STEP_MARKET_INTRO)
 	_emit_state_changed()
 
 
@@ -137,11 +264,39 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 		return false
 
 	match step_id:
-		STEP_MARKET_INTRO:
+		STEP_INTRO_WELCOME:
 			if action_id == "advance_intro":
-				_set_step(STEP_MARKET_GOAL)
+				_set_step(STEP_INTRO_ROLL)
 				return true
-		STEP_MARKET_GOAL:
+		STEP_INTRO_ROLL:
+			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 0:
+				_set_step(STEP_INTRO_HOLD)
+				return true
+		STEP_INTRO_HOLD:
+			if action_id == "hold_changed":
+				var held_indices := _to_int_array(payload.get("held_indices", []))
+				held_indices.sort()
+				var required := required_combat_hold_indices.duplicate()
+				required.sort()
+				if held_indices == required:
+					_set_step(STEP_INTRO_REROLL)
+					return true
+		STEP_INTRO_REROLL:
+			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 1:
+				_set_step(STEP_INTRO_PAIR)
+				return true
+		STEP_INTRO_PAIR:
+			if action_id == "combo_overlay_closed":
+				_set_step(STEP_INTRO_FINISH)
+				return true
+		STEP_INTRO_FINISH:
+			if action_id == "combat_score":
+				_set_step(STEP_INTRO_WIN)
+				return true
+		STEP_INTRO_WIN:
+			if action_id == "combat_next_round":
+				return true
+		STEP_MARKET_INTRO:
 			if action_id == "advance_intro":
 				_set_step(STEP_MARKET_SCORE)
 				return true
@@ -156,20 +311,8 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 				return true
 		STEP_BUY_EXTRA_SIX:
 			if action_id == "open_face_item" and payload.get("item_id", "") == "extra_6":
-				_set_step(STEP_CHOOSE_SWAP_DIE)
+				_set_step(STEP_GO_TO_DICE_SELECT)
 				return true
-		STEP_CHOOSE_SWAP_DIE:
-			if action_id == "choose_swap_die":
-				var die_color := str(payload.get("die_color", ""))
-				if die_color == "colorless":
-					improved_die_index = int(payload.get("die_index", -1))
-					_set_step(STEP_CHOOSE_SWAP_FACE)
-					return true
-		STEP_CHOOSE_SWAP_FACE:
-			if action_id == "swap_face" and int(payload.get("die_index", -1)) == improved_die_index:
-				if int(payload.get("old_value", 0)) <= 3:
-					_set_step(STEP_GO_TO_DICE_SELECT)
-					return true
 		STEP_GO_TO_DICE_SELECT:
 			if action_id == "go_to_dice_select":
 				_set_step(STEP_SELECT_REQUIRED_DICE)
@@ -179,39 +322,10 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 				var indices := _to_int_array(payload.get("selected_indices", []))
 				if selection_meets_requirements(indices):
 					set_selected_bag_indices(indices)
-					_set_step(STEP_COMBAT_ROLL)
+					_set_step(STEP_COMBAT_GOOD_LUCK)
 					return true
-		STEP_COMBAT_ROLL:
-			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 0:
-				_set_step(STEP_COMBAT_OPEN_COMBOS)
-				return true
-		STEP_COMBAT_OPEN_COMBOS:
-			if action_id == "combo_overlay_opened":
-				_set_step(STEP_COMBAT_EXPLAIN_COMBOS)
-				return true
-		STEP_COMBAT_EXPLAIN_COMBOS:
-			if action_id == "advance_combos_explain":
-				_set_step(STEP_COMBAT_HOLD_PAIR)
-				return true
-		STEP_COMBAT_HOLD_PAIR:
-			if action_id == "hold_changed":
-				var held_indices := _to_int_array(payload.get("held_indices", []))
-				held_indices.sort()
-				var required := required_combat_hold_indices.duplicate()
-				required.sort()
-				if held_indices == required:
-					_set_step(STEP_COMBAT_REROLL)
-					return true
-		STEP_COMBAT_REROLL:
-			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 1:
-				_set_step(STEP_COMBAT_SCORE)
-				return true
-		STEP_COMBAT_SCORE:
-			if action_id == "combat_win":
-				_set_step(STEP_COMBAT_WIN)
-				return true
-		STEP_COMBAT_WIN:
-			if action_id == "combat_next_round":
+		STEP_COMBAT_GOOD_LUCK:
+			if action_id == "combat_roll":
 				complete_tutorial()
 				return true
 
@@ -233,7 +347,7 @@ func is_shop_item_allowed(item_id: String) -> bool:
 	if not is_active():
 		return true
 	match step_id:
-		STEP_MARKET_INTRO, STEP_MARKET_GOAL, STEP_MARKET_SCORE:
+		STEP_MARKET_INTRO, STEP_MARKET_SCORE:
 			return false
 		STEP_BUY_LOADED_DIE:
 			return item_id == "loaded_die"
@@ -254,17 +368,17 @@ func can_go_to_dice_select() -> bool:
 func is_swap_die_allowed(die: Die, die_index: int) -> bool:
 	if not is_active():
 		return true
-	if step_id != STEP_CHOOSE_SWAP_DIE:
-		return false
-	return die_index >= 0 and die.color == "colorless"
+	if step_id == STEP_CHOOSE_SWAP_DIE:
+		return die_index >= 0 and die.color == "colorless"
+	return true
 
 
 func is_swap_face_allowed(die_index: int, face: DiceFace) -> bool:
 	if not is_active():
 		return true
-	if step_id != STEP_CHOOSE_SWAP_FACE:
-		return false
-	return die_index == improved_die_index and face.value <= 3
+	if step_id == STEP_CHOOSE_SWAP_FACE:
+		return die_index == improved_die_index and face.value <= 3
+	return true
 
 
 func selection_meets_requirements(selected_indices: Array[int]) -> bool:
@@ -287,39 +401,37 @@ func set_selected_bag_indices(indices: Array[int]) -> void:
 
 
 func get_scripted_roll_values(roll_number: int) -> Array[int]:
-	var result := _to_int_array([1, 1, 1, 1, 1])
-	if selected_bag_indices.size() != 5:
-		return result
-
-	var filler := _to_int_array([2, 3, 4] if roll_number == 0 else [6, 6, 5])
-	var filler_index := 0
-	for i in range(5):
-		if required_combat_hold_indices.has(i):
-			result[i] = 6
-		else:
-			result[i] = filler[filler_index]
-			filler_index += 1
-	return result
+	if step_id == STEP_INTRO_ROLL:
+		return _to_int_array([6, 3, 2, 5, 1])
+	if step_id == STEP_INTRO_REROLL:
+		return _to_int_array([6, 6, 1, 3, 5])
+	return []
 
 
 func should_use_scripted_rolls() -> bool:
-	return is_active() and checkpoint_scene == SCENE_COMBAT
+	if not is_active() or checkpoint_scene != SCENE_COMBAT:
+		return false
+	return is_intro_step()
 
 
 func is_combat_roll_allowed() -> bool:
 	if not is_active():
 		return true
-	return step_id == STEP_COMBAT_ROLL or step_id == STEP_COMBAT_REROLL
+	if step_id == STEP_INTRO_WIN:
+		return true
+	return step_id in [STEP_INTRO_ROLL, STEP_INTRO_REROLL, STEP_COMBAT_GOOD_LUCK]
 
 
 func should_restore_combo_overlay() -> bool:
-	return is_active() and checkpoint_scene == SCENE_COMBAT and step_id == STEP_COMBAT_EXPLAIN_COMBOS
+	return false
 
 
 func is_combat_hold_allowed(die_index: int, held_indices: Array[int]) -> bool:
 	if not is_active():
 		return true
-	if step_id != STEP_COMBAT_HOLD_PAIR:
+	if step_id == STEP_INTRO_WIN:
+		return true
+	if step_id != STEP_INTRO_HOLD:
 		return false
 	if held_indices.size() > required_combat_hold_indices.size():
 		return false
@@ -334,7 +446,7 @@ func is_combat_hold_allowed(die_index: int, held_indices: Array[int]) -> bool:
 func is_combat_score_allowed() -> bool:
 	if not is_active():
 		return true
-	return step_id == STEP_COMBAT_SCORE
+	return step_id in [STEP_INTRO_FINISH, STEP_INTRO_WIN]
 
 
 func get_required_bag_indices() -> Array[int]:

@@ -31,7 +31,7 @@ func test_overlay_places_explanation_panel_outside_multi_target_highlights() -> 
 	overlay.setup(PIXEL_FONT)
 	overlay.show_step(
 		"HOW COMBOS SCORE",
-		"The highlighted row is the combo you match. The score panel shows what you would bank if you ended the hand now.",
+		"The highlighted row is the combo you match. The score panel shows what you would bank if you ended the turn now.",
 		combo_row,
 		true,
 		"NEXT",
