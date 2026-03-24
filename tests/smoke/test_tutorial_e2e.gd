@@ -37,6 +37,9 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WELCOME)
 	assert_true(intro_combat._tutorial_overlay.visible)
+	assert_true(intro_combat._menu_btn.disabled)
+	intro_combat._on_pause_pressed()
+	assert_false(intro_combat._pause_overlay.visible)
 	intro_combat._tutorial_overlay._next_btn.emit_signal("pressed")
 	assert_true(await wait_until(
 		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_ROLL,
@@ -192,6 +195,7 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 		0.05,
 		"combat good luck completion"
 	))
+	assert_false(combat._menu_btn.disabled)
 
 
 func _find_shop_index(items: Array, item_id: String) -> int:

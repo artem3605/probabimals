@@ -464,6 +464,8 @@ func _build_combo_overlay() -> void:
 func _on_pause_pressed() -> void:
 	if _result_overlay.visible:
 		return
+	if TutorialManager.is_active():
+		return
 	if _combo_overlay.visible:
 		_request_close_combo_overlay()
 	get_tree().paused = true
