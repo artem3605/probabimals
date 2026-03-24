@@ -1,6 +1,8 @@
 class_name CombatManager
 extends Node
 
+enum HandState { HAND_ACTIVE, HAND_TRANSITION, COMBAT_ENDED }
+
 signal dice_rolled(values: Array[int])
 signal die_held(index: int, held: bool)
 signal hand_scored(combo: Dictionary, score_data: Dictionary)
@@ -18,6 +20,7 @@ var active_dice: Array[Die] = []
 var combo_detector := ComboDetector.new()
 var scoring_engine := ScoringEngine.new()
 var has_rolled: bool = false
+var hand_state: HandState = HandState.HAND_ACTIVE
 var _rerolls_reset_value: int = 2
 
 func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
@@ -30,11 +33,12 @@ func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
 	running_score = 0
 	current_roll.clear()
 	has_rolled = false
+	hand_state = HandState.HAND_ACTIVE
 	_reset_held()
 	combo_detector.set_combo_rules(combo_rules)
 
 func roll_dice() -> void:
-	if rerolls_remaining <= 0:
+	if not can_roll():
 		return
 	rerolls_remaining -= 1
 	rerolls_changed.emit(rerolls_remaining)
@@ -82,6 +86,8 @@ func get_current_combo() -> Dictionary:
 	return combo_detector.detect_best_combo(current_roll)
 
 func score_hand(modifiers: Array) -> Dictionary:
+	if not can_score():
+		return {}
 	var combo := get_current_combo()
 	if combo.is_empty():
 		return {}
@@ -106,18 +112,26 @@ func score_hand(modifiers: Array) -> Dictionary:
 	current_roll.clear()
 
 	if hands_remaining <= 0 or running_score >= target_score:
+		hand_state = HandState.COMBAT_ENDED
 		end_combat()
+	else:
+		hand_state = HandState.HAND_TRANSITION
 
 	return result
+
+func begin_next_hand() -> void:
+	if hand_state != HandState.HAND_TRANSITION:
+		return
+	hand_state = HandState.HAND_ACTIVE
 
 func end_combat() -> void:
 	combat_ended.emit(running_score, running_score >= target_score)
 
 func can_roll() -> bool:
-	return rerolls_remaining > 0
+	return hand_state == HandState.HAND_ACTIVE and rerolls_remaining > 0
 
 func can_score() -> bool:
-	return has_rolled and current_roll.size() > 0
+	return hand_state == HandState.HAND_ACTIVE and has_rolled and current_roll.size() > 0
 
 func _reset_held() -> void:
 	held_dice = [false, false, false, false, false]
