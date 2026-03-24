@@ -311,7 +311,31 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 				return true
 		STEP_BUY_EXTRA_SIX:
 			if action_id == "open_face_item" and payload.get("item_id", "") == "extra_6":
+				improved_die_index = -1
+				_set_step(STEP_CHOOSE_SWAP_DIE)
+				return true
+		STEP_CHOOSE_SWAP_DIE:
+			if action_id == "choose_swap_die":
+				var die_color := str(payload.get("die_color", ""))
+				if die_color == "colorless":
+					improved_die_index = int(payload.get("die_index", -1))
+					_set_step(STEP_CHOOSE_SWAP_FACE)
+					return true
+			elif action_id == "cancel_face_item":
+				improved_die_index = -1
+				_set_step(STEP_BUY_EXTRA_SIX)
+				return true
+		STEP_CHOOSE_SWAP_FACE:
+			if action_id == "swap_face" and int(payload.get("die_index", -1)) == improved_die_index:
 				_set_step(STEP_GO_TO_DICE_SELECT)
+				return true
+			elif action_id == "back_face_item":
+				improved_die_index = -1
+				_set_step(STEP_CHOOSE_SWAP_DIE)
+				return true
+			elif action_id == "cancel_face_item":
+				improved_die_index = -1
+				_set_step(STEP_BUY_EXTRA_SIX)
 				return true
 		STEP_GO_TO_DICE_SELECT:
 			if action_id == "go_to_dice_select":

@@ -28,6 +28,88 @@ func after_each() -> void:
 
 func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	TutorialManager.start_first_run()
+	GameManager._setup_intro_combat()
+
+	var intro_combat: Node = COMBAT_SCENE.instantiate()
+	autoqfree(intro_combat)
+	add_child_autofree(intro_combat)
+	await wait_until(func(): return not intro_combat._animating, 3.0, 0.05, "intro combat ready")
+
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WELCOME)
+	assert_true(intro_combat._tutorial_overlay.visible)
+	intro_combat._tutorial_overlay._next_btn.emit_signal("pressed")
+	assert_true(await wait_until(
+		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_ROLL,
+		2.0,
+		0.05,
+		"intro roll step"
+	))
+	assert_true(intro_combat._combo_btn.disabled)
+	var first_intro_roll := [6, 3, 2, 5, 1]
+	intro_combat._on_roll_pressed()
+	assert_true(await wait_until(
+		func():
+			return TutorialManager.step_id == TutorialManager.STEP_INTRO_HOLD \
+				and intro_combat.combat_mgr.current_roll_values() == first_intro_roll,
+		3.0,
+		0.05,
+		"intro first roll"
+	))
+	assert_eq_deep(intro_combat.combat_mgr.current_roll_values(), [6, 3, 2, 5, 1])
+	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
+	intro_combat._on_die_clicked(0)
+	assert_true(await wait_until(
+		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_REROLL,
+		2.0,
+		0.05,
+		"intro hold step"
+	))
+	assert_true(intro_combat.combat_mgr.is_held(0))
+	var second_intro_roll := [6, 6, 1, 3, 5]
+	intro_combat._on_roll_pressed()
+	assert_true(await wait_until(
+		func():
+			return TutorialManager.step_id == TutorialManager.STEP_INTRO_PAIR \
+				and intro_combat.combat_mgr.current_roll_values() == second_intro_roll,
+		3.0,
+		0.05,
+		"intro reroll step"
+	))
+	assert_false(intro_combat._combo_btn.disabled)
+	intro_combat._combo_btn.emit_signal("pressed")
+	await wait_process_frames(2)
+	assert_true(intro_combat._combo_overlay.visible)
+	assert_false(intro_combat._tutorial_overlay.visible)
+	intro_combat._combo_btn.emit_signal("pressed")
+	assert_true(await wait_until(
+		func():
+			return TutorialManager.step_id == TutorialManager.STEP_INTRO_FINISH \
+				and not intro_combat._combo_overlay.visible,
+		2.0,
+		0.05,
+		"intro finish step"
+	))
+
+	GameManager.target_score = 31
+	intro_combat.combat_mgr.target_score = 31
+	intro_combat._on_score_pressed()
+	assert_true(await wait_until(
+		func():
+			return TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN \
+				and intro_combat._result_overlay.visible \
+				and intro_combat._result_target_beaten,
+		3.0,
+		0.05,
+		"intro win overlay"
+	))
+
+	assert_true(TutorialManager.report_action("combat_next_round"))
+	GameManager.current_round = 1
+	GameManager.target_score = GameManager.BASE_TARGET
+	GameManager.coins = 35
+	GameManager.selected_dice.clear()
+	TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_INTRO)
 
 	var flea_market = FLEA_MARKET_SCENE.instantiate()
 	autoqfree(flea_market)
@@ -53,16 +135,18 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 
 	extra_six_card.buy_button.emit_signal("pressed")
 	await wait_process_frames(2)
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_GO_TO_DICE_SELECT)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_CHOOSE_SWAP_DIE)
 
 	flea_market._on_swap_die_selected(0)
 	await wait_process_frames(2)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_CHOOSE_SWAP_FACE)
 	var replace_face_index := GameManager.dice_bag.get_die(0).get_face_values().find(1)
 	if replace_face_index < 0:
 		replace_face_index = 0
 	flea_market._on_swap_face_selected(replace_face_index)
 	await wait_process_frames(2)
 	assert_eq(TutorialManager.improved_die_index, 0)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_GO_TO_DICE_SELECT)
 
 	assert_false(flea_market._ready_btn.disabled)
 	assert_true(TutorialManager.report_action("go_to_dice_select"))
@@ -79,8 +163,8 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	var required_targets: Array[Control] = dice_select._find_required_group_targets()
 
 	assert_eq(required_targets.size(), 2)
-	assert_true((dice_select._groups[loaded_group_idx]["card"] as ItemCard).is_accented())
-	assert_true((dice_select._groups[improved_group_idx]["card"] as ItemCard).is_accented())
+	assert_true(required_targets.has(dice_select._groups[loaded_group_idx]["card"]))
+	assert_true(required_targets.has(dice_select._groups[improved_group_idx]["card"]))
 
 	dice_select._on_plus_pressed(loaded_group_idx)
 	dice_select._on_plus_pressed(improved_group_idx)
@@ -101,9 +185,13 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 
 	assert_true(combat._tutorial_overlay.visible)
 	assert_true(TutorialManager.is_combat_roll_allowed())
-	TutorialManager.report_action("combat_roll", {"roll_number": 0})
-	assert_true(TutorialManager.completed)
-	assert_false(TutorialManager.is_active())
+	combat._on_roll_pressed()
+	assert_true(await wait_until(
+		func(): return TutorialManager.completed and not TutorialManager.is_active(),
+		3.0,
+		0.05,
+		"combat good luck completion"
+	))
 
 
 func _find_shop_index(items: Array, item_id: String) -> int:

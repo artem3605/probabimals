@@ -566,6 +566,11 @@ func _on_swap_face_selected(face_index: int) -> void:
 
 	var selected_die_index := _selected_die_index
 	var success := GameManager.buy_face_swap(selected_die_index, face_index, new_face, cost)
+	if success and TutorialManager.is_active():
+		TutorialManager.report_action("swap_face", {
+			"die_index": selected_die_index,
+			"old_value": old_face.value,
+		})
 	_close_face_swap()
 	if success:
 		if TutorialManager.is_active():
@@ -582,9 +587,14 @@ func _on_swap_face_selected(face_index: int) -> void:
 
 func _on_face_swap_cancel() -> void:
 	_close_face_swap()
+	if TutorialManager.is_active():
+		TutorialManager.report_action("cancel_face_item")
+		_refresh_tutorial_ui()
 
 
 func _on_face_swap_back() -> void:
+	if TutorialManager.is_active():
+		TutorialManager.report_action("back_face_item")
 	_show_die_picker(_pending_face_item, _pending_shop_index)
 
 

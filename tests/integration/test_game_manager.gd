@@ -133,7 +133,7 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	assert_eq(TutorialManager.checkpoint_scene, TutorialManager.SCENE_DICE_SELECT)
 	assert_eq_deep(restored.build_save_data(), data)
 
-func test_start_tutorial_replay_resets_run_and_enters_flea_market() -> void:
+func test_start_tutorial_replay_resets_run_and_enters_intro_combat() -> void:
 	_manager.coins = 7
 	_manager.current_round = 4
 	_manager.target_score = 999
@@ -141,13 +141,15 @@ func test_start_tutorial_replay_resets_run_and_enters_flea_market() -> void:
 
 	await _manager.start_tutorial_replay()
 
-	assert_eq(_manager.coins, 50)
-	assert_eq(_manager.current_round, 1)
-	assert_eq(_manager.target_score, _manager.BASE_TARGET)
+	assert_eq(_manager.coins, 25)
+	assert_eq(_manager.current_round, 0)
+	assert_eq(_manager.target_score, 60)
 	assert_eq(_manager.modifiers.size(), 0)
+	assert_eq(_manager.selected_dice.size(), 5)
 	assert_eq(TutorialManager.mode, TutorialManager.MODE_REPLAY)
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_INTRO)
-	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WELCOME)
+	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
+	assert_eq_deep(_manager.phase_history, [_manager.Phase.COMBAT])
 
 func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	var default_path := "user://gut_default_save_%d.json" % Time.get_ticks_usec()
