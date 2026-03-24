@@ -105,17 +105,19 @@ func score_hand(modifiers: Array) -> Dictionary:
 	}
 	hand_scored.emit(combo, score_data)
 
+	if hands_remaining <= 0 or running_score >= target_score:
+		hand_state = HandState.COMBAT_ENDED
+	else:
+		hand_state = HandState.HAND_TRANSITION
+
 	has_rolled = false
 	rerolls_remaining = _rerolls_reset_value
 	rerolls_changed.emit(rerolls_remaining)
 	_reset_held()
 	current_roll.clear()
 
-	if hands_remaining <= 0 or running_score >= target_score:
-		hand_state = HandState.COMBAT_ENDED
+	if hand_state == HandState.COMBAT_ENDED:
 		end_combat()
-	else:
-		hand_state = HandState.HAND_TRANSITION
 
 	return result
 

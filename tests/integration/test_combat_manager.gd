@@ -41,9 +41,11 @@ func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void
 		TestData.deterministic_die([6]),
 		TestData.deterministic_die([6]),
 	]
+	var can_roll_on_reroll_updates: Array[bool] = []
 
+	manager.rerolls_changed.connect(func(_remaining: int): can_roll_on_reroll_updates.append(manager.can_roll()))
 	watch_signals(manager)
-	manager.start_combat(dice, 999, 2, 1, _combo_rules, 4)
+	manager.start_combat(dice, 999, 2, 2, _combo_rules, 4)
 	manager.roll_dice()
 	manager.toggle_hold(0)
 	var result: Dictionary = manager.score_hand([])
@@ -58,6 +60,7 @@ func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void
 	assert_false(manager.can_roll())
 	assert_eq(manager.current_roll.size(), 0)
 	assert_false(manager.is_held(0))
+	assert_eq(can_roll_on_reroll_updates, [true, false])
 	assert_signal_emitted_with_parameters(manager, "hands_changed", [1])
 	assert_signal_emitted_with_parameters(manager, "rerolls_changed", [4], 1)
 	assert_signal_emitted(manager, "hand_scored")
