@@ -190,6 +190,24 @@ theme_override_styles/hover = SubResource("btn_hover")
 theme_override_styles/focus = SubResource("btn_focus")
 text = "SETTINGS"
 
+[node name="PlaytestSurveyButton" type="Button" parent="ButtonContainer" unique_id=211470109]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 64)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_focus_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.667, 0, 1)
+theme_override_colors/font_hover_color = Color(1, 0.843, 0, 1)
+theme_override_colors/font_disabled_color = Color(0.4, 0.35, 0.1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("btn_normal")
+theme_override_styles/pressed = SubResource("btn_pressed")
+theme_override_styles/hover = SubResource("btn_hover")
+theme_override_styles/focus = SubResource("btn_focus")
+theme_override_styles/disabled = SubResource("btn_disabled")
+text = "PLAYTEST SURVEY"
+
 [node name="ExitButton" type="Button" parent="ButtonContainer" unique_id=533731284]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 64)
@@ -205,3 +223,23 @@ theme_override_styles/pressed = SubResource("btn_pressed")
 theme_override_styles/hover = SubResource("btn_hover")
 theme_override_styles/focus = SubResource("btn_focus")
 text = "EXIT"
+
+[node name="VersionLabel" type="Label" parent="." unique_id=571023101]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -46.0
+offset_right = 220.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.102, 0.102, 0.102, 0.8)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 10
+text = "VERSION"
+horizontal_alignment = 1
+vertical_alignment = 1

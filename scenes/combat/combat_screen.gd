@@ -38,6 +38,7 @@ var _result_sub_label: Label
 var _result_coins_label: Label
 var _result_next_btn: Button
 var _result_retry_btn: Button
+var _result_survey_btn: Button
 var _result_menu_btn: Button
 var _result_final_score: int = 0
 var _result_target_beaten: bool = false
@@ -367,6 +368,13 @@ func _build_result_overlay() -> void:
 	_result_retry_btn.pressed.connect(_on_retry_tutorial_pressed)
 	_result_retry_btn.visible = false
 	vbox.add_child(_result_retry_btn)
+
+	_result_survey_btn = _make_pixel_button("TAKE SURVEY", Vector2(280, 60), 14)
+	_result_survey_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_result_survey_btn.pressed.connect(_on_playtest_survey_pressed)
+	_result_survey_btn.disabled = not GameManager.has_playtest_survey_url()
+	_result_survey_btn.visible = false
+	vbox.add_child(_result_survey_btn)
 
 	_result_menu_btn = _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
 	_result_menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -855,6 +863,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_overlay.visible = true
 	_result_overlay.modulate.a = 0.0
 	AudioManager.play_sfx(&"round_win" if target_beaten else &"game_over")
+	_result_survey_btn.disabled = not GameManager.has_playtest_survey_url()
 
 	_result_score_label.text = str(final_score) + " PTS"
 
@@ -875,6 +884,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 		_result_coins_label.visible = true
 		_result_next_btn.visible = true
 		_result_retry_btn.visible = false
+		_result_survey_btn.visible = false
 		_result_menu_btn.visible = false
 	else:
 		if TutorialManager.is_active():
@@ -884,6 +894,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 			_result_coins_label.visible = false
 			_result_next_btn.visible = false
 			_result_retry_btn.visible = true
+			_result_survey_btn.visible = false
 			_result_menu_btn.visible = true
 		else:
 			_result_message.text = "GAME OVER"
@@ -892,6 +903,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 			_result_coins_label.visible = false
 			_result_next_btn.visible = false
 			_result_retry_btn.visible = false
+			_result_survey_btn.visible = true
 			_result_menu_btn.visible = true
 
 	var tween := create_tween()
@@ -1033,6 +1045,11 @@ func _on_next_round_pressed() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
+
+
+func _on_playtest_survey_pressed() -> void:
+	GameManager.open_playtest_survey()
+
 
 func _go_to_main_menu() -> void:
 	var tween := create_tween()

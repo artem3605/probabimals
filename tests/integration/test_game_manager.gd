@@ -79,6 +79,13 @@ func test_build_save_data_keeps_combat_phase_for_active_tutorial_checkpoint() ->
 	assert_eq(data["phase"], "COMBAT")
 	assert_eq(data["tutorial_mode"], TutorialManager.MODE_FIRST_RUN)
 
+
+func test_build_save_data_includes_version_metadata() -> void:
+	var data: Dictionary = _manager.build_save_data()
+
+	assert_eq(data["save_version"], 1)
+	assert_eq(data["app_version"], _manager.get_app_version())
+
 func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	_manager.current_phase = _manager.Phase.DICE_SELECT
 	_manager.coins = 37
@@ -151,6 +158,47 @@ func test_start_tutorial_replay_resets_run_and_enters_intro_combat() -> void:
 	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.COMBAT])
 
+
+func test_apply_save_data_migrates_legacy_save_without_version() -> void:
+	var legacy_data := {
+		"phase": "DICE_SELECT",
+		"coins": 41,
+		"total_score": 240,
+		"target_score": 300,
+		"hands_per_round": 5,
+		"rerolls_per_hand": 2,
+		"current_round": 4,
+		"dice_bag": [
+			{
+				"faces": [1, 2, 3, 4, 5, 6],
+				"color": "green",
+				"name": "Legacy Die",
+				"description": "Old-format die"
+			}
+		],
+		"modifiers": [],
+	}
+
+	var restored_phase: int = _manager.apply_save_data(legacy_data)
+
+	assert_eq(restored_phase, _manager.Phase.DICE_SELECT)
+	assert_eq(_manager.coins, 41)
+	assert_eq(_manager.current_round, 4)
+	assert_eq(_manager.dice_bag.size(), 1)
+	assert_eq(_manager.dice_bag.get_die(0).die_name, "Legacy Die")
+	assert_eq(_manager.build_save_data()["save_version"], 1)
+
+func test_apply_save_data_rejects_future_save_version_without_mutating_state() -> void:
+	var future_data: Dictionary = _manager.build_save_data()
+	future_data["save_version"] = 99
+	_manager.coins = 123
+	_manager.current_phase = _manager.Phase.MAIN_MENU
+
+	var restored_phase: int = _manager.apply_save_data(future_data)
+
+	assert_eq(restored_phase, _manager.Phase.MAIN_MENU)
+	assert_eq(_manager.coins, 123)
+
 func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	var default_path := "user://gut_default_save_%d.json" % Time.get_ticks_usec()
 	var save_path := "user://gut_test_save_%d.json" % Time.get_ticks_usec()
@@ -162,8 +210,60 @@ func test_save_game_uses_override_path_instead_of_production_save() -> void:
 
 	_manager.save_game(save_path)
 
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	assert_not_null(file)
+	var json := JSON.new()
+	assert_eq(json.parse(file.get_as_text()), OK)
+	file.close()
+	var saved_data: Dictionary = json.data
+
 	assert_true(_manager.has_save(save_path))
+	assert_true(_manager.can_load_save(save_path))
 	assert_false(_manager.has_save())
+	assert_eq(int(saved_data["save_version"]), 1)
+	assert_eq(saved_data["app_version"], _manager.get_app_version())
+
+func test_can_load_save_accepts_legacy_save_without_version() -> void:
+	var save_path := "user://gut_legacy_save_%d.json" % Time.get_ticks_usec()
+	_temp_paths.append(save_path)
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	assert_not_null(file)
+	file.store_string(JSON.stringify({
+		"phase": "FLEA_MARKET",
+		"coins": 55,
+		"total_score": 10,
+		"target_score": 200,
+		"hands_per_round": 4,
+		"rerolls_per_hand": 3,
+		"current_round": 2,
+		"dice_bag": [],
+		"modifiers": [],
+	}))
+	file.close()
+
+	assert_true(_manager.can_load_save(save_path))
+
+func test_can_load_save_returns_false_for_future_save_version() -> void:
+	var save_path := "user://gut_future_save_%d.json" % Time.get_ticks_usec()
+	_temp_paths.append(save_path)
+	var file := FileAccess.open(save_path, FileAccess.WRITE)
+	assert_not_null(file)
+	file.store_string(JSON.stringify({
+		"save_version": 99,
+		"app_version": "v9.9.9",
+		"phase": "FLEA_MARKET",
+		"coins": 55,
+		"total_score": 10,
+		"target_score": 200,
+		"hands_per_round": 4,
+		"rerolls_per_hand": 3,
+		"current_round": 2,
+		"dice_bag": [],
+		"modifiers": [],
+	}))
+	file.close()
+
+	assert_false(_manager.can_load_save(save_path))
 
 
 func test_tutorial_completion_persists_save_without_phase_change() -> void:
