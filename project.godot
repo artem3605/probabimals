@@ -15,8 +15,13 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Probabimals"
+config/version="v0.1.0"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+
+[playtest]
+
+survey_url="https://docs.google.com/forms/d/e/1FAIpQLSdgPZ-V4iFnO2e3-gVyw7HGFkA-ByykxrhiCvcnTikyJZTQ5w/viewform?usp=dialog"
 
 [autoload]
 

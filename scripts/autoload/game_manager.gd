@@ -3,6 +3,10 @@ extends Node
 enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT }
 
 const SAVE_PATH := "user://save_game.json"
+const APP_VERSION_SETTING := "application/config/version"
+const DEFAULT_APP_VERSION := "v0.0.0"
+const SAVE_FORMAT_VERSION := 1
+const PLAYTEST_SURVEY_URL_SETTING := "playtest/survey_url"
 
 signal phase_changed(new_phase: Phase)
 signal coins_changed(new_amount: int)
@@ -171,6 +175,29 @@ func advance_round() -> void:
 func get_round_reward() -> int:
 	return 10 + 5 * current_round
 
+
+func get_app_version() -> String:
+	var version := str(ProjectSettings.get_setting(APP_VERSION_SETTING, DEFAULT_APP_VERSION))
+	if version.is_empty():
+		return DEFAULT_APP_VERSION
+	return version
+
+
+func get_playtest_survey_url() -> String:
+	return str(ProjectSettings.get_setting(PLAYTEST_SURVEY_URL_SETTING, "")).strip_edges()
+
+
+func has_playtest_survey_url() -> bool:
+	return not get_playtest_survey_url().is_empty()
+
+
+func open_playtest_survey() -> bool:
+	var url := get_playtest_survey_url()
+	if url.is_empty():
+		return false
+	return OS.shell_open(url) == OK
+
+
 func _change_phase(new_phase: Phase) -> void:
 	var old_phase := current_phase
 	current_phase = new_phase
@@ -203,12 +230,18 @@ func has_save(path_override: String = "") -> bool:
 	return FileAccess.file_exists(_resolve_save_path(path_override))
 
 
+func can_load_save(path_override: String = "") -> bool:
+	return not _normalize_save_data(_read_save_data(path_override)).is_empty()
+
+
 func build_save_data() -> Dictionary:
 	var save_phase := current_phase
 	if save_phase == Phase.COMBAT and not TutorialManager.is_active():
 		save_phase = Phase.FLEA_MARKET
 
 	return {
+		"save_version": SAVE_FORMAT_VERSION,
+		"app_version": get_app_version(),
 		"phase": Phase.keys()[save_phase],
 		"coins": coins,
 		"total_score": total_score,
@@ -227,6 +260,13 @@ func build_save_data() -> Dictionary:
 
 
 func apply_save_data(data: Dictionary) -> Phase:
+	var normalized := _normalize_save_data(data)
+	if normalized.is_empty():
+		return current_phase
+	return _apply_normalized_save_data(normalized)
+
+
+func _apply_normalized_save_data(data: Dictionary) -> Phase:
 	coins = int(data.get("coins", 50))
 	total_score = int(data.get("total_score", 0))
 	target_score = int(data.get("target_score", 150))
@@ -254,14 +294,11 @@ func save_game(path_override: String = "") -> void:
 
 
 func load_game(path_override: String = "") -> void:
-	var file := FileAccess.open(_resolve_save_path(path_override), FileAccess.READ)
-	if not file:
+	var data := _read_save_data(path_override)
+	var normalized := _normalize_save_data(data)
+	if normalized.is_empty():
 		return
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		return
-	var data: Dictionary = json.data
-	var phase_to_load := apply_save_data(data)
+	var phase_to_load := _apply_normalized_save_data(normalized)
 
 	AudioManager.pause_for_ad()
 	PokiSDK.commercial_break()
@@ -294,6 +331,45 @@ func _on_tutorial_state_changed() -> void:
 func _sync_tutorial_tracking() -> void:
 	_last_tutorial_completed = TutorialManager.completed
 	_last_tutorial_active = TutorialManager.is_active()
+
+
+func _read_save_data(path_override: String = "") -> Dictionary:
+	var file := FileAccess.open(_resolve_save_path(path_override), FileAccess.READ)
+	if not file:
+		return {}
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return {}
+	var raw: Variant = json.data
+	if raw is Dictionary:
+		return raw.duplicate(true)
+	return {}
+
+
+func _normalize_save_data(data: Dictionary) -> Dictionary:
+	if data.is_empty():
+		return {}
+	return _migrate_save_data(data, _extract_save_version(data))
+
+
+func _extract_save_version(data: Dictionary) -> int:
+	if data.has("save_version"):
+		return int(data.get("save_version", SAVE_FORMAT_VERSION))
+	return 0
+
+
+func _migrate_save_data(data: Dictionary, from_version: int) -> Dictionary:
+	var migrated := data.duplicate(true)
+	if from_version == 0:
+		migrated["save_version"] = SAVE_FORMAT_VERSION
+		if not migrated.has("app_version"):
+			migrated["app_version"] = "legacy"
+		return migrated
+	if from_version == SAVE_FORMAT_VERSION:
+		if not migrated.has("app_version"):
+			migrated["app_version"] = get_app_version()
+		return migrated
+	return {}
 
 
 func _serialize_dice_bag() -> Array:

@@ -7,7 +7,9 @@ var _time := 0.0
 @onready var _new_game_btn: Button = %NewGameButton
 @onready var _continue_btn: Button = %ContinueButton
 @onready var _settings_btn: Button = %SettingsButton
+@onready var _playtest_survey_btn: Button = %PlaytestSurveyButton
 @onready var _exit_btn: Button = %ExitButton
+@onready var _version_label: Label = $VersionLabel
 @onready var _sun: Control = $Sun
 @onready var _sun_image: TextureRect = $Sun/SunImage
 
@@ -26,13 +28,19 @@ func _ready() -> void:
 	_new_game_btn.pressed.connect(_on_new_game_pressed)
 	_continue_btn.pressed.connect(_on_continue_pressed)
 	_settings_btn.pressed.connect(_on_settings_pressed)
+	_playtest_survey_btn.pressed.connect(_on_playtest_survey_pressed)
 	_exit_btn.pressed.connect(_on_exit_pressed)
 
-	_continue_btn.disabled = not GameManager.has_save()
 	AudioManager.play_music(&"menu")
 
 	_title_label.add_theme_font_override("font", _pixel_font)
 	_title_underline.color = DARK
+	_version_label.add_theme_font_override("font", _pixel_font)
+	_version_label.add_theme_font_size_override("font_size", 10)
+	_version_label.add_theme_color_override("font_color", Color(0.102, 0.102, 0.102, 0.8))
+	_version_label.text = "VERSION %s" % GameManager.get_app_version()
+	_playtest_survey_btn.disabled = not GameManager.has_playtest_survey_url()
+	_continue_btn.disabled = not GameManager.can_load_save()
 
 	_sun_textures = [
 		load("res://assets/art/decorations/sun_happy.svg"),
@@ -42,7 +50,7 @@ func _ready() -> void:
 	_sun_origin = _sun.position
 	_sun.pivot_offset = _sun.size * 0.5
 	_sun.gui_input.connect(_on_sun_input)
-	for btn in [_new_game_btn, _continue_btn, _settings_btn, _exit_btn]:
+	for btn in [_new_game_btn, _continue_btn, _settings_btn, _playtest_survey_btn, _exit_btn]:
 		btn.add_theme_font_override("font", _pixel_font)
 		btn.mouse_entered.connect(_on_btn_hover_enter.bind(btn))
 		btn.mouse_exited.connect(_on_btn_hover_exit.bind(btn))
@@ -65,7 +73,7 @@ func _draw() -> void:
 	_draw_pixel_creature()
 	_draw_pixel_coin()
 	_draw_button_shadows(
-		[_new_game_btn, _continue_btn, _settings_btn, _exit_btn]
+		[_new_game_btn, _continue_btn, _settings_btn, _playtest_survey_btn, _exit_btn]
 	)
 
 
@@ -158,6 +166,10 @@ func _on_settings_pressed() -> void:
 	_master_slider.value = AudioManager.get_master_volume()
 	_music_slider.value = AudioManager.get_music_volume()
 	_sfx_slider.value = AudioManager.get_sfx_volume()
+
+
+func _on_playtest_survey_pressed() -> void:
+	GameManager.open_playtest_survey()
 
 
 func _on_settings_close() -> void:
