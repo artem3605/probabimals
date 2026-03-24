@@ -35,6 +35,10 @@ var hover_cost: int = -1
 var _card_color: Color = Color.WHITE
 var _font: Font
 var _vbox: VBoxContainer
+var _accent_active: bool = false
+var _accent_color: Color = GOLD
+var _is_selected: bool = false
+var _is_framed: bool = false
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
@@ -101,15 +105,24 @@ func set_bottom_text(text: String, color: Color = DARK) -> void:
 
 
 func set_selected(selected: bool) -> void:
-	if selected:
-		main_button.add_theme_stylebox_override("normal", _make_style(_card_color, GOLD, 4, 4))
-	else:
-		main_button.add_theme_stylebox_override("normal", _make_style(_card_color, BORDER_BLACK, 4, 4))
+	_is_selected = selected
+	_refresh_button_frame()
+
+
+func set_accent(accented: bool, accent_color: Color = GOLD) -> void:
+	_accent_active = accented
+	_accent_color = accent_color
+	_refresh_button_frame()
+
+
+func is_accented() -> bool:
+	return _accent_active
 
 
 const FRAME_BG := Color("c8e6f5")
 
 func setup_frame() -> void:
+	_is_framed = true
 	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, 12))
 	main_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	main_button.add_theme_stylebox_override("hover", _make_style(_card_color, BORDER_BLACK, 4, 4))
@@ -120,6 +133,7 @@ func setup_frame() -> void:
 	mouse_entered.connect(_on_frame_hover_in)
 	mouse_exited.connect(_on_frame_hover_out)
 	gui_input.connect(_on_frame_click)
+	_refresh_button_frame()
 
 
 func create_action_button(text: String, pixel_font: Font) -> Button:
@@ -227,3 +241,20 @@ func _get_text_color(bg: Color) -> Color:
 	if bg.get_luminance() > 0.5:
 		return Color("0a0a0a")
 	return Color.WHITE
+
+
+func _refresh_button_frame() -> void:
+	if main_button == null:
+		return
+	if _is_framed:
+		var frame_border_width := 4 if _accent_active else 0
+		var frame_border := _accent_color if _accent_active else FRAME_BG
+		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, 12))
+
+	var border := GOLD if _is_selected else (_accent_color if _accent_active else BORDER_BLACK)
+	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, 4, 4))
+	if _is_framed:
+		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, 4, 4))
+	else:
+		var hover_border := _accent_color if _accent_active else GOLD
+		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, hover_border, 4, 4))

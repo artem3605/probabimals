@@ -20,23 +20,69 @@ var selected_dice: Array[Die] = []
 var current_round: int = 1
 const BASE_TARGET: int = 150
 var save_path: String = SAVE_PATH
+var _last_tutorial_completed: bool = false
+var _last_tutorial_active: bool = false
 
-func start_game() -> void:
+func _ready() -> void:
+	_sync_tutorial_tracking()
+	if not TutorialManager.state_changed.is_connected(_on_tutorial_state_changed):
+		TutorialManager.state_changed.connect(_on_tutorial_state_changed)
+
+func start_game(skip_tutorial_intro: bool = false) -> void:
 	delete_save()
+	_reset_run_state()
+	if skip_tutorial_intro:
+		TutorialManager.clear_active_tutorial()
+	elif TutorialManager.should_auto_start_on_new_game():
+		TutorialManager.start_first_run()
+	else:
+		TutorialManager.clear_active_tutorial()
+
+	AudioManager.pause_for_ad()
+	PokiSDK.commercial_break()
+	await PokiSDK.commercial_break_done
+	AudioManager.resume_after_ad()
+
+	if TutorialManager.is_active() and TutorialManager.is_intro_step():
+		_setup_intro_combat()
+		_change_phase(Phase.COMBAT)
+	else:
+		_change_phase(Phase.FLEA_MARKET)
+
+
+func start_tutorial_replay() -> void:
+	delete_save()
+	_reset_run_state()
+	TutorialManager.start_replay()
+	_setup_intro_combat()
+	AudioManager.pause_for_ad()
+	PokiSDK.commercial_break()
+	await PokiSDK.commercial_break_done
+	AudioManager.resume_after_ad()
+	_change_phase(Phase.COMBAT)
+
+
+func _setup_intro_combat() -> void:
+	current_round = 0
+	target_score = 60
+	coins = 25
+	selected_dice.clear()
+	for die in dice_bag.get_all():
+		selected_dice.append(die)
+
+
+func _reset_run_state() -> void:
 	coins = 50
 	total_score = 0
 	current_round = 1
 	target_score = BASE_TARGET
+	hands_per_round = 4
+	rerolls_per_hand = 3
 	modifiers.clear()
 	dice_bag = DiceBag.new()
 	for i in range(5):
 		dice_bag.add_die(Die.new())
 	selected_dice.clear()
-	AudioManager.pause_for_ad()
-	PokiSDK.commercial_break()
-	await PokiSDK.commercial_break_done
-	AudioManager.resume_after_ad()
-	_change_phase(Phase.FLEA_MARKET)
 
 func buy_item(item: Dictionary) -> bool:
 	var cost: int = item.get("cost", 0)
@@ -159,7 +205,7 @@ func has_save(path_override: String = "") -> bool:
 
 func build_save_data() -> Dictionary:
 	var save_phase := current_phase
-	if save_phase == Phase.COMBAT:
+	if save_phase == Phase.COMBAT and not TutorialManager.is_active():
 		save_phase = Phase.FLEA_MARKET
 
 	return {
@@ -171,7 +217,12 @@ func build_save_data() -> Dictionary:
 		"rerolls_per_hand": rerolls_per_hand,
 		"current_round": current_round,
 		"dice_bag": _serialize_dice_bag(),
+		"selected_dice_indices": _serialize_selected_dice_indices(),
 		"modifiers": modifiers.duplicate(true),
+		"tutorial_completed": TutorialManager.completed,
+		"tutorial_mode": TutorialManager.mode,
+		"tutorial_step_id": TutorialManager.step_id,
+		"tutorial_state": TutorialManager.build_save_data(),
 	}
 
 
@@ -184,7 +235,15 @@ func apply_save_data(data: Dictionary) -> Phase:
 	current_round = int(data.get("current_round", 1))
 	dice_bag = _deserialize_dice_bag(data.get("dice_bag", []))
 	modifiers = data.get("modifiers", []).duplicate(true)
-	selected_dice.clear()
+	selected_dice = _deserialize_selected_dice(data.get("selected_dice_indices", []))
+	var tutorial_state: Dictionary = data.get("tutorial_state", {})
+	if tutorial_state.is_empty():
+		tutorial_state = {
+			"completed": bool(data.get("tutorial_completed", false)),
+			"mode": str(data.get("tutorial_mode", TutorialManager.MODE_INACTIVE)),
+			"step_id": str(data.get("tutorial_step_id", "")),
+		}
+	TutorialManager.apply_save_data(tutorial_state)
 	return _phase_from_save_name(str(data.get("phase", "FLEA_MARKET")))
 
 
@@ -224,11 +283,39 @@ func _resolve_save_path(path_override: String) -> String:
 	return save_path
 
 
+func _on_tutorial_state_changed() -> void:
+	var just_completed := TutorialManager.completed and not _last_tutorial_completed
+	var just_cleared_active := _last_tutorial_active and not TutorialManager.is_active()
+	_sync_tutorial_tracking()
+	if current_phase != Phase.MAIN_MENU and (just_completed or just_cleared_active):
+		save_game()
+
+
+func _sync_tutorial_tracking() -> void:
+	_last_tutorial_completed = TutorialManager.completed
+	_last_tutorial_active = TutorialManager.is_active()
+
+
 func _serialize_dice_bag() -> Array:
 	var dice_arr: Array = []
 	for d in dice_bag.get_all():
 		dice_arr.append(_serialize_die(d))
 	return dice_arr
+
+
+func _serialize_selected_dice_indices() -> Array:
+	var used_indices: Array[int] = []
+	var indices: Array = []
+	var all_dice := dice_bag.get_all()
+	for selected_die in selected_dice:
+		for i in range(all_dice.size()):
+			if used_indices.has(i):
+				continue
+			if all_dice[i] == selected_die:
+				indices.append(i)
+				used_indices.append(i)
+				break
+	return indices
 
 
 func _serialize_die(die: Die) -> Dictionary:
@@ -260,6 +347,16 @@ func _deserialize_dice_bag(raw_dice: Array) -> DiceBag:
 		if d is Dictionary:
 			bag.add_die(_deserialize_die(d))
 	return bag
+
+
+func _deserialize_selected_dice(raw_indices: Variant) -> Array[Die]:
+	var restored: Array[Die] = []
+	if raw_indices is Array:
+		for raw_index in raw_indices:
+			var die := dice_bag.get_die(int(raw_index))
+			if die != null:
+				restored.append(die)
+	return restored
 
 
 func _deserialize_die(raw_die: Dictionary) -> Die:

@@ -65,7 +65,7 @@ func _load_audio_assets() -> void:
 		var stream := _try_load(MUSIC_DIR, music_name)
 		if stream:
 			_music_cache[music_name] = stream
-		else:
+		elif _audio_source_exists(MUSIC_DIR, music_name):
 			push_warning("AudioManager: failed to load music '%s'" % music_name)
 
 	print("AudioManager: loaded %d sfx, %d music" % [_sfx_cache.size(), _music_cache.size()])
@@ -80,9 +80,86 @@ func _load_audio_assets() -> void:
 func _try_load(dir_path: String, file_name: String) -> AudioStream:
 	for ext in ["wav", "ogg", "mp3"]:
 		var path := "%s%s.%s" % [dir_path, file_name, ext]
-		if ResourceLoader.exists(path):
-			return load(path)
+		var stream: AudioStream = null
+		if ResourceLoader.exists(path, "AudioStream"):
+			stream = ResourceLoader.load(path, "AudioStream") as AudioStream
+		if stream:
+			return stream
+
+		if ext == "wav" and FileAccess.file_exists(path):
+			var fallback := _load_wav_from_source(path)
+			if fallback:
+				return fallback
 	return null
+
+
+func _audio_source_exists(dir_path: String, file_name: String) -> bool:
+	for ext in ["wav", "ogg", "mp3"]:
+		var path := "%s%s.%s" % [dir_path, file_name, ext]
+		if ResourceLoader.exists(path, "AudioStream") or FileAccess.file_exists(path):
+			return true
+	return false
+
+
+func _load_wav_from_source(path: String) -> AudioStreamWAV:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if not file or file.get_length() < 12:
+		return null
+
+	if file.get_buffer(4).get_string_from_ascii() != "RIFF":
+		return null
+
+	file.seek(8)
+	if file.get_buffer(4).get_string_from_ascii() != "WAVE":
+		return null
+
+	file.seek(12)
+
+	var format_code := -1
+	var channel_count := 0
+	var sample_rate := 0
+	var bits_per_sample := 0
+	var pcm_data := PackedByteArray()
+
+	while file.get_position() + 8 <= file.get_length():
+		var chunk_id := file.get_buffer(4).get_string_from_ascii()
+		var chunk_size := file.get_32()
+		var chunk_start := file.get_position()
+		if chunk_start + chunk_size > file.get_length():
+			return null
+
+		if chunk_id == "fmt ":
+			if chunk_size < 16:
+				return null
+			format_code = file.get_16()
+			channel_count = file.get_16()
+			sample_rate = file.get_32()
+			file.get_32()
+			file.get_16()
+			bits_per_sample = file.get_16()
+		elif chunk_id == "data":
+			pcm_data = file.get_buffer(chunk_size)
+
+		var next_chunk := chunk_start + chunk_size
+		if chunk_size % 2 == 1:
+			next_chunk += 1
+		file.seek(next_chunk)
+
+	if format_code != 1 or pcm_data.is_empty():
+		return null
+
+	if channel_count not in [1, 2]:
+		return null
+
+	if bits_per_sample not in [8, 16]:
+		return null
+
+	var stream := AudioStreamWAV.new()
+	stream.mix_rate = sample_rate
+	stream.stereo = channel_count == 2
+	stream.format = AudioStreamWAV.FORMAT_16_BITS if bits_per_sample == 16 else AudioStreamWAV.FORMAT_8_BITS
+	stream.data = pcm_data
+	return stream
 
 
 # -- SFX -------------------------------------------------------------------

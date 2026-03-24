@@ -2,16 +2,20 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
+const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := 7
 
 var _shop_offerings: Array[Dictionary] = []
 var _sold: Array[bool] = []
+var _shop_cards: Array = []
 var _coin_label: Label
+var _coin_panel: PanelContainer
 var _shop_container: HBoxContainer
 var _reroll_btn: Button
 var _ready_btn: Button
 var _my_dice_btn: Button
+var _stats_vbox: VBoxContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
@@ -27,6 +31,7 @@ var _swap_desc_body: Label
 var _pending_face_item: Dictionary = {}
 var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
+var _tutorial_overlay: Control
 
 
 func _ready() -> void:
@@ -35,6 +40,11 @@ func _ready() -> void:
 	_generate_offerings()
 	_update_coins()
 	GameManager.coins_changed.connect(func(_a: int): _update_coins())
+	TutorialManager.step_changed.connect(_on_tutorial_step_changed)
+	TutorialManager.state_changed.connect(_on_tutorial_state_changed)
+	if TutorialManager.is_active():
+		TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
+	_refresh_tutorial_ui()
 	AudioManager.play_music(&"menu")
 
 
@@ -82,6 +92,7 @@ func _build_ui() -> void:
 	_all_buttons.append(_ready_btn)
 
 	_build_face_swap_overlay()
+	_build_tutorial_overlay()
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
@@ -105,17 +116,17 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	right_wrapper.alignment = BoxContainer.ALIGNMENT_END
 	bar.add_child(right_wrapper)
 
-	var right_vbox := VBoxContainer.new()
-	right_vbox.add_theme_constant_override("separation", 12)
-	right_wrapper.add_child(right_vbox)
+	_stats_vbox = VBoxContainer.new()
+	_stats_vbox.add_theme_constant_override("separation", 12)
+	right_wrapper.add_child(_stats_vbox)
 
-	var coin_panel := _make_panel(GOLD, BORDER_BLACK, Vector2(124, 48))
-	right_vbox.add_child(coin_panel)
+	_coin_panel = _make_panel(GOLD, BORDER_BLACK, Vector2(124, 48))
+	_stats_vbox.add_child(_coin_panel)
 
 	var coin_hbox := HBoxContainer.new()
 	coin_hbox.add_theme_constant_override("separation", 8)
 	coin_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	coin_panel.add_child(coin_hbox)
+	_coin_panel.add_child(coin_hbox)
 
 	var coin_icon := _create_coin_icon()
 	coin_hbox.add_child(coin_icon)
@@ -126,7 +137,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	_my_dice_btn = _make_colored_button("MY BAG", Vector2(124, 44), BLUE, BLUE.lightened(0.15), 12)
 	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
 	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
-	right_vbox.add_child(_my_dice_btn)
+	_stats_vbox.add_child(_my_dice_btn)
 	_all_buttons.append(_my_dice_btn)
 
 
@@ -168,6 +179,13 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 func _generate_offerings() -> void:
 	_shop_offerings.clear()
 	_sold.clear()
+	if TutorialManager.is_active():
+		_shop_offerings = TutorialManager.get_fixed_shop_offerings()
+		for _i in range(_shop_offerings.size()):
+			_sold.append(false)
+		_refresh_shop_display()
+		return
+
 	var catalogue := DataManager.get_shop_catalogue()
 	if catalogue.is_empty():
 		return
@@ -183,6 +201,7 @@ func _generate_offerings() -> void:
 
 
 func _refresh_shop_display() -> void:
+	_shop_cards.clear()
 	for child in _shop_container.get_children():
 		_shop_container.remove_child(child)
 		child.queue_free()
@@ -195,6 +214,7 @@ func _refresh_shop_display() -> void:
 		card.card_hover_entered.connect(_on_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_card_hover_exit)
 		_shop_container.add_child(card)
+		_shop_cards.append(card)
 
 	_update_buy_buttons()
 
@@ -226,27 +246,43 @@ func _update_coins() -> void:
 	if _coin_label:
 		_coin_label.text = str(GameManager.coins)
 	if _reroll_btn:
-		_reroll_btn.disabled = GameManager.coins < REROLL_COST
+		_reroll_btn.disabled = GameManager.coins < REROLL_COST or TutorialManager.is_active()
 	_update_buy_buttons()
+	_refresh_tutorial_ui()
 
 
 func _update_buy_buttons() -> void:
-	var cards := _shop_container.get_children()
+	var cards := _shop_cards
 	for i in mini(cards.size(), _shop_offerings.size()):
-		var card = cards[i]
+		var card: ShopItemCard = cards[i]
 		if card is ShopItemCard:
 			if _sold[i]:
 				card.set_buy_status("sold")
+				card.set_accent(false)
+			elif TutorialManager.is_active():
+				var item_id := str(_shop_offerings[i].get("id", ""))
+				var allowed := TutorialManager.is_shop_item_allowed(item_id)
+				card.set_accent(allowed, GOLD)
+				if allowed and GameManager.coins >= _shop_offerings[i].get("cost", 0):
+					card.set_buy_status("guide")
+				elif allowed:
+					card.set_buy_status("no_money")
+				else:
+					card.set_buy_status("locked")
 			elif GameManager.coins < _shop_offerings[i].get("cost", 0):
 				card.set_buy_status("no_money")
+				card.set_accent(false)
 			else:
 				card.set_buy_status("buy")
+				card.set_accent(false)
 
 
 # -- Callbacks -----------------------------------------------------------------
 
 
 func _on_reroll_pressed() -> void:
+	if TutorialManager.is_active():
+		return
 	if GameManager.coins < REROLL_COST:
 		return
 	GameManager.coins -= REROLL_COST
@@ -256,6 +292,10 @@ func _on_reroll_pressed() -> void:
 
 
 func _on_ready_pressed() -> void:
+	if TutorialManager.is_active() and not TutorialManager.can_go_to_dice_select():
+		return
+	if TutorialManager.is_active():
+		TutorialManager.report_action("go_to_dice_select")
 	GameManager.go_to_dice_select()
 
 
@@ -306,15 +346,27 @@ func _on_shop_item_buy(index: int) -> void:
 	if index < 0 or index >= _shop_offerings.size() or _sold[index]:
 		return
 	var item := _shop_offerings[index]
+	var item_id := str(item.get("id", ""))
+
+	if TutorialManager.is_active() and not TutorialManager.is_shop_item_allowed(item_id):
+		return
 
 	if item.get("category", "") == "face":
 		if GameManager.coins < item.get("cost", 0):
 			return
+		if TutorialManager.is_active():
+			TutorialManager.report_action("open_face_item", {"item_id": item_id})
 		_show_die_picker(item, index)
+		_refresh_tutorial_ui()
 		return
 
 	var success := GameManager.buy_item(item)
 	if success:
+		if TutorialManager.is_active() and item_id == "loaded_die":
+			TutorialManager.report_action("buy_item", {
+				"item_id": item_id,
+				"die_index": GameManager.dice_bag.size() - 1,
+			})
 		AudioManager.play_sfx(&"purchase")
 		_sold[index] = true
 		_desc_title.text = "Purchased!"
@@ -322,6 +374,7 @@ func _on_shop_item_buy(index: int) -> void:
 		_desc_body.text = item.get("name", "")
 		_desc_panel.visible = true
 		_update_coins()
+		_refresh_tutorial_ui()
 
 
 # -- Face swap overlay ---------------------------------------------------------
@@ -405,6 +458,10 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 		var die: Die = all_dice[i]
 		var card := ItemCard.new()
 		card.setup_as_dice_item(die, _pixel_font)
+		if TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_DIE:
+			var allowed := TutorialManager.is_swap_die_allowed(die, i)
+			card.set_accent(allowed, BLUE)
+			card.modulate = Color(1, 1, 1, 1) if allowed else Color(0.75, 0.75, 0.75, 1)
 		card.card_pressed.connect(_on_swap_die_selected.bind(i))
 		card.card_hover_entered.connect(_on_swap_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_swap_card_hover_exit)
@@ -414,6 +471,7 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 	_reconnect_swap_btn(_on_face_swap_cancel)
 
 	_face_swap_overlay.visible = true
+	_refresh_tutorial_ui()
 
 
 func _show_face_picker(die_index: int) -> void:
@@ -464,13 +522,26 @@ func _show_face_picker(die_index: int) -> void:
 			card._vbox.add_child(card.bottom_control)
 
 		card.card_pressed.connect(_on_swap_face_selected.bind(i))
+		if TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_FACE:
+			var allowed := TutorialManager.is_swap_face_allowed(die_index, face)
+			card.set_accent(allowed, BLUE)
+			card.modulate = Color(1, 1, 1, 1) if allowed else Color(0.75, 0.75, 0.75, 1)
 		_face_swap_cards.add_child(card)
 
 	_face_swap_action_btn.text = "BACK"
 	_reconnect_swap_btn(_on_face_swap_back)
+	_refresh_tutorial_ui()
 
 
 func _on_swap_die_selected(die_index: int) -> void:
+	var die := GameManager.dice_bag.get_die(die_index)
+	if TutorialManager.is_active() and (die == null or not TutorialManager.is_swap_die_allowed(die, die_index)):
+		return
+	if TutorialManager.is_active():
+		TutorialManager.report_action("choose_swap_die", {
+			"die_index": die_index,
+			"die_color": die.color if die != null else "",
+		})
 	_show_face_picker(die_index)
 
 
@@ -486,9 +557,24 @@ func _on_swap_face_selected(face_index: int) -> void:
 	if new_face == null:
 		new_face = DiceFace.make_basic(face_value)
 
-	var success := GameManager.buy_face_swap(_selected_die_index, face_index, new_face, cost)
+	var die := GameManager.dice_bag.get_die(_selected_die_index)
+	if die == null:
+		return
+	var old_face := die.get_face(face_index)
+	if TutorialManager.is_active() and not TutorialManager.is_swap_face_allowed(_selected_die_index, old_face):
+		return
+
+	var selected_die_index := _selected_die_index
+	var success := GameManager.buy_face_swap(selected_die_index, face_index, new_face, cost)
+	if success and TutorialManager.is_active():
+		TutorialManager.report_action("swap_face", {
+			"die_index": selected_die_index,
+			"old_value": old_face.value,
+		})
 	_close_face_swap()
 	if success:
+		if TutorialManager.is_active():
+			TutorialManager.improved_die_index = selected_die_index
 		AudioManager.play_sfx(&"purchase")
 		_sold[shop_idx] = true
 		_desc_title.text = "Purchased!"
@@ -496,13 +582,19 @@ func _on_swap_face_selected(face_index: int) -> void:
 		_desc_body.text = item_name
 		_desc_panel.visible = true
 		_update_coins()
+		_refresh_tutorial_ui()
 
 
 func _on_face_swap_cancel() -> void:
 	_close_face_swap()
+	if TutorialManager.is_active():
+		TutorialManager.report_action("cancel_face_item")
+		_refresh_tutorial_ui()
 
 
 func _on_face_swap_back() -> void:
+	if TutorialManager.is_active():
+		TutorialManager.report_action("back_face_item")
 	_show_die_picker(_pending_face_item, _pending_shop_index)
 
 
@@ -512,6 +604,7 @@ func _close_face_swap() -> void:
 	_pending_face_item = {}
 	_pending_shop_index = -1
 	_selected_die_index = -1
+	_refresh_tutorial_ui()
 
 
 func _on_swap_card_hover_enter(card: Control) -> void:
@@ -534,3 +627,74 @@ func _reconnect_swap_btn(target: Callable) -> void:
 func _clear_swap_cards() -> void:
 	for child in _face_swap_cards.get_children():
 		child.queue_free()
+
+
+func _build_tutorial_overlay() -> void:
+	_tutorial_overlay = TutorialOverlay.new()
+	add_child(_tutorial_overlay)
+	_tutorial_overlay.setup(_pixel_font)
+	_tutorial_overlay.next_pressed.connect(_on_tutorial_next_pressed)
+
+
+func _refresh_tutorial_ui() -> void:
+	if _tutorial_overlay == null:
+		return
+
+	_ready_btn.disabled = TutorialManager.is_active() and not TutorialManager.can_go_to_dice_select()
+
+	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_FLEA_MARKET:
+		_tutorial_overlay.hide_overlay()
+		return
+
+	if _face_swap_overlay != null and _face_swap_overlay.visible:
+		_tutorial_overlay.hide_overlay()
+		return
+
+	var config := TutorialManager.get_step_text()
+	if config.is_empty():
+		_tutorial_overlay.hide_overlay()
+		return
+
+	_tutorial_overlay.show_step_from_config(config, _get_tutorial_highlight_target())
+
+
+func _get_tutorial_highlight_target() -> Variant:
+	match TutorialManager.step_id:
+		TutorialManager.STEP_MARKET_INTRO: return _shop_container
+		TutorialManager.STEP_MARKET_SCORE: return _stats_vbox
+		TutorialManager.STEP_BUY_LOADED_DIE: return _find_shop_action_target("loaded_die")
+		TutorialManager.STEP_BUY_EXTRA_SIX: return _find_shop_action_target("extra_6")
+		TutorialManager.STEP_GO_TO_DICE_SELECT: return _ready_btn
+		_: return null
+
+
+func _find_shop_action_target(item_id: String) -> Control:
+	for i in range(_shop_offerings.size()):
+		if _shop_offerings[i].get("id", "") == item_id and i < _shop_cards.size():
+			return _shop_cards[i]
+	return _shop_container
+
+
+func _find_first_swap_card(allowed: bool) -> Control:
+	for child in _face_swap_cards.get_children():
+		if child is ItemCard and (child as ItemCard).is_accented() == allowed:
+			return child
+	return _face_swap_cards
+
+
+func _on_tutorial_next_pressed() -> void:
+	if TutorialManager.step_id in [
+		TutorialManager.STEP_MARKET_INTRO,
+		TutorialManager.STEP_MARKET_SCORE,
+	]:
+		TutorialManager.report_action("advance_intro")
+
+
+func _on_tutorial_step_changed(_step: String) -> void:
+	_update_buy_buttons()
+	_refresh_tutorial_ui()
+
+
+func _on_tutorial_state_changed() -> void:
+	_update_buy_buttons()
+	_refresh_tutorial_ui()

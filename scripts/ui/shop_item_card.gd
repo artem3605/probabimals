@@ -84,6 +84,14 @@ func set_buy_status(status: String) -> void:
 			buy_button.text = "SOLD"
 			buy_button.disabled = true
 			modulate = Color(0.7, 0.7, 0.7, 1)
+		"locked":
+			buy_button.text = "BUY"
+			buy_button.disabled = true
+			modulate = Color(1, 1, 1, 1)
+		"guide":
+			buy_button.text = "BUY THIS"
+			buy_button.disabled = false
+			modulate = Color(1, 1, 1, 1)
 
 
 func _get_item_color(item: Dictionary) -> Color:

@@ -3,9 +3,11 @@ extends GutTest
 const TestData = preload("res://tests/support/test_data.gd")
 
 var _combo_rules: Array
+var _scripted_rolls: Array = []
 
 func before_each() -> void:
 	_combo_rules = TestData.load_combo_rules()
+	_scripted_rolls.clear()
 
 func test_roll_hold_and_reroll_cycle_keeps_held_die_value() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -95,3 +97,33 @@ func test_combat_ends_when_hands_run_out() -> void:
 	manager.score_hand([])
 
 	assert_signal_emitted_with_parameters(manager, "combat_ended", [56, false])
+
+func test_roll_provider_overrides_roll_sequence_without_breaking_hold_logic() -> void:
+	var manager: CombatManager = CombatManager.new()
+	autoqfree(manager)
+	var dice: Array[Die] = [
+		TestData.deterministic_die([1, 1]),
+		TestData.deterministic_die([1, 1]),
+		TestData.deterministic_die([1, 1]),
+		TestData.deterministic_die([1, 1]),
+		TestData.deterministic_die([1, 1]),
+	]
+	_scripted_rolls = [
+		[6, 6, 2, 3, 4],
+		[6, 6, 6, 6, 5],
+	]
+
+	manager.start_combat(dice, 999, 1, 2, _combo_rules, 2, Callable(self, "_roll_provider"))
+	manager.roll_dice()
+	manager.hold_die(0)
+	manager.hold_die(1)
+	manager.roll_dice()
+
+	assert_eq_deep(manager.current_roll_values(), [6, 6, 6, 6, 5])
+
+
+func _roll_provider(roll_number: int, _held_dice: Array) -> Array[int]:
+	var result: Array[int] = []
+	for value in _scripted_rolls[roll_number]:
+		result.append(int(value))
+	return result
