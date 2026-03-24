@@ -9,7 +9,9 @@ func test_autoloads_boot_with_game_data_loaded() -> void:
 	assert_not_null(TutorialManager)
 	assert_true(DataManager.get_combo_rules().size() > 0)
 	assert_true(DataManager.get_all_faces().size() > 0)
-	assert_eq(GameManager.get_app_version(), "v0.1.0")
+	var configured_version := str(ProjectSettings.get_setting("application/config/version", ""))
+	assert_false(configured_version.is_empty())
+	assert_eq(GameManager.get_app_version(), configured_version)
 
 func test_main_menu_scene_instantiates_with_playtest_button() -> void:
 	var scene: PackedScene = load("res://scenes/main_menu/main_menu.tscn")
