@@ -795,13 +795,15 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	tween.tween_callback(func():
 		_score_value_label.add_theme_color_override("font_color", DARK)
 		_score_pts_suffix.add_theme_color_override("font_color", DARK)
-		_reset_for_next_hand()
+		if combat_mgr.hand_state == CombatManager.HandState.HAND_TRANSITION:
+			combat_mgr.begin_next_hand()
+			_reset_for_next_hand()
 		_animating = false
 	)
 
 
 func _reset_for_next_hand() -> void:
-	if combat_mgr.hands_remaining <= 0:
+	if combat_mgr.hand_state != CombatManager.HandState.HAND_ACTIVE:
 		return
 
 	_combo_name_label.text = ""
