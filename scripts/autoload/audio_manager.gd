@@ -2,6 +2,7 @@ extends Node
 
 const SFX_POOL_SIZE := 8
 const DEFAULT_FADE_SEC := 1.0
+const DEFAULT_SFX_GAIN_DB := -14.0
 const SETTINGS_PATH := "user://audio_settings.json"
 
 const SFX_DIR := "res://assets/audio/sfx/"
@@ -170,7 +171,7 @@ func play_sfx(sfx_name: StringName, volume_db: float = 0.0) -> void:
 		return
 	var player := _get_free_sfx_player()
 	player.stream = stream
-	player.volume_db = volume_db
+	player.volume_db = DEFAULT_SFX_GAIN_DB + volume_db
 	player.play()
 
 
