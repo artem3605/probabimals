@@ -21,9 +21,10 @@ var current_round: int = 1
 const BASE_TARGET: int = 150
 var save_path: String = SAVE_PATH
 var _last_tutorial_completed: bool = false
+var _last_tutorial_active: bool = false
 
 func _ready() -> void:
-	_last_tutorial_completed = TutorialManager.completed
+	_sync_tutorial_tracking()
 	if not TutorialManager.state_changed.is_connected(_on_tutorial_state_changed):
 		TutorialManager.state_changed.connect(_on_tutorial_state_changed)
 
@@ -284,9 +285,15 @@ func _resolve_save_path(path_override: String) -> String:
 
 func _on_tutorial_state_changed() -> void:
 	var just_completed := TutorialManager.completed and not _last_tutorial_completed
-	_last_tutorial_completed = TutorialManager.completed
-	if just_completed and current_phase != Phase.MAIN_MENU:
+	var just_cleared_active := _last_tutorial_active and not TutorialManager.is_active()
+	_sync_tutorial_tracking()
+	if current_phase != Phase.MAIN_MENU and (just_completed or just_cleared_active):
 		save_game()
+
+
+func _sync_tutorial_tracking() -> void:
+	_last_tutorial_completed = TutorialManager.completed
+	_last_tutorial_active = TutorialManager.is_active()
 
 
 func _serialize_dice_bag() -> Array:

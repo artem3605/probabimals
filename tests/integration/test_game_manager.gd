@@ -186,3 +186,29 @@ func test_tutorial_completion_persists_save_without_phase_change() -> void:
 	assert_true(bool(data.get("tutorial_completed", false)))
 	assert_eq(str(data.get("tutorial_mode", "")), TutorialManager.MODE_INACTIVE)
 	assert_eq(str(data.get("phase", "")), "FLEA_MARKET")
+
+
+func test_tutorial_replay_completion_persists_cleared_checkpoint_for_completed_users() -> void:
+	var save_path := "user://gut_tutorial_replay_complete_%d.json" % Time.get_ticks_usec()
+	_temp_paths.append(save_path)
+	_manager.save_path = save_path
+	_manager.current_phase = _manager.Phase.COMBAT
+	TutorialManager.completed = true
+	TutorialManager.start_replay()
+	TutorialManager.enter_scene(TutorialManager.SCENE_COMBAT)
+	_manager._sync_tutorial_tracking()
+
+	TutorialManager.complete_tutorial()
+	_manager._on_tutorial_state_changed()
+
+	assert_true(_manager.has_save())
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	assert_not_null(file)
+	var json := JSON.new()
+	assert_eq(json.parse(file.get_as_text()), OK)
+	var data: Dictionary = json.data
+	var tutorial_state: Dictionary = data.get("tutorial_state", {})
+	assert_true(bool(data.get("tutorial_completed", false)))
+	assert_eq(str(data.get("tutorial_mode", "")), TutorialManager.MODE_INACTIVE)
+	assert_eq(str(tutorial_state.get("step_id", "__missing__")), "")
+	assert_eq(str(tutorial_state.get("checkpoint_scene", "__missing__")), "")

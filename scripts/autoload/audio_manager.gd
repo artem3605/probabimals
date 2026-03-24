@@ -80,19 +80,13 @@ func _load_audio_assets() -> void:
 func _try_load(dir_path: String, file_name: String) -> AudioStream:
 	for ext in ["wav", "ogg", "mp3"]:
 		var path := "%s%s.%s" % [dir_path, file_name, ext]
-		if not FileAccess.file_exists(path):
-			continue
-
-		if ext == "wav" and not _has_imported_cache(path):
-			var fallback := _load_wav_from_source(path)
-			if fallback:
-				return fallback
-
-		var stream := load(path) as AudioStream
+		var stream: AudioStream = null
+		if ResourceLoader.exists(path, "AudioStream"):
+			stream = ResourceLoader.load(path, "AudioStream") as AudioStream
 		if stream:
 			return stream
 
-		if ext == "wav":
+		if ext == "wav" and FileAccess.file_exists(path):
 			var fallback := _load_wav_from_source(path)
 			if fallback:
 				return fallback
@@ -101,26 +95,9 @@ func _try_load(dir_path: String, file_name: String) -> AudioStream:
 
 func _audio_source_exists(dir_path: String, file_name: String) -> bool:
 	for ext in ["wav", "ogg", "mp3"]:
-		if FileAccess.file_exists("%s%s.%s" % [dir_path, file_name, ext]):
+		var path := "%s%s.%s" % [dir_path, file_name, ext]
+		if ResourceLoader.exists(path, "AudioStream") or FileAccess.file_exists(path):
 			return true
-	return false
-
-
-func _has_imported_cache(source_path: String) -> bool:
-	var import_path := "%s.import" % source_path
-	if not FileAccess.file_exists(import_path):
-		return false
-
-	var file := FileAccess.open(import_path, FileAccess.READ)
-	if not file:
-		return false
-
-	for line in file.get_as_text().split("\n"):
-		var stripped := line.strip_edges()
-		if stripped.begins_with("path=\"") and stripped.ends_with("\""):
-			var imported_path := stripped.substr(6, stripped.length() - 7)
-			return FileAccess.file_exists(imported_path)
-
 	return false
 
 
