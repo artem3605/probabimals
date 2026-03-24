@@ -164,3 +164,25 @@ func test_save_game_uses_override_path_instead_of_production_save() -> void:
 
 	assert_true(_manager.has_save(save_path))
 	assert_false(_manager.has_save())
+
+
+func test_tutorial_completion_persists_save_without_phase_change() -> void:
+	var save_path := "user://gut_tutorial_complete_%d.json" % Time.get_ticks_usec()
+	_temp_paths.append(save_path)
+	_manager.save_path = save_path
+	_manager.current_phase = _manager.Phase.COMBAT
+	TutorialManager.start_first_run()
+	TutorialManager.enter_scene(TutorialManager.SCENE_COMBAT)
+
+	TutorialManager.complete_tutorial()
+	_manager._on_tutorial_state_changed()
+
+	assert_true(_manager.has_save())
+	var file := FileAccess.open(save_path, FileAccess.READ)
+	assert_not_null(file)
+	var json := JSON.new()
+	assert_eq(json.parse(file.get_as_text()), OK)
+	var data: Dictionary = json.data
+	assert_true(bool(data.get("tutorial_completed", false)))
+	assert_eq(str(data.get("tutorial_mode", "")), TutorialManager.MODE_INACTIVE)
+	assert_eq(str(data.get("phase", "")), "FLEA_MARKET")

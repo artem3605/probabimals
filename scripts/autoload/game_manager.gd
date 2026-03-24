@@ -20,6 +20,12 @@ var selected_dice: Array[Die] = []
 var current_round: int = 1
 const BASE_TARGET: int = 150
 var save_path: String = SAVE_PATH
+var _last_tutorial_completed: bool = false
+
+func _ready() -> void:
+	_last_tutorial_completed = TutorialManager.completed
+	if not TutorialManager.state_changed.is_connected(_on_tutorial_state_changed):
+		TutorialManager.state_changed.connect(_on_tutorial_state_changed)
 
 func start_game(skip_tutorial_intro: bool = false) -> void:
 	delete_save()
@@ -274,6 +280,13 @@ func _resolve_save_path(path_override: String) -> String:
 	if not path_override.is_empty():
 		return path_override
 	return save_path
+
+
+func _on_tutorial_state_changed() -> void:
+	var just_completed := TutorialManager.completed and not _last_tutorial_completed
+	_last_tutorial_completed = TutorialManager.completed
+	if just_completed and current_phase != Phase.MAIN_MENU:
+		save_game()
 
 
 func _serialize_dice_bag() -> Array:
