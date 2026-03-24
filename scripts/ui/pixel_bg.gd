@@ -199,7 +199,15 @@ func _make_menu_button() -> Button:
 	var btn := _make_pixel_button("MENU", Vector2(96, 56), 14)
 	btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	btn.pressed.connect(_go_to_main_menu)
+	_sync_menu_button_tutorial_lock(btn)
+	TutorialManager.state_changed.connect(_sync_menu_button_tutorial_lock.bind(btn))
 	return btn
+
+
+func _sync_menu_button_tutorial_lock(btn: BaseButton) -> void:
+	if not is_instance_valid(btn):
+		return
+	btn.disabled = TutorialManager.is_active()
 
 
 ## Navigate back to the main menu. Override in subclasses for custom transitions.
