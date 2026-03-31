@@ -2,6 +2,8 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const CombatDice = preload("res://scripts/ui/combat_dice.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
+const PROBABILITY_TOGGLE_WIDTH := 32
+const PROBABILITY_PANEL_WIDTH := 168
 
 var combat_mgr: CombatManager
 var _dice_cards: Array = []
@@ -19,6 +21,15 @@ var _dice_container: HBoxContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
+var _probability_dock: Control
+var _probability_panel: PanelContainer
+var _probability_shadow: ColorRect
+var _probability_toggle_btn: Button
+var _probability_notice_chip: PanelContainer
+var _probability_notice_label: Label
+var _probability_list_box: VBoxContainer
+var _probability_row_entries: Array = []
+var _probability_panel_collapsed: bool = false
 
 var _hand_info_label: Label
 
@@ -65,6 +76,12 @@ func _ready() -> void:
 	_setup_combat()
 	_refresh_tutorial_ui()
 	AudioManager.play_music(&"menu")
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		queue_redraw()
+		call_deferred("_refresh_responsive_layout")
 
 
 func _process(_delta: float) -> void:
@@ -114,6 +131,7 @@ func _setup_combat() -> void:
 	_update_rerolls_display()
 	_update_hand_display()
 	_update_score_bar()
+	_refresh_probability_panel()
 	_refresh_tutorial_dice_accents()
 
 
@@ -125,8 +143,7 @@ func _build_ui() -> void:
 	_build_top_bar(content)
 	_build_hand_subtitle(content)
 	_build_score_panel(content)
-	_build_dice_tray(content)
-	_build_description_panel(content)
+	_build_combat_workspace(content)
 
 	var outer := content.get_parent()
 	var action_center := action_bar.get_parent()
@@ -144,6 +161,7 @@ func _build_ui() -> void:
 	_build_pause_overlay()
 	_build_combo_overlay()
 	_build_tutorial_overlay()
+	call_deferred("_refresh_responsive_layout")
 	modulate.a = 0.0
 	_animating = true
 	var tween := create_tween()
@@ -256,6 +274,131 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 	_score_bar_label = _make_pixel_label("0/" + str(GameManager.target_score), 16, DARK)
 	_score_bar_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_score_bar_container.add_child(_score_bar_label)
+
+
+func _build_combat_workspace(parent: VBoxContainer) -> void:
+	var center_stack := VBoxContainer.new()
+	center_stack.name = "CombatWorkspace"
+	center_stack.add_theme_constant_override("separation", 16)
+	center_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(center_stack)
+
+	_build_dice_tray(center_stack)
+	_build_description_panel(center_stack)
+	_build_probability_panel()
+
+
+func _build_probability_panel() -> void:
+	_probability_dock = Control.new()
+	_probability_dock.name = "ProbabilityPanelDock"
+	_probability_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_probability_dock)
+
+	_probability_shadow = ColorRect.new()
+	_probability_shadow.color = SHADOW_COLOR
+	_probability_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_probability_dock.add_child(_probability_shadow)
+
+	_probability_panel = _make_panel(
+		Color(0.11, 0.12, 0.14, 0.92),
+		Color(0.22, 0.24, 0.27, 0.92),
+		Vector2(PROBABILITY_PANEL_WIDTH, 0),
+		4
+	)
+	_probability_panel.name = "ProbabilityPanel"
+	_probability_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_probability_dock.add_child(_probability_panel)
+
+	_probability_toggle_btn = _make_pixel_button(">", Vector2(28, 56), 10)
+	_probability_toggle_btn.name = "ProbabilityPanelToggle"
+	_probability_toggle_btn.pressed.connect(_on_probability_toggle_pressed)
+	_probability_dock.add_child(_probability_toggle_btn)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "ProbabilityPanelContent"
+	vbox.add_theme_constant_override("separation", 4)
+	_probability_panel.add_child(vbox)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 4)
+	vbox.add_child(header)
+
+	var title := _make_pixel_label("ODDS", 10, GOLD)
+	title.name = "ProbabilityPanelTitle"
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_child(title)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(spacer)
+
+	_probability_notice_chip = PanelContainer.new()
+	_probability_notice_chip.name = "ProbabilityPanelNoticeChip"
+	header.add_child(_probability_notice_chip)
+
+	_probability_notice_label = _make_pixel_label("ROLL FIRST", 7, Color("bbbbbb"))
+	_probability_notice_label.name = "ProbabilityPanelNotice"
+	_probability_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_probability_notice_chip.add_child(_probability_notice_label)
+
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 2)
+	divider.color = Color(1, 1, 1, 0.08)
+	vbox.add_child(divider)
+
+	_probability_list_box = VBoxContainer.new()
+	_probability_list_box.name = "ProbabilityPanelList"
+	_probability_list_box.add_theme_constant_override("separation", 2)
+	vbox.add_child(_probability_list_box)
+
+	_probability_row_entries.clear()
+	for combo in DataManager.get_combo_rules():
+		var row_data := _make_probability_row(combo)
+		_probability_list_box.add_child(row_data["panel"])
+		_probability_row_entries.append(row_data)
+
+	_probability_panel_collapsed = true
+	_update_probability_rows({})
+	_update_probability_panel_visibility(false)
+
+
+func _position_probability_overlay() -> void:
+	if _probability_dock == null or _probability_panel == null or _probability_toggle_btn == null:
+		return
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+
+	var panel_size := _probability_panel.get_combined_minimum_size()
+	var panel_width := PROBABILITY_PANEL_WIDTH
+	var panel_height := int(ceil(panel_size.y))
+	var toggle_size := _probability_toggle_btn.get_combined_minimum_size()
+
+	var dice_y := 0.0
+	if _dice_container != null:
+		dice_y = _dice_container.global_position.y - global_position.y
+	var dock_y := dice_y
+
+	var toggle_x := int(size.x) - int(toggle_size.x)
+	var toggle_y := int(round((panel_height - toggle_size.y) / 2.0))
+
+	var panel_x := toggle_x - panel_width
+	_probability_panel.position = Vector2(panel_x, 0)
+	_probability_panel.size = Vector2(panel_width, panel_height)
+	_probability_toggle_btn.position = Vector2(toggle_x, maxi(0, toggle_y))
+
+	_probability_shadow.position = _probability_panel.position + Vector2(4, 4)
+	_probability_shadow.size = Vector2(panel_width, panel_height)
+	_probability_shadow.visible = not _probability_panel_collapsed
+
+	_probability_dock.position = Vector2(0, dock_y)
+	_probability_dock.size = Vector2(size.x, panel_height + 8)
+
+
+func _refresh_responsive_layout() -> void:
+	if _probability_dock == null or _probability_panel == null:
+		return
+	_update_probability_panel_visibility(false)
+	_position_probability_overlay()
 
 
 func _build_dice_tray(parent: VBoxContainer) -> void:
@@ -518,6 +661,69 @@ func _update_rerolls_display() -> void:
 		_end_turn_btn.disabled = not combat_mgr.can_score()
 
 
+func _refresh_probability_panel() -> void:
+	if _probability_panel == null or combat_mgr == null:
+		return
+
+	var snapshot := combat_mgr.get_probability_snapshot()
+	var held_count := _count_held_dice()
+	if snapshot.is_empty():
+		_update_probability_rows({})
+		_set_probability_notice(
+			"ROLL FIRST",
+			Color("9ca3af"),
+			Color(1, 1, 1, 0.04),
+			Color(1, 1, 1, 0.12)
+		)
+		return
+
+	_update_probability_rows(snapshot)
+
+	if held_count > 0:
+		_set_probability_notice(
+			"%d LOCKED" % held_count,
+			GOLD,
+			Color(GOLD.r, GOLD.g, GOLD.b, 0.12),
+			Color(GOLD.r, GOLD.g, GOLD.b, 0.36)
+		)
+	else:
+		_set_probability_notice(
+			"ALL OPEN",
+			BLUE.lightened(0.15),
+			Color(BLUE.r, BLUE.g, BLUE.b, 0.12),
+			Color(BLUE.r, BLUE.g, BLUE.b, 0.32)
+		)
+
+
+func _format_probability(probability_value: Variant) -> String:
+	if probability_value == null:
+		return "--"
+	var percentage := float(probability_value) * 100.0
+	if is_equal_approx(percentage, 100.0):
+		return "100%"
+	return "%.1f%%" % percentage
+
+
+func _count_held_dice() -> int:
+	if combat_mgr == null:
+		return 0
+	var held_count := 0
+	for i in range(_dice_cards.size()):
+		if combat_mgr.is_held(i):
+			held_count += 1
+	return held_count
+
+
+func _update_probability_rows(snapshot: Dictionary) -> void:
+	for entry in _probability_row_entries:
+		var combo_type: String = entry["type"]
+		var value_label: Label = entry["value_label"]
+		var probability_value: Variant = null
+		if snapshot.has(combo_type):
+			probability_value = snapshot[combo_type]
+		value_label.text = _format_probability(probability_value)
+
+
 func _update_hand_display() -> void:
 	if _hand_info_label:
 		var current_hand := _total_hands - combat_mgr.hands_remaining + 1
@@ -541,17 +747,7 @@ func _show_combo(combo: Dictionary) -> void:
 	_combo_name_label.text = combo_name.to_upper()
 
 	var priority: int = combo.get("priority", 0)
-	match priority:
-		0, 1:
-			_combo_name_label.add_theme_color_override("font_color", Color("888888"))
-		2, 3:
-			_combo_name_label.add_theme_color_override("font_color", Color("ff6b4a"))
-		4, 5:
-			_combo_name_label.add_theme_color_override("font_color", BLUE)
-		6, 7:
-			_combo_name_label.add_theme_color_override("font_color", GOLD)
-		8:
-			_combo_name_label.add_theme_color_override("font_color", PINK)
+	_combo_name_label.add_theme_color_override("font_color", _get_combo_priority_color(priority))
 
 	var preview := _calculate_combo_preview(combo)
 
@@ -652,6 +848,8 @@ func _on_die_held(index: int, held: bool) -> void:
 	AudioManager.play_sfx(&"dice_hold" if held else &"dice_release")
 	var card: Control = _dice_cards[index]
 	card.set_held(held)
+	_refresh_probability_panel()
+	_update_combo_highlight()
 	_refresh_tutorial_dice_accents()
 	if TutorialManager.is_active():
 		TutorialManager.report_action("hold_changed", {"held_indices": _current_held_indices()})
@@ -757,6 +955,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_score_breakdown_label.text = ""
 
 	_update_rerolls_display()
+	_refresh_probability_panel()
 	_update_combo_highlight()
 	_refresh_tutorial_dice_accents()
 	if TutorialManager.is_active():
@@ -829,6 +1028,7 @@ func _reset_for_next_hand() -> void:
 		_dice_cards[i].reset_die()
 
 	_update_rerolls_display()
+	_refresh_probability_panel()
 	_update_combo_highlight()
 	_refresh_tutorial_dice_accents()
 
@@ -956,17 +1156,64 @@ func _make_combo_row(combo: Dictionary) -> Dictionary:
 		mult_box.add_child(eff_label)
 		row.add_child(mult_box)
 	else:
-		var mult_color := Color.WHITE
-		match priority:
-			0, 1: mult_color = Color("888888")
-			2, 3: mult_color = Color("ff6b4a")
-			4, 5: mult_color = BLUE
-			6, 7: mult_color = GOLD
-			8: mult_color = PINK
-		var mult_label := _make_pixel_label("x%.1f" % mult_data["base"], 10, mult_color)
+		var mult_label := _make_pixel_label("x%.1f" % mult_data["base"], 10, _get_combo_priority_color(priority))
 		row.add_child(mult_label)
 
 	return { "panel": panel, "default_style": default_style }
+
+
+func _make_probability_row(combo: Dictionary) -> Dictionary:
+	var combo_type: String = combo.get("type", "")
+	var combo_name := str(combo.get("name", combo_type)).to_upper()
+	var priority: int = combo.get("priority", 0)
+
+	var panel := PanelContainer.new()
+	panel.name = "ProbabilityRow_%s" % combo_type
+	panel.custom_minimum_size = Vector2(PROBABILITY_PANEL_WIDTH - 8, 0)
+	panel.add_theme_stylebox_override("panel", _make_style(Color(1, 1, 1, 0.03), Color(1, 1, 1, 0), 0, 2))
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	panel.add_child(row)
+
+	var name_label := _make_pixel_label(combo_name, 7, Color.WHITE)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_label)
+
+	var value_label := _make_pixel_label("--", 7, _get_combo_priority_color(priority))
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value_label.custom_minimum_size = Vector2(40, 0)
+	row.add_child(value_label)
+
+	return {
+		"panel": panel,
+		"type": combo_type,
+		"name_label": name_label,
+		"value_label": value_label,
+	}
+
+
+func _set_probability_notice(text: String, font_color: Color, bg_color: Color, border_color: Color) -> void:
+	_probability_notice_label.text = text
+	_probability_notice_label.add_theme_color_override("font_color", font_color)
+	_probability_notice_chip.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, 2, 6))
+
+
+func _update_probability_panel_visibility(refresh_layout: bool = true) -> void:
+	if _probability_toggle_btn == null or _probability_panel == null:
+		return
+	_probability_panel.visible = not _probability_panel_collapsed
+	if _probability_shadow != null:
+		_probability_shadow.visible = not _probability_panel_collapsed
+	_probability_toggle_btn.text = ">" if _probability_panel_collapsed else "<"
+	queue_redraw()
+	if refresh_layout:
+		call_deferred("_refresh_responsive_layout")
+
+
+func _on_probability_toggle_pressed() -> void:
+	_probability_panel_collapsed = not _probability_panel_collapsed
+	_update_probability_panel_visibility()
 
 
 func _get_pattern_colors(combo_type: String) -> Array:
@@ -1145,6 +1392,71 @@ func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:
 	return TutorialManager.get_scripted_roll_values(roll_number)
 
 
+func get_probability_status_text() -> String:
+	return str(_probability_notice_label.text)
+
+
+func is_probability_collapsed() -> bool:
+	return _probability_panel_collapsed
+
+
+func is_probability_panel_body_visible() -> bool:
+	return not _probability_panel_collapsed
+
+
+func get_combo_button_right_x() -> float:
+	if _combo_btn == null:
+		return 0.0
+	return _combo_btn.global_position.x + _combo_btn.size.x
+
+
+func get_probability_toggle_right_x() -> float:
+	if _probability_toggle_btn == null:
+		return 0.0
+	return _probability_toggle_btn.global_position.x + _probability_toggle_btn.size.x
+
+
+func get_probability_row_text(combo_type: String) -> String:
+	for entry in _probability_row_entries:
+		if entry["type"] == combo_type:
+			return str(entry["value_label"].text)
+	return ""
+
+
+func get_probability_row_name_text(combo_type: String) -> String:
+	for entry in _probability_row_entries:
+		if entry["type"] == combo_type:
+			return str(entry["name_label"].text)
+	return ""
+
+
+func get_probability_row_count() -> int:
+	return _probability_row_entries.size()
+
+
+func get_probability_display_snapshot() -> Dictionary:
+	var snapshot := {}
+	for entry in _probability_row_entries:
+		snapshot[entry["type"]] = str(entry["value_label"].text)
+	return snapshot
+
+
+func toggle_probability_panel() -> void:
+	_on_probability_toggle_pressed()
+
+
+func get_dice_tray_global_x() -> float:
+	if _dice_container == null:
+		return 0.0
+	return _dice_container.global_position.x
+
+
+func get_dice_tray_center_x() -> float:
+	if _dice_container == null:
+		return 0.0
+	return _dice_container.global_position.x + (_dice_container.size.x / 2.0)
+
+
 func _current_held_indices() -> Array[int]:
 	var held_indices: Array[int] = []
 	for i in range(_dice_cards.size()):
@@ -1180,6 +1492,21 @@ func _find_current_combo_row_panel() -> Control:
 		if entry["type"] == combo_type:
 			return entry["panel"]
 	return _combo_btn
+
+
+func _get_combo_priority_color(priority: int) -> Color:
+	match priority:
+		0, 1:
+			return Color("888888")
+		2, 3:
+			return Color("ff6b4a")
+		4, 5:
+			return BLUE
+		6, 7:
+			return GOLD
+		8:
+			return PINK
+	return Color.WHITE
 
 
 func _open_combo_overlay() -> void:
