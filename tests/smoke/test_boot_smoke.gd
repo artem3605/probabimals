@@ -24,6 +24,28 @@ func test_main_menu_scene_instantiates_with_playtest_button() -> void:
 func test_combat_screen_script_loads() -> void:
 	assert_not_null(load("res://scenes/combat/combat_screen.gd"))
 
+
+func test_combo_reveal_fx_layer_has_visual_only_api() -> void:
+	var script: Script = load("res://scripts/ui/combo_reveal_fx.gd")
+	assert_not_null(script)
+
+	var fx: Control = script.new()
+	autoqfree(fx)
+	add_child_autofree(fx)
+
+	assert_eq(fx.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+	var combo := {
+		"name": "Pair",
+		"type": "pair",
+		"priority": 1,
+		"in_combo": [true, true, false, false, false],
+	}
+	fx.play(combo, [], Color("ff6b4a"))
+
+	assert_eq(fx.get_reveal_tier(), 1)
+	assert_eq(fx.get_active_combo_type(), "pair")
+
 func test_seeded_combat_flow_runs_headless() -> void:
 	var manager: CombatManager = CombatManager.new()
 	autoqfree(manager)

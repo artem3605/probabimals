@@ -1,12 +1,15 @@
 extends GutTest
 
+const ComboOddsHelperScript = preload("res://scripts/scoring/combo_odds_helper.gd")
 const TestData = preload("res://tests/support/test_data.gd")
 
 var _combo_rules: Array
+var _odds_helper
 var _scripted_rolls: Array = []
 
 func before_each() -> void:
 	_combo_rules = TestData.load_combo_rules()
+	_odds_helper = ComboOddsHelperScript.new()
 	_scripted_rolls.clear()
 
 func test_roll_hold_and_reroll_cycle_keeps_held_die_value() -> void:
@@ -175,9 +178,68 @@ func test_roll_provider_overrides_roll_sequence_without_breaking_hold_logic() ->
 
 	assert_eq_deep(manager.current_roll_values(), [6, 6, 6, 6, 5])
 
+func test_probability_snapshot_updates_for_hold_unhold_reroll_and_hand_reset() -> void:
+	var manager: CombatManager = CombatManager.new()
+	autoqfree(manager)
+	var dice: Array[Die] = [
+		TestData.deterministic_die([2, 6]),
+		TestData.deterministic_die([2, 6]),
+		TestData.deterministic_die([3, 6]),
+		TestData.deterministic_die([4, 6]),
+		TestData.deterministic_die([6, 6]),
+	]
+
+	manager.start_combat(dice, 999, 2, 2, _combo_rules, 2)
+	assert_eq_deep(manager.get_probability_snapshot(), {})
+
+	manager.roll_dice()
+
+	var expected_open_snapshot := _expected_probability_snapshot(manager, dice)
+	assert_eq_deep(manager.get_probability_snapshot(), expected_open_snapshot)
+
+	manager.hold_die(0)
+
+	var held_snapshot := manager.get_probability_snapshot()
+	var expected_held_snapshot := _expected_probability_snapshot(manager, dice)
+	assert_eq_deep(held_snapshot, expected_held_snapshot)
+	assert_ne(held_snapshot, expected_open_snapshot)
+
+	manager.unhold_die(0)
+
+	var unheld_snapshot := manager.get_probability_snapshot()
+	assert_eq_deep(unheld_snapshot, _expected_probability_snapshot(manager, dice))
+	assert_eq_deep(unheld_snapshot, expected_open_snapshot)
+
+	manager.hold_die(0)
+	manager.roll_dice()
+
+	var rerolled_snapshot := manager.get_probability_snapshot()
+	assert_eq_deep(manager.current_roll_values(), [2, 6, 6, 6, 6])
+	assert_eq_deep(rerolled_snapshot, _expected_probability_snapshot(manager, dice))
+	assert_eq_deep(rerolled_snapshot, held_snapshot)
+
+	manager.score_hand([])
+
+	assert_eq_deep(manager.get_probability_snapshot(), {})
+
 
 func _roll_provider(roll_number: int, _held_dice: Array) -> Array[int]:
 	var result: Array[int] = []
 	for value in _scripted_rolls[roll_number]:
 		result.append(int(value))
 	return result
+
+func _expected_probability_snapshot(manager: CombatManager, dice: Array[Die]) -> Dictionary:
+	var die_face_options: Array = []
+	for die in dice:
+		var options: Array[DiceFace] = []
+		for face in die.faces:
+			options.append(face.duplicate_face())
+		die_face_options.append(options)
+
+	return _odds_helper.calculate_probabilities(
+		manager.current_roll,
+		manager.held_dice,
+		_combo_rules,
+		die_face_options
+	)

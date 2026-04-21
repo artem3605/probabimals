@@ -47,7 +47,6 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 		0.05,
 		"intro roll step"
 	))
-	assert_true(intro_combat._combo_btn.disabled)
 	var first_intro_roll := [6, 3, 2, 5, 1]
 	intro_combat._on_roll_pressed()
 	assert_true(await wait_until(
@@ -78,16 +77,9 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 		0.05,
 		"intro reroll step"
 	))
-	assert_false(intro_combat._combo_btn.disabled)
-	intro_combat._combo_btn.emit_signal("pressed")
-	await wait_process_frames(2)
-	assert_true(intro_combat._combo_overlay.visible)
-	assert_false(intro_combat._tutorial_overlay.visible)
-	intro_combat._combo_btn.emit_signal("pressed")
+	intro_combat._tutorial_overlay._next_btn.emit_signal("pressed")
 	assert_true(await wait_until(
-		func():
-			return TutorialManager.step_id == TutorialManager.STEP_INTRO_FINISH \
-				and not intro_combat._combo_overlay.visible,
+		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_FINISH,
 		2.0,
 		0.05,
 		"intro finish step"

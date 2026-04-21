@@ -1,5 +1,22 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const MAIN_MENU_VERSION_FONT_SIZE := 10
+const MAIN_MENU_SETTINGS_PANEL_SIZE := Vector2(480, 0)
+const MAIN_MENU_SETTINGS_PANEL_MARGIN := 32
+const MAIN_MENU_SETTINGS_SEPARATION := 28
+const MAIN_MENU_SETTINGS_TITLE_FONT_SIZE := 24
+const MAIN_MENU_SETTINGS_SPACER_HEIGHT := 8
+const MAIN_MENU_SETTINGS_DIVIDER_HEIGHT := 4
+const MAIN_MENU_TUTORIAL_BUTTON_SIZE := Vector2(240, 56)
+const MAIN_MENU_TUTORIAL_BUTTON_FONT_SIZE := 14
+const MAIN_MENU_CLOSE_BUTTON_SIZE := Vector2(200, 56)
+const MAIN_MENU_CLOSE_BUTTON_FONT_SIZE := 16
+const MAIN_MENU_VOLUME_ROW_SEPARATION := 16
+const MAIN_MENU_VOLUME_LABEL_FONT_SIZE := 14
+const MAIN_MENU_VOLUME_LABEL_WIDTH := 120
+const MAIN_MENU_VOLUME_SLIDER_SIZE := Vector2(240, 32)
+const MAIN_MENU_SLIDER_GRABBER_SIZE := Vector2i(16, 24)
+
 var _time := 0.0
 
 @onready var _title_label: Label = $TitleLabel
@@ -36,7 +53,7 @@ func _ready() -> void:
 	_title_label.add_theme_font_override("font", _pixel_font)
 	_title_underline.color = DARK
 	_version_label.add_theme_font_override("font", _pixel_font)
-	_version_label.add_theme_font_size_override("font_size", 10)
+	_version_label.add_theme_font_size_override("font_size", MAIN_MENU_VERSION_FONT_SIZE)
 	_version_label.add_theme_color_override("font_color", Color(0.102, 0.102, 0.102, 0.8))
 	_version_label.text = "VERSION %s" % GameManager.get_app_version()
 	_playtest_survey_btn.disabled = not GameManager.has_playtest_survey_url()
@@ -197,14 +214,14 @@ func _build_settings_overlay() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_overlay.add_child(center)
 
-	var panel := _make_panel(DARK, GOLD, Vector2(480, 0), 32)
+	var panel := _make_panel(DARK, GOLD, MAIN_MENU_SETTINGS_PANEL_SIZE, MAIN_MENU_SETTINGS_PANEL_MARGIN)
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 28)
+	vbox.add_theme_constant_override("separation", MAIN_MENU_SETTINGS_SEPARATION)
 	panel.add_child(vbox)
 
-	var title := _make_pixel_label("SETTINGS", 24, GOLD)
+	var title := _make_pixel_label("SETTINGS", MAIN_MENU_SETTINGS_TITLE_FONT_SIZE, GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
@@ -218,35 +235,45 @@ func _build_settings_overlay() -> void:
 	_sfx_slider.value_changed.connect(func(val: float): AudioManager.set_sfx_volume(val))
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 8)
+	spacer.custom_minimum_size = Vector2(0, MAIN_MENU_SETTINGS_SPACER_HEIGHT)
 	vbox.add_child(spacer)
 
 	var tutorial_divider := ColorRect.new()
 	tutorial_divider.color = GOLD.darkened(0.5)
-	tutorial_divider.custom_minimum_size = Vector2(0, 4)
+	tutorial_divider.custom_minimum_size = Vector2(0, MAIN_MENU_SETTINGS_DIVIDER_HEIGHT)
 	vbox.add_child(tutorial_divider)
 
 	var tutorial_btn_center := CenterContainer.new()
 	vbox.add_child(tutorial_btn_center)
 
-	var tutorial_btn := _make_pixel_button("TUTORIAL", Vector2(240, 56), 14)
+	var tutorial_btn := _make_pixel_button(
+		"TUTORIAL",
+		MAIN_MENU_TUTORIAL_BUTTON_SIZE,
+		MAIN_MENU_TUTORIAL_BUTTON_FONT_SIZE
+	)
 	tutorial_btn.pressed.connect(_on_settings_tutorial_pressed)
 	tutorial_btn_center.add_child(tutorial_btn)
 
 	var btn_center := CenterContainer.new()
 	vbox.add_child(btn_center)
-	var close_btn := _make_colored_button("CLOSE", Vector2(200, 56), GREEN, GREEN.lightened(0.15), 16)
+	var close_btn := _make_colored_button(
+		"CLOSE",
+		MAIN_MENU_CLOSE_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		MAIN_MENU_CLOSE_BUTTON_FONT_SIZE
+	)
 	close_btn.pressed.connect(_on_settings_close)
 	btn_center.add_child(close_btn)
 
 
 func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float) -> HSlider:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", MAIN_MENU_VOLUME_ROW_SEPARATION)
 	parent.add_child(row)
 
-	var lbl := _make_pixel_label(label_text, 14, Color.WHITE)
-	lbl.custom_minimum_size = Vector2(120, 0)
+	var lbl := _make_pixel_label(label_text, MAIN_MENU_VOLUME_LABEL_FONT_SIZE, Color.WHITE)
+	lbl.custom_minimum_size = Vector2(MAIN_MENU_VOLUME_LABEL_WIDTH, 0)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(lbl)
 
@@ -255,7 +282,7 @@ func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float)
 	slider.max_value = 1.0
 	slider.step = 0.05
 	slider.value = initial
-	slider.custom_minimum_size = Vector2(240, 32)
+	slider.custom_minimum_size = MAIN_MENU_VOLUME_SLIDER_SIZE
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var slider_style := StyleBoxFlat.new()
@@ -281,7 +308,12 @@ func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float)
 
 
 func _create_grabber_texture(color: Color) -> ImageTexture:
-	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
+	var img := Image.create(
+		MAIN_MENU_SLIDER_GRABBER_SIZE.x,
+		MAIN_MENU_SLIDER_GRABBER_SIZE.y,
+		false,
+		Image.FORMAT_RGBA8
+	)
 	img.fill(color)
 	return ImageTexture.create_from_image(img)
 

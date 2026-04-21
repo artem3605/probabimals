@@ -80,7 +80,8 @@ const STEP_TEXT := {
 	},
 	"intro_pair": {
 		"title": "COMBO!",
-		"body": "Two 6s -- that's a Pair! Pairs give bonus points. Tap Combos to see all scoring patterns!",
+		"body": "Two 6s -- that's a Pair! Pairs give bonus points. The panel above lists every scoring pattern and its odds.",
+		"show_next": true,
 		"panel_width": 630,
 		"panel_anchor": Vector2(0.5, 0.72),
 	},
@@ -286,7 +287,7 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 				_set_step(STEP_INTRO_PAIR)
 				return true
 		STEP_INTRO_PAIR:
-			if action_id == "combo_overlay_closed":
+			if action_id == "advance_intro":
 				_set_step(STEP_INTRO_FINISH)
 				return true
 		STEP_INTRO_FINISH:

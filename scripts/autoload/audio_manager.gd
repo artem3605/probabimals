@@ -82,15 +82,15 @@ func _try_load(dir_path: String, file_name: String) -> AudioStream:
 	for ext in ["wav", "ogg", "mp3"]:
 		var path := "%s%s.%s" % [dir_path, file_name, ext]
 		var stream: AudioStream = null
+		if ext == "wav" and FileAccess.file_exists(path):
+			stream = _load_wav_from_source(path)
+			if stream:
+				return stream
+
 		if ResourceLoader.exists(path, "AudioStream"):
 			stream = ResourceLoader.load(path, "AudioStream") as AudioStream
 		if stream:
 			return stream
-
-		if ext == "wav" and FileAccess.file_exists(path):
-			var fallback := _load_wav_from_source(path)
-			if fallback:
-				return fallback
 	return null
 
 
