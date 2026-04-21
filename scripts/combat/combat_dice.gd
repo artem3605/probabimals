@@ -5,9 +5,12 @@ const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 const COMBAT_CARD_SIZE := Vector2(110, 110)
 const COMBAT_CARD_LABEL_FONT_SIZE := 12
 const COMBAT_CARD_LABEL_HEIGHT := 18
+const COMBO_REVEAL_BASE_POP := 1.04
+const COMBO_REVEAL_POP_PER_TIER := 0.014
 
 var _face_panel: Control
 var _display_name: String = ""
+var _combo_reveal_tween: Tween
 
 
 func setup(die: Die, pixel_font: Font) -> void:
@@ -50,10 +53,41 @@ func set_held(held: bool) -> void:
 		set_bottom_text(_display_name, DARK)
 
 
+func play_combo_reveal_hit(color: Color, tier: int, delay: float) -> void:
+	if main_button == null:
+		return
+	if _combo_reveal_tween != null and _combo_reveal_tween.is_valid():
+		_combo_reveal_tween.kill()
+
+	main_button.scale = Vector2.ONE
+	main_button.modulate = Color.WHITE
+	var pop := COMBO_REVEAL_BASE_POP + float(clampi(tier, 0, 8)) * COMBO_REVEAL_POP_PER_TIER
+	var hit_color := color.lightened(0.3)
+
+	_combo_reveal_tween = create_tween()
+	if delay > 0.0:
+		_combo_reveal_tween.tween_interval(delay)
+	_combo_reveal_tween.tween_property(main_button, "scale", Vector2(pop, pop), 0.08) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_combo_reveal_tween.parallel().tween_property(main_button, "modulate", hit_color, 0.08)
+	_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.14) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_combo_reveal_tween.parallel().tween_property(main_button, "modulate", Color.WHITE, 0.14)
+	if tier >= 6:
+		_combo_reveal_tween.tween_property(main_button, "scale", Vector2(1.05, 1.05), 0.06)
+		_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.12) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
 func reset_die() -> void:
+	if _combo_reveal_tween != null and _combo_reveal_tween.is_valid():
+		_combo_reveal_tween.kill()
+	if main_button != null:
+		main_button.scale = Vector2.ONE
+		main_button.modulate = Color.WHITE
 	set_face(0)
 	set_held(false)
 
 
 func get_display_name() -> String:
-	return _display_name	
+	return _display_name

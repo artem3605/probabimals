@@ -1,489 +1,561 @@
 class_name CombatProbabilityPanel
-extends Control
+extends PanelContainer
+## Unified score + probability panel shown above the dice tray during combat.
+## Top row surfaces the current combo name, running points, and the score
+## breakdown. The bottom grid shows every combo's odds in three columns.
+## See Figma: Probabimals – Combat Screen Redesign, node 28:909 (ScorePanel).
 
-const PROBABILITY_TOGGLE_WIDTH := 32
-const PROBABILITY_TOGGLE_HEIGHT := 56
-const PROBABILITY_PANEL_WIDTH := 196
-const PROBABILITY_PANEL_MIN_HEIGHT := 344
-const PROBABILITY_NOTICE_CHIP_WIDTH := 116
-const PROBABILITY_SLIDE_SEC := 0.18
-const PROBABILITY_PANEL_MARGIN := 4
-const PROBABILITY_PANEL_TOP_PAD := 10
-const PROBABILITY_SHADOW_OFFSET := 4.0
-const PROBABILITY_DOCK_BOTTOM_PAD := 8.0
-const PROBABILITY_CONTENT_SPACING := 6
-const PROBABILITY_HEADER_SPACING := 8
-const PROBABILITY_LIST_SPACING := 3
-const PROBABILITY_ROW_GAP := 6
-const PROBABILITY_ROW_MARGIN := 6
-const PROBABILITY_ROW_VALUE_WIDTH := 52
-const PROBABILITY_ROW_PANEL_WIDTH := PROBABILITY_PANEL_WIDTH - (PROBABILITY_PANEL_MARGIN * 2)
-const PROBABILITY_ROW_NAME_WIDTH := PROBABILITY_ROW_PANEL_WIDTH - (PROBABILITY_ROW_MARGIN * 2) - PROBABILITY_ROW_GAP - PROBABILITY_ROW_VALUE_WIDTH
-const PROBABILITY_TITLE_FONT_SIZE := 14
-const PROBABILITY_STATUS_FONT_SIZE := 10
-const PROBABILITY_ROW_NAME_FONT_SIZE := 12
-const PROBABILITY_ROW_VALUE_FONT_SIZE := 12
-const PROBABILITY_TOGGLE_FONT_SIZE := 14
-const PROBABILITY_TOGGLE_MARGIN := 8
-const PROBABILITY_DIVIDER_HEIGHT := 2
-const PROBABILITY_VALUE_MIN_COLOR := Color("666666")
-const PROBABILITY_VALUE_MAX_COLOR := Color("ffffff")
+const RAIL_WIDTH := 978
+const RAIL_HEIGHT := 180
+const RAIL_BORDER_WIDTH := 0
+const RAIL_PAD_TOP := 18
+const RAIL_PAD_BOTTOM := 20
+const RAIL_PAD_H := 24
+const RAIL_SHADOW_OFFSET := Vector2(6, 6)
 
-const DARK := Color("1a1a1a")
-const GOLD := Color("ffd700")
-const BORDER_BLACK := Color("000000")
-const SHADOW_COLOR := Color(0, 0, 0, 0.5)
+const SCORE_HEADER_HEIGHT := 48
+const SCORE_COMBO_NAME_WIDTH := 240
+const SCORE_COMBO_NAME_FONT_SIZE := 16
+const SCORE_VALUE_IDLE_FONT_SIZE := 18
+const SCORE_VALUE_PREVIEW_FONT_SIZE := 28
+const SCORE_PTS_FONT_SIZE := 16
+const SCORE_BREAKDOWN_WIDTH := 240
+const SCORE_BREAKDOWN_FONT_SIZE := 14
+const SCORE_PTS_SEPARATION := 6
+
+const CONTENT_SEPARATION := 12
+const BODY_COLUMN_GAP := 10
+const BODY_ROW_SEPARATION := 4
+
+const ROW_HEIGHT := 22
+const ROW_BORDER_WIDTH := 2
+const ROW_H_PADDING := 8
+const ROW_V_PADDING := 3
+const ROW_GAP := 5
+const ROW_FONT_SIZE := 9
+const ROW_NAME_WIDTH := 128
+const ROW_MULT_WIDTH := 44
+const ROW_BAR_WIDTH := 18
+const ROW_BAR_HEIGHT := 4
+const ROW_PCT_WIDTH := 36
+const PATTERN_SQUARE := 7
+const PATTERN_BORDER := 1
+const PATTERN_GAP := 1
+
+const RAIL_BG := Color("bfeeff")
+const RAIL_BORDER := Color("1a1a1a")
+const RAIL_SHADOW := Color(0, 0, 0, 0.55)
+const HEADER_COLOR := Color("1a1a1a")
+const BAR_TRACK := Color("333333")
+const BAR_MUTED_FILL := Color("666666")
+
+const GREY := Color("888888")
+const ORANGE := Color("ff6b4a")
 const BLUE := Color("4a9eff")
+const GOLD := Color("ffd700")
 const PINK := Color("ff69b4")
+const GREEN := Color("9acd32")
+
+const HIGHLIGHT_BG := Color(0.29, 0.62, 1.0, 0.22)
+const HIGHLIGHT_BORDER := Color("4a9eff")
+const HIGHLIGHT_NAME := Color("ffffff")
+
+const PCT_LOW_MAX := 0.20
+const PCT_MID_MAX := 0.50
 
 var _pixel_font: Font
 var _combo_rules: Array = []
+var _row_entries: Array = []
+var _current_combo_type: String = ""
+var _status_text: String = "ROLL FIRST"
+var _has_rolled: bool = false
 
-var _probability_panel: PanelContainer
-var _probability_shadow: ColorRect
-var _probability_toggle_btn: Button
-var _probability_notice_chip: PanelContainer
-var _probability_notice_label: Label
-var _probability_list_box: VBoxContainer
-var _probability_row_entries: Array = []
-var _probability_panel_collapsed: bool = true
-var _probability_slide_tween: Tween
-var _last_viewport_size: Vector2 = Vector2.ZERO
-var _last_dice_y: float = 0.0
+var _score_header_row: HBoxContainer
+var _combo_name_label: Label
+var _score_value_label: Label
+var _score_pts_suffix: Label
+var _score_breakdown_label: Label
+var _body_root: HBoxContainer
 
 
 func setup(pixel_font: Font, combo_rules: Array) -> void:
-	if _probability_panel != null:
+	if not _row_entries.is_empty():
 		return
 
 	_pixel_font = pixel_font
-	_combo_rules = combo_rules.duplicate(true)
-	name = "ProbabilityPanelDock"
+	_combo_rules = _sort_by_priority_desc(combo_rules)
+
+	name = "ProbabilityPanel"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	custom_minimum_size = Vector2(RAIL_WIDTH, RAIL_HEIGHT)
+	size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
-	_probability_shadow = ColorRect.new()
-	_probability_shadow.color = SHADOW_COLOR
-	_probability_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_probability_shadow)
+	add_theme_stylebox_override("panel", _build_rail_style())
 
-	_probability_panel = _make_panel(
-		Color(0.11, 0.12, 0.14, 0.92),
-		Color(0.22, 0.24, 0.27, 0.92),
-		Vector2(PROBABILITY_PANEL_WIDTH, PROBABILITY_PANEL_MIN_HEIGHT),
-		PROBABILITY_PANEL_MARGIN
-	)
-	_probability_panel.name = "ProbabilityPanel"
-	_probability_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_probability_panel.clip_contents = true
-	var panel_sb: StyleBoxFlat = _probability_panel.get_theme_stylebox("panel")
-	panel_sb.content_margin_top = PROBABILITY_PANEL_TOP_PAD
-	add_child(_probability_panel)
+	var content := VBoxContainer.new()
+	content.name = "ProbabilityContent"
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", CONTENT_SEPARATION)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(content)
 
-	_probability_toggle_btn = _make_pixel_button(
-		"<",
-		Vector2(PROBABILITY_TOGGLE_WIDTH, PROBABILITY_TOGGLE_HEIGHT),
-		PROBABILITY_TOGGLE_FONT_SIZE
-	)
-	_probability_toggle_btn.name = "ProbabilityPanelToggle"
-	_probability_toggle_btn.pressed.connect(_on_probability_toggle_pressed)
-	add_child(_probability_toggle_btn)
+	_build_score_header(content)
+	_build_body(content)
+	_refresh_rows({})
 
-	var vbox := VBoxContainer.new()
-	vbox.name = "ProbabilityPanelContent"
-	vbox.custom_minimum_size = Vector2(PROBABILITY_ROW_PANEL_WIDTH, 0)
-	vbox.add_theme_constant_override("separation", PROBABILITY_CONTENT_SPACING)
-	_probability_panel.add_child(vbox)
 
-	var header := VBoxContainer.new()
-	header.add_theme_constant_override("separation", PROBABILITY_HEADER_SPACING)
-	vbox.add_child(header)
-
-	var title := _make_pixel_label("ODDS", PROBABILITY_TITLE_FONT_SIZE, GOLD)
-	title.name = "ProbabilityPanelTitle"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	header.add_child(title)
-
-	_probability_notice_chip = PanelContainer.new()
-	_probability_notice_chip.name = "ProbabilityPanelNoticeChip"
-	_probability_notice_chip.custom_minimum_size = Vector2(PROBABILITY_NOTICE_CHIP_WIDTH, 0)
-	_probability_notice_chip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	header.add_child(_probability_notice_chip)
-
-	_probability_notice_label = _make_pixel_label("ROLL FIRST", PROBABILITY_STATUS_FONT_SIZE, Color("bbbbbb"))
-	_probability_notice_label.name = "ProbabilityPanelNotice"
-	_probability_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_probability_notice_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_probability_notice_chip.add_child(_probability_notice_label)
-
-	var divider := ColorRect.new()
-	divider.custom_minimum_size = Vector2(0, PROBABILITY_DIVIDER_HEIGHT)
-	divider.color = Color(1, 1, 1, 0.08)
-	vbox.add_child(divider)
-
-	_probability_list_box = VBoxContainer.new()
-	_probability_list_box.name = "ProbabilityPanelList"
-	_probability_list_box.custom_minimum_size = Vector2(PROBABILITY_ROW_PANEL_WIDTH, 0)
-	_probability_list_box.add_theme_constant_override("separation", PROBABILITY_LIST_SPACING)
-	vbox.add_child(_probability_list_box)
-
-	_probability_row_entries.clear()
-	for combo in _combo_rules:
-		var row_data := _make_probability_row(combo)
-		_probability_list_box.add_child(row_data["panel"])
-		_probability_row_entries.append(row_data)
-
-	_update_probability_rows({})
-	_update_probability_panel_visibility(false)
-
+# -- Public API ---------------------------------------------------------------
 
 func get_panel_node() -> PanelContainer:
-	return _probability_panel
+	return self
 
 
-func refresh_layout(viewport_size: Vector2, dice_y: float) -> void:
-	if _probability_panel == null:
-		return
-	_last_viewport_size = viewport_size
-	_last_dice_y = dice_y
-	if _probability_slide_tween != null and _probability_slide_tween.is_valid():
-		_probability_slide_tween.kill()
-		_probability_slide_tween = null
-	_update_probability_panel_visibility(false)
-	_position_probability_overlay()
+func refresh_layout(_viewport_size: Vector2, _dice_y: float) -> void:
+	# The rail now sits inline in the combat content stack, so no manual
+	# positioning is required.
+	pass
 
 
 func refresh_snapshot(snapshot: Dictionary, held_count: int) -> void:
-	if _probability_panel == null:
+	if _row_entries.is_empty():
 		return
+
+	_has_rolled = not snapshot.is_empty()
+	_refresh_rows(snapshot)
 
 	if snapshot.is_empty():
-		_update_probability_rows({})
-		_set_probability_notice(
-			"ROLL FIRST",
-			Color("9ca3af"),
-			Color(1, 1, 1, 0.04),
-			Color(1, 1, 1, 0.12)
-		)
-		return
-
-	_update_probability_rows(snapshot)
-
-	if held_count > 0:
-		_set_probability_notice(
-			"%d LOCKED" % held_count,
-			GOLD,
-			Color(GOLD.r, GOLD.g, GOLD.b, 0.12),
-			Color(GOLD.r, GOLD.g, GOLD.b, 0.36)
-		)
+		_status_text = "ROLL FIRST"
+	elif held_count > 0:
+		_status_text = "%d LOCKED" % held_count
 	else:
-		_set_probability_notice(
-			"ALL OPEN",
-			BLUE.lightened(0.15),
-			Color(BLUE.r, BLUE.g, BLUE.b, 0.12),
-			Color(BLUE.r, BLUE.g, BLUE.b, 0.32)
-		)
+		_status_text = "ALL OPEN"
+
+
+func highlight_current_combo(combo_type: String) -> void:
+	if _current_combo_type == combo_type:
+		return
+	_current_combo_type = combo_type
+	_apply_row_styles()
+
+
+func clear_current_combo_highlight() -> void:
+	highlight_current_combo("")
+
+
+# -- Accessors used by tests and combat screen -------------------------------
+
+func get_combo_name_label() -> Label:
+	return _combo_name_label
+
+
+func get_score_value_label() -> Label:
+	return _score_value_label
+
+
+func get_score_pts_suffix_label() -> Label:
+	return _score_pts_suffix
+
+
+func get_score_breakdown_label() -> Label:
+	return _score_breakdown_label
 
 
 func get_status_text() -> String:
-	return str(_probability_notice_label.text)
+	return _status_text
 
 
 func is_collapsed() -> bool:
-	return _probability_panel_collapsed
+	return false
 
 
 func is_body_visible() -> bool:
-	return not _probability_panel_collapsed
+	return true
+
+
+func toggle_panel() -> void:
+	pass
 
 
 func get_toggle_right_x() -> float:
-	if _probability_toggle_btn == null:
-		return 0.0
-	return _probability_toggle_btn.global_position.x + _probability_toggle_btn.size.x
+	return global_position.x + size.x
 
 
 func get_row_text(combo_type: String) -> String:
-	for entry in _probability_row_entries:
+	for entry in _row_entries:
 		if entry["type"] == combo_type:
-			return str(entry["value_label"].text)
+			return str(entry["pct_label"].text)
 	return ""
 
 
 func get_row_name_text(combo_type: String) -> String:
-	for entry in _probability_row_entries:
+	for entry in _row_entries:
 		if entry["type"] == combo_type:
 			return str(entry["name_label"].text)
 	return ""
 
 
 func get_row_count() -> int:
-	return _probability_row_entries.size()
+	return _row_entries.size()
 
 
 func get_display_snapshot() -> Dictionary:
 	var snapshot := {}
-	for entry in _probability_row_entries:
-		snapshot[entry["type"]] = str(entry["value_label"].text)
+	for entry in _row_entries:
+		snapshot[entry["type"]] = str(entry["pct_label"].text)
 	return snapshot
 
 
-func toggle_panel() -> void:
-	_on_probability_toggle_pressed()
+# -- Build helpers -----------------------------------------------------------
+
+func _build_rail_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = RAIL_BG
+	sb.border_color = RAIL_BORDER
+	sb.set_border_width_all(RAIL_BORDER_WIDTH)
+	sb.set_corner_radius_all(0)
+	sb.content_margin_top = RAIL_PAD_TOP
+	sb.content_margin_bottom = RAIL_PAD_BOTTOM
+	sb.content_margin_left = RAIL_PAD_H
+	sb.content_margin_right = RAIL_PAD_H
+	sb.shadow_color = RAIL_SHADOW
+	sb.shadow_size = 0
+	sb.shadow_offset = RAIL_SHADOW_OFFSET
+	return sb
 
 
-func _position_probability_overlay() -> void:
-	if _last_viewport_size.x <= 0.0 or _last_viewport_size.y <= 0.0:
-		return
+func _build_score_header(parent: VBoxContainer) -> void:
+	_score_header_row = HBoxContainer.new()
+	_score_header_row.name = "ScoreHeader"
+	_score_header_row.custom_minimum_size = Vector2(0, SCORE_HEADER_HEIGHT)
+	_score_header_row.add_theme_constant_override("separation", 0)
+	_score_header_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_score_header_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_score_header_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(_score_header_row)
 
-	var layout := _get_probability_overlay_layout()
-	var panel_x: float = float(layout["collapsed_panel_x"]) if _probability_panel_collapsed else float(layout["expanded_panel_x"])
-	var toggle_x: float = float(layout["collapsed_toggle_x"]) if _probability_panel_collapsed else float(layout["expanded_toggle_x"])
-	_set_probability_overlay_geometry(panel_x, toggle_x, layout)
-	_probability_shadow.visible = not _probability_panel_collapsed
+	var combo_slot := _make_header_slot(SCORE_COMBO_NAME_WIDTH, "ComboNameSlot")
+	_score_header_row.add_child(combo_slot)
 
+	_combo_name_label = _make_label("", SCORE_COMBO_NAME_FONT_SIZE, HEADER_COLOR)
+	_combo_name_label.name = "ComboNameLabel"
+	_combo_name_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_combo_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_combo_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_combo_name_label.clip_text = true
+	combo_slot.add_child(_combo_name_label)
 
-func _get_probability_overlay_layout() -> Dictionary:
-	var panel_size := _probability_panel.get_combined_minimum_size()
-	var panel_width := PROBABILITY_PANEL_WIDTH
-	var panel_height := maxi(int(ceil(panel_size.y)), PROBABILITY_PANEL_MIN_HEIGHT)
-	var toggle_size := _probability_toggle_btn.get_combined_minimum_size()
+	var pts_row := HBoxContainer.new()
+	pts_row.name = "ScoreValueRow"
+	pts_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	pts_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pts_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pts_row.add_theme_constant_override("separation", SCORE_PTS_SEPARATION)
+	pts_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_score_header_row.add_child(pts_row)
 
-	var expanded_panel_x := int(_last_viewport_size.x) - panel_width
-	var collapsed_panel_x := int(_last_viewport_size.x)
-	var expanded_toggle_x := expanded_panel_x - int(toggle_size.x)
-	var collapsed_toggle_x := int(_last_viewport_size.x) - int(toggle_size.x)
-	var toggle_y := maxi(0, int(round((panel_height - toggle_size.y) / 2.0)))
+	_score_value_label = _make_label("ROLL!", SCORE_VALUE_IDLE_FONT_SIZE, HEADER_COLOR)
+	_score_value_label.name = "ScoreValueLabel"
+	_score_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_score_value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pts_row.add_child(_score_value_label)
 
-	var available := _last_viewport_size.y - _last_dice_y
-	var dock_y := roundf(_last_dice_y + (available - panel_height) / 2.0)
+	_score_pts_suffix = _make_label("", SCORE_PTS_FONT_SIZE, HEADER_COLOR)
+	_score_pts_suffix.name = "ScorePtsSuffix"
+	_score_pts_suffix.size_flags_vertical = Control.SIZE_SHRINK_END
+	_score_pts_suffix.visible = false
+	pts_row.add_child(_score_pts_suffix)
 
-	return {
-		"panel_width": panel_width,
-		"panel_height": panel_height,
-		"dock_y": dock_y,
-		"expanded_panel_x": expanded_panel_x,
-		"collapsed_panel_x": collapsed_panel_x,
-		"expanded_toggle_x": expanded_toggle_x,
-		"collapsed_toggle_x": collapsed_toggle_x,
-		"toggle_y": toggle_y,
-	}
+	var breakdown_slot := _make_header_slot(SCORE_BREAKDOWN_WIDTH, "ScoreBreakdownSlot")
+	_score_header_row.add_child(breakdown_slot)
 
-
-func _set_probability_overlay_geometry(panel_x: float, toggle_x: float, layout: Dictionary) -> void:
-	var panel_width: float = float(layout["panel_width"])
-	var panel_height: float = float(layout["panel_height"])
-	var dock_y: float = float(layout["dock_y"])
-	var toggle_y: float = float(layout["toggle_y"])
-
-	position = Vector2(0, dock_y)
-	size = Vector2(_last_viewport_size.x, panel_height + PROBABILITY_DOCK_BOTTOM_PAD)
-	_probability_panel.position = Vector2(panel_x, 0)
-	_probability_panel.size = Vector2(panel_width, panel_height)
-	_probability_toggle_btn.position = Vector2(toggle_x, toggle_y)
-	_probability_shadow.position = Vector2(panel_x + PROBABILITY_SHADOW_OFFSET, PROBABILITY_SHADOW_OFFSET)
-	_probability_shadow.size = Vector2(panel_width, panel_height)
-
-
-func _animate_probability_overlay() -> void:
-	if _last_viewport_size.x <= 0.0 or _last_viewport_size.y <= 0.0:
-		return
-
-	var layout := _get_probability_overlay_layout()
-	var target_panel_x: float = float(layout["collapsed_panel_x"]) if _probability_panel_collapsed else float(layout["expanded_panel_x"])
-	var target_toggle_x: float = float(layout["collapsed_toggle_x"]) if _probability_panel_collapsed else float(layout["expanded_toggle_x"])
-	var toggle_y: float = float(layout["toggle_y"])
-	var panel_width: float = float(layout["panel_width"])
-	var panel_height: float = float(layout["panel_height"])
-	var dock_y: float = float(layout["dock_y"])
-
-	size = Vector2(_last_viewport_size.x, panel_height + PROBABILITY_DOCK_BOTTOM_PAD)
-	position = Vector2(0, dock_y)
-	_probability_panel.size = Vector2(panel_width, panel_height)
-	_probability_toggle_btn.position.y = toggle_y
-	_probability_shadow.size = Vector2(panel_width, panel_height)
-	_probability_shadow.position.y = PROBABILITY_SHADOW_OFFSET
-
-	if _probability_slide_tween != null and _probability_slide_tween.is_valid():
-		_probability_slide_tween.kill()
-
-	_probability_shadow.visible = true
-	_probability_slide_tween = create_tween()
-	_probability_slide_tween.set_parallel(true)
-	_probability_slide_tween.set_ease(Tween.EASE_OUT)
-	_probability_slide_tween.set_trans(Tween.TRANS_CUBIC)
-	_probability_slide_tween.tween_property(_probability_panel, "position:x", target_panel_x, PROBABILITY_SLIDE_SEC)
-	_probability_slide_tween.tween_property(_probability_toggle_btn, "position:x", target_toggle_x, PROBABILITY_SLIDE_SEC)
-	_probability_slide_tween.tween_property(_probability_shadow, "position:x", float(target_panel_x) + PROBABILITY_SHADOW_OFFSET, PROBABILITY_SLIDE_SEC)
-	_probability_slide_tween.chain().tween_callback(func():
-		_probability_slide_tween = null
-		_set_probability_overlay_geometry(target_panel_x, target_toggle_x, layout)
-		_probability_shadow.visible = not _probability_panel_collapsed
-		queue_redraw()
-	)
+	_score_breakdown_label = _make_label("", SCORE_BREAKDOWN_FONT_SIZE, HEADER_COLOR)
+	_score_breakdown_label.name = "ScoreBreakdownLabel"
+	_score_breakdown_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_score_breakdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_score_breakdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_score_breakdown_label.clip_text = true
+	breakdown_slot.add_child(_score_breakdown_label)
 
 
-func _make_probability_row(combo: Dictionary) -> Dictionary:
+func _build_body(parent: VBoxContainer) -> void:
+	_body_root = HBoxContainer.new()
+	_body_root.name = "ProbabilityBody"
+	_body_root.add_theme_constant_override("separation", BODY_COLUMN_GAP)
+	_body_root.alignment = BoxContainer.ALIGNMENT_CENTER
+	_body_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_body_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(_body_root)
+
+	_row_entries.clear()
+	var column_size := 3
+	var column_count: int = int(ceil(float(_combo_rules.size()) / float(column_size)))
+	for col in range(column_count):
+		var column := VBoxContainer.new()
+		column.name = "ProbabilityColumn%d" % col
+		column.add_theme_constant_override("separation", BODY_ROW_SEPARATION)
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_body_root.add_child(column)
+
+		for row_index in range(column_size):
+			var combo_index := col * column_size + row_index
+			if combo_index >= _combo_rules.size():
+				break
+			var row_entry := _build_row(_combo_rules[combo_index])
+			column.add_child(row_entry["panel"])
+			_row_entries.append(row_entry)
+
+
+func _build_row(combo: Dictionary) -> Dictionary:
 	var combo_type: String = combo.get("type", "")
-	var combo_name := _format_probability_row_name(str(combo.get("name", combo_type)).to_upper())
+	var combo_name: String = str(combo.get("name", combo_type)).to_upper()
+	var priority: int = int(combo.get("priority", 0))
+	var mult: float = float(combo.get("combo_mult", 1.0))
+	var priority_color := _priority_color(priority)
+
+	var default_style := _build_row_style(Color(0, 0, 0, 0), Color(0, 0, 0, 0))
 
 	var panel := PanelContainer.new()
 	panel.name = "ProbabilityRow_%s" % combo_type
-	panel.custom_minimum_size = Vector2(PROBABILITY_ROW_PANEL_WIDTH, 0)
-	panel.add_theme_stylebox_override("panel", _make_style(Color(1, 1, 1, 0.03), Color(1, 1, 1, 0), 0, PROBABILITY_ROW_MARGIN))
+	panel.custom_minimum_size = Vector2(0, ROW_HEIGHT)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", default_style)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", PROBABILITY_ROW_GAP)
+	row.add_theme_constant_override("separation", ROW_GAP)
+	row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(row)
 
-	var name_label := _make_pixel_label(combo_name, PROBABILITY_ROW_NAME_FONT_SIZE, Color.WHITE)
-	name_label.custom_minimum_size = Vector2(PROBABILITY_ROW_NAME_WIDTH, 0)
+	var name_label := _make_label(combo_name, ROW_FONT_SIZE, priority_color)
+	name_label.custom_minimum_size = Vector2(ROW_NAME_WIDTH, 0)
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.size_flags_horizontal = Control.SIZE_FILL
+	name_label.clip_text = true
 	row.add_child(name_label)
 
-	var value_label := _make_pixel_label("--", PROBABILITY_ROW_VALUE_FONT_SIZE, PROBABILITY_VALUE_MIN_COLOR)
-	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.custom_minimum_size = Vector2(PROBABILITY_ROW_VALUE_WIDTH, 0)
-	row.add_child(value_label)
+	var pattern_row := HBoxContainer.new()
+	pattern_row.add_theme_constant_override("separation", PATTERN_GAP)
+	pattern_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	pattern_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pattern_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(pattern_row)
+
+	var pattern_colors := _get_pattern_colors(combo_type)
+	for color in pattern_colors:
+		var square := PanelContainer.new()
+		square.custom_minimum_size = Vector2(PATTERN_SQUARE, PATTERN_SQUARE)
+		square.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		square.add_theme_stylebox_override("panel", _build_square_style(color))
+		pattern_row.add_child(square)
+
+	var mult_label := _make_label("x%.1f" % mult, ROW_FONT_SIZE, priority_color)
+	mult_label.custom_minimum_size = Vector2(ROW_MULT_WIDTH, 0)
+	mult_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mult_label.clip_text = true
+	row.add_child(mult_label)
+
+	var bar_wrapper := PanelContainer.new()
+	bar_wrapper.custom_minimum_size = Vector2(ROW_BAR_WIDTH, ROW_BAR_HEIGHT)
+	bar_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar_wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_wrapper.clip_contents = true
+	bar_wrapper.add_theme_stylebox_override("panel", _build_bar_track_style())
+	row.add_child(bar_wrapper)
+
+	var bar_fill := ColorRect.new()
+	bar_fill.color = BAR_MUTED_FILL
+	bar_fill.custom_minimum_size = Vector2(0, ROW_BAR_HEIGHT)
+	bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar_wrapper.add_child(bar_fill)
+
+	var pct_label := _make_label("--", ROW_FONT_SIZE, GREY)
+	pct_label.custom_minimum_size = Vector2(ROW_PCT_WIDTH, 0)
+	pct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pct_label.clip_text = true
+	row.add_child(pct_label)
 
 	return {
 		"panel": panel,
 		"type": combo_type,
 		"name_label": name_label,
-		"value_label": value_label,
+		"mult_label": mult_label,
+		"bar_wrapper": bar_wrapper,
+		"bar_fill": bar_fill,
+		"pct_label": pct_label,
+		"priority_color": priority_color,
+		"default_style": default_style,
 	}
 
 
-func _format_probability_row_name(combo_name: String) -> String:
-	var words := combo_name.split(" ", false)
-	if words.size() <= 1:
-		return combo_name
-
-	var best_split := 1
-	var best_delta := INF
-	for split_index in range(1, words.size()):
-		var left := " ".join(words.slice(0, split_index))
-		var right := " ".join(words.slice(split_index))
-		var delta := absf(float(left.length() - right.length()))
-		if delta < best_delta:
-			best_delta = delta
-			best_split = split_index
-
-	return "%s\n%s" % [
-		" ".join(words.slice(0, best_split)),
-		" ".join(words.slice(best_split)),
-	]
-
-
-func _set_probability_notice(text: String, font_color: Color, bg_color: Color, border_color: Color) -> void:
-	_probability_notice_label.text = text
-	_probability_notice_label.add_theme_color_override("font_color", font_color)
-	_probability_notice_chip.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, 2, PROBABILITY_HEADER_SPACING))
-
-
-func _update_probability_panel_visibility(refresh_layout: bool = true) -> void:
-	if _probability_toggle_btn == null or _probability_panel == null:
-		return
-	_probability_panel.visible = true
-	_probability_toggle_btn.text = "<" if _probability_panel_collapsed else ">"
-	queue_redraw()
-	if refresh_layout:
-		_animate_probability_overlay()
-
-
-func _on_probability_toggle_pressed() -> void:
-	_probability_panel_collapsed = not _probability_panel_collapsed
-	_update_probability_panel_visibility()
-
-
-func _update_probability_rows(snapshot: Dictionary) -> void:
-	for entry in _probability_row_entries:
+func _refresh_rows(snapshot: Dictionary) -> void:
+	for entry in _row_entries:
 		var combo_type: String = entry["type"]
-		var value_label: Label = entry["value_label"]
+		var pct_label: Label = entry["pct_label"]
+		var bar_fill: ColorRect = entry["bar_fill"]
+		var bar_wrapper: PanelContainer = entry["bar_wrapper"]
+
 		var probability_value: Variant = null
 		if snapshot.has(combo_type):
 			probability_value = snapshot[combo_type]
-		value_label.text = _format_probability(probability_value)
-		value_label.add_theme_color_override("font_color", _get_probability_value_color(probability_value))
+
+		pct_label.text = _format_pct(probability_value)
+		pct_label.add_theme_color_override("font_color", _pct_color(probability_value))
+
+		var fill_color := _bar_fill_color(probability_value)
+		bar_fill.color = fill_color
+		var track_width := maxf(bar_wrapper.size.x, ROW_BAR_WIDTH)
+		var pct := 0.0
+		if probability_value != null:
+			pct = clampf(float(probability_value), 0.0, 1.0)
+		bar_fill.size = Vector2(track_width * pct, ROW_BAR_HEIGHT)
+
+	_apply_row_styles()
 
 
-func _format_probability(probability_value: Variant) -> String:
+func _apply_row_styles() -> void:
+	for entry in _row_entries:
+		var panel: PanelContainer = entry["panel"]
+		var name_label: Label = entry["name_label"]
+		if entry["type"] == _current_combo_type and not _current_combo_type.is_empty():
+			panel.add_theme_stylebox_override(
+				"panel",
+				_build_row_style(HIGHLIGHT_BG, HIGHLIGHT_BORDER)
+			)
+			name_label.add_theme_color_override("font_color", HIGHLIGHT_NAME)
+		else:
+			panel.add_theme_stylebox_override("panel", entry["default_style"])
+			name_label.add_theme_color_override("font_color", entry["priority_color"])
+
+
+# -- Formatting helpers ------------------------------------------------------
+
+func _format_pct(probability_value: Variant) -> String:
 	if probability_value == null:
 		return "--"
 	var percentage := float(probability_value) * 100.0
 	if is_equal_approx(percentage, 100.0):
 		return "100%"
+	if percentage >= 10.0:
+		return "%d%%" % int(round(percentage))
 	return "%.1f%%" % percentage
 
 
-func _get_probability_value_color(probability_value: Variant) -> Color:
+func _pct_color(probability_value: Variant) -> Color:
 	if probability_value == null:
-		return PROBABILITY_VALUE_MIN_COLOR
+		return GREY
+	var pct := clampf(float(probability_value), 0.0, 1.0)
+	if pct <= PCT_LOW_MAX:
+		return GREY
+	if pct <= PCT_MID_MAX:
+		return GOLD
+	return GREEN
 
-	var strength := clampf(float(probability_value), 0.0, 1.0)
-	return PROBABILITY_VALUE_MIN_COLOR.lerp(PROBABILITY_VALUE_MAX_COLOR, strength)
+
+func _bar_fill_color(probability_value: Variant) -> Color:
+	if probability_value == null:
+		return BAR_MUTED_FILL
+	var pct := clampf(float(probability_value), 0.0, 1.0)
+	if pct <= PCT_LOW_MAX:
+		return BAR_MUTED_FILL
+	if pct <= PCT_MID_MAX:
+		return GOLD
+	return GREEN
 
 
-func _get_combo_priority_color(priority: int) -> Color:
+func _priority_color(priority: int) -> Color:
 	match priority:
 		0, 1:
-			return Color("888888")
+			return GREY
 		2, 3:
-			return Color("ff6b4a")
+			return ORANGE
 		4, 5:
 			return BLUE
 		6, 7:
 			return GOLD
 		8:
 			return PINK
-	return Color.WHITE
+	return HEADER_COLOR
 
 
-func _make_panel(bg_color: Color, border_color: Color, min_size: Vector2, margin: int = 8) -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = min_size
-	panel.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, 4, margin))
-	return panel
+func _get_pattern_colors(combo_type: String) -> Array:
+	var a := BLUE
+	var b := PINK
+	var g := GREY
+	var s := [BLUE.darkened(0.3), BLUE.darkened(0.15), BLUE, BLUE.lightened(0.15), BLUE.lightened(0.3)]
+	match combo_type:
+		"high_card":      return [a, g, g, g, g]
+		"pair":           return [a, a, g, g, g]
+		"two_pair":       return [a, a, b, b, g]
+		"three_same":     return [a, a, a, g, g]
+		"small_straight": return [s[0], s[1], s[2], s[3], g]
+		"full_house":     return [a, a, a, b, b]
+		"large_straight": return [s[0], s[1], s[2], s[3], s[4]]
+		"four_same":      return [a, a, a, a, g]
+		"yahtzee":        return [a, a, a, a, a]
+	return [g, g, g, g, g]
 
 
-func _make_pixel_label(text: String, font_size: int, color: Color = DARK) -> Label:
+func _sort_by_priority_desc(combo_rules: Array) -> Array:
+	var out := combo_rules.duplicate(true)
+	out.sort_custom(func(lhs, rhs):
+		return int(lhs.get("priority", 0)) > int(rhs.get("priority", 0))
+	)
+	return out
+
+
+# -- Style helpers -----------------------------------------------------------
+
+func _build_row_style(bg: Color, border: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	sb.set_border_width_all(ROW_BORDER_WIDTH)
+	sb.set_corner_radius_all(0)
+	sb.content_margin_left = ROW_H_PADDING
+	sb.content_margin_right = ROW_H_PADDING
+	sb.content_margin_top = ROW_V_PADDING
+	sb.content_margin_bottom = ROW_V_PADDING
+	return sb
+
+
+func _build_square_style(color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.border_color = RAIL_BORDER
+	sb.set_border_width_all(PATTERN_BORDER)
+	sb.set_corner_radius_all(0)
+	return sb
+
+
+func _build_bar_track_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = BAR_TRACK
+	sb.set_corner_radius_all(0)
+	sb.set_content_margin_all(0)
+	return sb
+
+
+func _make_header_slot(width: int, slot_name: String) -> Control:
+	var slot := Control.new()
+	slot.name = slot_name
+	slot.custom_minimum_size = Vector2(width, 0)
+	slot.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slot.clip_contents = true
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return slot
+
+
+func _make_label(text: String, font_size: int, color: Color) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_override("font", _pixel_font)
 	lbl.add_theme_font_size_override("font_size", font_size)
 	lbl.add_theme_color_override("font_color", color)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
-
-
-func _make_pixel_button(text: String, min_size: Vector2, font_size: int = 16) -> Button:
-	var btn := Button.new()
-	btn.text = text
-	btn.custom_minimum_size = min_size
-	btn.add_theme_font_override("font", _pixel_font)
-	btn.add_theme_font_size_override("font_size", font_size)
-	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, 4, PROBABILITY_TOGGLE_MARGIN))
-	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), 4, PROBABILITY_TOGGLE_MARGIN))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, 4, PROBABILITY_TOGGLE_MARGIN))
-	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), 4, PROBABILITY_TOGGLE_MARGIN))
-
-	var focus := _make_style(Color(0, 0, 0, 0), GOLD, 4, PROBABILITY_TOGGLE_MARGIN)
-	focus.draw_center = false
-	btn.add_theme_stylebox_override("focus", focus)
-
-	btn.add_theme_color_override("font_color", GOLD)
-	btn.add_theme_color_override("font_hover_color", GOLD)
-	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
-	btn.add_theme_color_override("font_focus_color", GOLD)
-	btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
-	return btn
-
-
-func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK, border_width: int = 4, margin: int = 20) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg_color
-	sb.border_color = border_color
-	sb.set_border_width_all(border_width)
-	sb.set_corner_radius_all(0)
-	sb.set_content_margin_all(margin)
-	return sb
