@@ -1,9 +1,77 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
-const CombatDice = preload("res://scripts/ui/combat_dice.gd")
+const CombatDice = preload("res://scripts/combat/combat_dice.gd")
+const CombatProbabilityPanelScript = preload("res://scripts/combat/combat_probability_panel.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
-const PROBABILITY_TOGGLE_WIDTH := 32
-const PROBABILITY_PANEL_WIDTH := 168
+const COMBAT_CONTENT_SEPARATION := 32
+const COMBAT_TOP_BAR_SEPARATION := 16
+const COMBAT_MENU_SHADOW_OFFSET := Vector2(4, 4)
+const COMBAT_SCORE_PANEL_SHADOW_OFFSET := Vector2(8, 8)
+const COMBAT_REROLL_SHADOW_OFFSET := Vector2(6, 6)
+const COMBAT_END_TURN_SHADOW_OFFSET := Vector2(8, 8)
+const COMBAT_REROLL_BUTTON_SIZE := Vector2(152, 68)
+const COMBAT_REROLL_BUTTON_FONT_SIZE := 14
+const COMBAT_END_TURN_BUTTON_SIZE := Vector2(168, 68)
+const COMBAT_END_TURN_BUTTON_FONT_SIZE := 16
+const COMBAT_COMBO_BUTTON_SIZE := Vector2(96, 56)
+const COMBAT_COMBO_BUTTON_FONT_SIZE := 10
+const COMBAT_HAND_INFO_FONT_SIZE := 14
+const COMBAT_SCORE_PANEL_SIZE := Vector2(780, 56)
+const COMBAT_SCORE_PANEL_MARGIN := 12
+const COMBAT_SCORE_LABEL_FONT_SIZE := 16
+const COMBAT_SCORE_VALUE_IDLE_FONT_SIZE := 18
+const COMBAT_SCORE_VALUE_PREVIEW_FONT_SIZE := 28
+const COMBAT_SCORE_BREAKDOWN_FONT_SIZE := 14
+const COMBAT_SCORE_BAR_SEPARATION := 12
+const COMBAT_SCORE_BAR_CONTAINER_SIZE := Vector2(500, 0)
+const COMBAT_SCORE_BAR_TRACK_SIZE := Vector2(300, 24)
+const COMBAT_SCORE_BAR_FILL_OFFSET := Vector2(2, 2)
+const COMBAT_SCORE_BAR_FILL_HEIGHT := 20
+const COMBAT_SCORE_BAR_TRACK_INSET := 4
+const COMBAT_WORKSPACE_SEPARATION := 16
+const COMBAT_DICE_TRAY_SEPARATION := 24
+const COMBAT_DESC_PANEL_SIZE := Vector2(420, 0)
+const COMBAT_DESC_PANEL_MARGIN := 16
+const COMBAT_DESC_SEPARATION := 12
+const COMBAT_DESC_TITLE_FONT_SIZE := 14
+const COMBAT_DESC_BODY_FONT_SIZE := 12
+const COMBAT_RESULT_PANEL_SIZE := Vector2(760, 0)
+const COMBAT_RESULT_PANEL_MARGIN := 24
+const COMBAT_RESULT_SEPARATION := 20
+const COMBAT_RESULT_MESSAGE_FONT_SIZE := 32
+const COMBAT_RESULT_MESSAGE_WIDTH := Vector2(660, 0)
+const COMBAT_RESULT_SCORE_FONT_SIZE := 40
+const COMBAT_RESULT_SUB_FONT_SIZE := 16
+const COMBAT_RESULT_COINS_FONT_SIZE := 20
+const COMBAT_RESULT_BUTTON_SPACER_HEIGHT := 12
+const COMBAT_RESULT_BUTTON_SIZE := Vector2(280, 60)
+const COMBAT_RESULT_NEXT_BUTTON_FONT_SIZE := 16
+const COMBAT_RESULT_RETRY_BUTTON_FONT_SIZE := 14
+const COMBAT_RESULT_SURVEY_BUTTON_FONT_SIZE := 14
+const COMBAT_RESULT_MENU_BUTTON_FONT_SIZE := 14
+const COMBAT_PAUSE_SEPARATION := 24
+const COMBAT_PAUSE_TITLE_FONT_SIZE := 36
+const COMBAT_PAUSE_BUTTON_SPACER_HEIGHT := 20
+const COMBAT_PAUSE_BUTTON_SIZE := Vector2(280, 60)
+const COMBAT_PAUSE_RESUME_BUTTON_FONT_SIZE := 16
+const COMBAT_PAUSE_QUIT_BUTTON_FONT_SIZE := 14
+const COMBAT_COMBO_DIALOG_SEPARATION := 6
+const COMBAT_COMBO_DIALOG_TITLE_FONT_SIZE := 20
+const COMBAT_COMBO_DIALOG_TOP_SPACER := 8
+const COMBAT_COMBO_DIALOG_BOTTOM_SPACER := 12
+const COMBAT_COMBO_CLOSE_BUTTON_SIZE := Vector2(200, 52)
+const COMBAT_COMBO_CLOSE_BUTTON_FONT_SIZE := 14
+const COMBAT_COMBO_ROW_PANEL_SIZE := Vector2(500, 0)
+const COMBAT_COMBO_ROW_STYLE_BORDER_WIDTH := 2
+const COMBAT_COMBO_ROW_STYLE_MARGIN := 8
+const COMBAT_COMBO_ROW_SEPARATION := 12
+const COMBAT_COMBO_ROW_NAME_FONT_SIZE := 10
+const COMBAT_COMBO_ROW_NAME_WIDTH := Vector2(180, 0)
+const COMBAT_COMBO_PATTERN_SEPARATION := 4
+const COMBAT_COMBO_PATTERN_SQUARE_SIZE := Vector2(14, 14)
+const COMBAT_COMBO_MULT_SEPARATION := 6
+const COMBAT_COMBO_BASE_MULT_FONT_SIZE := 9
+const COMBAT_COMBO_EFFECTIVE_MULT_FONT_SIZE := 10
 
 var combat_mgr: CombatManager
 var _dice_cards: Array = []
@@ -21,15 +89,9 @@ var _dice_container: HBoxContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
+var _probability_panel_ui
 var _probability_dock: Control
 var _probability_panel: PanelContainer
-var _probability_shadow: ColorRect
-var _probability_toggle_btn: Button
-var _probability_notice_chip: PanelContainer
-var _probability_notice_label: Label
-var _probability_list_box: VBoxContainer
-var _probability_row_entries: Array = []
-var _probability_panel_collapsed: bool = false
 
 var _hand_info_label: Label
 
@@ -91,10 +153,10 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	_draw_all_bg()
-	_draw_button_shadows([_menu_btn, _combo_btn], Vector2(4, 4))
-	_draw_panel_shadow(_score_panel, Vector2(8, 8))
-	_draw_button_shadows([_reroll_btn], Vector2(6, 6))
-	_draw_button_shadows([_end_turn_btn], Vector2(8, 8))
+	_draw_button_shadows([_menu_btn, _combo_btn], COMBAT_MENU_SHADOW_OFFSET)
+	_draw_panel_shadow(_score_panel, COMBAT_SCORE_PANEL_SHADOW_OFFSET)
+	_draw_button_shadows([_reroll_btn], COMBAT_REROLL_SHADOW_OFFSET)
+	_draw_button_shadows([_end_turn_btn], COMBAT_END_TURN_SHADOW_OFFSET)
 
 
 func _setup_combat() -> void:
@@ -136,7 +198,7 @@ func _setup_combat() -> void:
 
 
 func _build_ui() -> void:
-	var layout := _make_screen_layout(32)
+	var layout := _make_screen_layout(COMBAT_CONTENT_SEPARATION)
 	var content: VBoxContainer = layout["content"]
 	var action_bar: HBoxContainer = layout["action_bar"]
 
@@ -149,11 +211,23 @@ func _build_ui() -> void:
 	var action_center := action_bar.get_parent()
 	_build_score_bar(outer, action_center)
 
-	_reroll_btn = _make_colored_button("", Vector2(152, 68), PINK, PINK.lightened(0.15), 14)
+	_reroll_btn = _make_colored_button(
+		"",
+		COMBAT_REROLL_BUTTON_SIZE,
+		PINK,
+		PINK.lightened(0.15),
+		COMBAT_REROLL_BUTTON_FONT_SIZE
+	)
 	_reroll_btn.pressed.connect(_on_roll_pressed)
 	action_bar.add_child(_reroll_btn)
 
-	_end_turn_btn = _make_colored_button("", Vector2(168, 68), GREEN, GREEN.lightened(0.15), 16)
+	_end_turn_btn = _make_colored_button(
+		"",
+		COMBAT_END_TURN_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		COMBAT_END_TURN_BUTTON_FONT_SIZE
+	)
 	_end_turn_btn.pressed.connect(_on_score_pressed)
 	action_bar.add_child(_end_turn_btn)
 
@@ -171,7 +245,7 @@ func _build_ui() -> void:
 
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 16)
+	bar.add_theme_constant_override("separation", COMBAT_TOP_BAR_SEPARATION)
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
@@ -191,14 +265,14 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer2)
 
-	_combo_btn = _make_pixel_button("COMBOS", Vector2(96, 56), 10)
+	_combo_btn = _make_pixel_button("COMBOS", COMBAT_COMBO_BUTTON_SIZE, COMBAT_COMBO_BUTTON_FONT_SIZE)
 	_combo_btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_combo_btn.pressed.connect(_on_combo_btn_pressed)
 	bar.add_child(_combo_btn)
 
 
 func _build_hand_subtitle(parent: VBoxContainer) -> void:
-	_hand_info_label = _make_pixel_label("", 14)
+	_hand_info_label = _make_pixel_label("", COMBAT_HAND_INFO_FONT_SIZE)
 	_hand_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(_hand_info_label)
 
@@ -207,14 +281,14 @@ func _build_score_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_score_panel = _make_panel(CARD_BG, CARD_BG, Vector2(780, 56), 12)
+	_score_panel = _make_panel(CARD_BG, CARD_BG, COMBAT_SCORE_PANEL_SIZE, COMBAT_SCORE_PANEL_MARGIN)
 	center.add_child(_score_panel)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 0)
 	_score_panel.add_child(row)
 
-	_combo_name_label = _make_pixel_label("", 16, DARK)
+	_combo_name_label = _make_pixel_label("", COMBAT_SCORE_LABEL_FONT_SIZE, DARK)
 	_combo_name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_combo_name_label)
 
@@ -225,16 +299,16 @@ func _build_score_panel(parent: VBoxContainer) -> void:
 	pts_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(pts_row)
 
-	_score_value_label = _make_pixel_label("ROLL!", 18, DARK)
+	_score_value_label = _make_pixel_label("ROLL!", COMBAT_SCORE_VALUE_IDLE_FONT_SIZE, DARK)
 	_score_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pts_row.add_child(_score_value_label)
 
-	_score_pts_suffix = _make_pixel_label("", 16, DARK)
+	_score_pts_suffix = _make_pixel_label("", COMBAT_SCORE_LABEL_FONT_SIZE, DARK)
 	_score_pts_suffix.size_flags_vertical = Control.SIZE_SHRINK_END
 	_score_pts_suffix.visible = false
 	pts_row.add_child(_score_pts_suffix)
 
-	_score_breakdown_label = _make_pixel_label("", 14, DARK)
+	_score_breakdown_label = _make_pixel_label("", COMBAT_SCORE_BREAKDOWN_FONT_SIZE, DARK)
 	_score_breakdown_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_score_breakdown_label)
 
@@ -245,16 +319,16 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 	outer.move_child(center, before.get_index())
 
 	_score_bar_container = HBoxContainer.new()
-	_score_bar_container.add_theme_constant_override("separation", 12)
-	_score_bar_container.custom_minimum_size = Vector2(500, 0)
+	_score_bar_container.add_theme_constant_override("separation", COMBAT_SCORE_BAR_SEPARATION)
+	_score_bar_container.custom_minimum_size = COMBAT_SCORE_BAR_CONTAINER_SIZE
 	center.add_child(_score_bar_container)
 
-	var score_label := _make_pixel_label("SCORE", 14, DARK)
+	var score_label := _make_pixel_label("SCORE", COMBAT_HAND_INFO_FONT_SIZE, DARK)
 	score_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_score_bar_container.add_child(score_label)
 
 	var track_wrapper := Control.new()
-	track_wrapper.custom_minimum_size = Vector2(300, 24)
+	track_wrapper.custom_minimum_size = COMBAT_SCORE_BAR_TRACK_SIZE
 	track_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	track_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	track_wrapper.clip_contents = true
@@ -267,11 +341,11 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 
 	_score_bar_fill = ColorRect.new()
 	_score_bar_fill.color = GREEN
-	_score_bar_fill.position = Vector2(2, 2)
-	_score_bar_fill.size = Vector2(0, 20)
+	_score_bar_fill.position = COMBAT_SCORE_BAR_FILL_OFFSET
+	_score_bar_fill.size = Vector2(0, COMBAT_SCORE_BAR_FILL_HEIGHT)
 	track_wrapper.add_child(_score_bar_fill)
 
-	_score_bar_label = _make_pixel_label("0/" + str(GameManager.target_score), 16, DARK)
+	_score_bar_label = _make_pixel_label("0/" + str(GameManager.target_score), COMBAT_SCORE_LABEL_FONT_SIZE, DARK)
 	_score_bar_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_score_bar_container.add_child(_score_bar_label)
 
@@ -279,7 +353,7 @@ func _build_score_bar(outer: VBoxContainer, before: Control) -> void:
 func _build_combat_workspace(parent: VBoxContainer) -> void:
 	var center_stack := VBoxContainer.new()
 	center_stack.name = "CombatWorkspace"
-	center_stack.add_theme_constant_override("separation", 16)
+	center_stack.add_theme_constant_override("separation", COMBAT_WORKSPACE_SEPARATION)
 	center_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(center_stack)
 
@@ -289,116 +363,20 @@ func _build_combat_workspace(parent: VBoxContainer) -> void:
 
 
 func _build_probability_panel() -> void:
-	_probability_dock = Control.new()
-	_probability_dock.name = "ProbabilityPanelDock"
-	_probability_dock.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_probability_dock)
-
-	_probability_shadow = ColorRect.new()
-	_probability_shadow.color = SHADOW_COLOR
-	_probability_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_probability_dock.add_child(_probability_shadow)
-
-	_probability_panel = _make_panel(
-		Color(0.11, 0.12, 0.14, 0.92),
-		Color(0.22, 0.24, 0.27, 0.92),
-		Vector2(PROBABILITY_PANEL_WIDTH, 0),
-		4
-	)
-	_probability_panel.name = "ProbabilityPanel"
-	_probability_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_probability_dock.add_child(_probability_panel)
-
-	_probability_toggle_btn = _make_pixel_button(">", Vector2(28, 56), 10)
-	_probability_toggle_btn.name = "ProbabilityPanelToggle"
-	_probability_toggle_btn.pressed.connect(_on_probability_toggle_pressed)
-	_probability_dock.add_child(_probability_toggle_btn)
-
-	var vbox := VBoxContainer.new()
-	vbox.name = "ProbabilityPanelContent"
-	vbox.add_theme_constant_override("separation", 4)
-	_probability_panel.add_child(vbox)
-
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 4)
-	vbox.add_child(header)
-
-	var title := _make_pixel_label("ODDS", 10, GOLD)
-	title.name = "ProbabilityPanelTitle"
-	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	header.add_child(title)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(spacer)
-
-	_probability_notice_chip = PanelContainer.new()
-	_probability_notice_chip.name = "ProbabilityPanelNoticeChip"
-	header.add_child(_probability_notice_chip)
-
-	_probability_notice_label = _make_pixel_label("ROLL FIRST", 7, Color("bbbbbb"))
-	_probability_notice_label.name = "ProbabilityPanelNotice"
-	_probability_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_probability_notice_chip.add_child(_probability_notice_label)
-
-	var divider := ColorRect.new()
-	divider.custom_minimum_size = Vector2(0, 2)
-	divider.color = Color(1, 1, 1, 0.08)
-	vbox.add_child(divider)
-
-	_probability_list_box = VBoxContainer.new()
-	_probability_list_box.name = "ProbabilityPanelList"
-	_probability_list_box.add_theme_constant_override("separation", 2)
-	vbox.add_child(_probability_list_box)
-
-	_probability_row_entries.clear()
-	for combo in DataManager.get_combo_rules():
-		var row_data := _make_probability_row(combo)
-		_probability_list_box.add_child(row_data["panel"])
-		_probability_row_entries.append(row_data)
-
-	_probability_panel_collapsed = true
-	_update_probability_rows({})
-	_update_probability_panel_visibility(false)
-
-
-func _position_probability_overlay() -> void:
-	if _probability_dock == null or _probability_panel == null or _probability_toggle_btn == null:
-		return
-	if size.x <= 0.0 or size.y <= 0.0:
-		return
-
-	var panel_size := _probability_panel.get_combined_minimum_size()
-	var panel_width := PROBABILITY_PANEL_WIDTH
-	var panel_height := int(ceil(panel_size.y))
-	var toggle_size := _probability_toggle_btn.get_combined_minimum_size()
-
-	var dice_y := 0.0
-	if _dice_container != null:
-		dice_y = _dice_container.global_position.y - global_position.y
-	var dock_y := dice_y
-
-	var toggle_x := int(size.x) - int(toggle_size.x)
-	var toggle_y := int(round((panel_height - toggle_size.y) / 2.0))
-
-	var panel_x := toggle_x - panel_width
-	_probability_panel.position = Vector2(panel_x, 0)
-	_probability_panel.size = Vector2(panel_width, panel_height)
-	_probability_toggle_btn.position = Vector2(toggle_x, maxi(0, toggle_y))
-
-	_probability_shadow.position = _probability_panel.position + Vector2(4, 4)
-	_probability_shadow.size = Vector2(panel_width, panel_height)
-	_probability_shadow.visible = not _probability_panel_collapsed
-
-	_probability_dock.position = Vector2(0, dock_y)
-	_probability_dock.size = Vector2(size.x, panel_height + 8)
+	_probability_panel_ui = CombatProbabilityPanelScript.new()
+	add_child(_probability_panel_ui)
+	_probability_panel_ui.setup(_pixel_font, DataManager.get_combo_rules())
+	_probability_dock = _probability_panel_ui
+	_probability_panel = _probability_panel_ui.get_panel_node()
 
 
 func _refresh_responsive_layout() -> void:
-	if _probability_dock == null or _probability_panel == null:
+	if _probability_panel_ui == null:
 		return
-	_update_probability_panel_visibility(false)
-	_position_probability_overlay()
+	var score_top := 0.0
+	if _score_panel != null:
+		score_top = _score_panel.global_position.y - global_position.y
+	_probability_panel_ui.refresh_layout(size, score_top)
 
 
 func _build_dice_tray(parent: VBoxContainer) -> void:
@@ -406,7 +384,7 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 	parent.add_child(center)
 
 	_dice_container = HBoxContainer.new()
-	_dice_container.add_theme_constant_override("separation", 24)
+	_dice_container.add_theme_constant_override("separation", COMBAT_DICE_TRAY_SEPARATION)
 	center.add_child(_dice_container)
 
 	_dice_cards.clear()
@@ -432,21 +410,21 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_desc_panel = _make_panel(DARK, GOLD, COMBAT_DESC_PANEL_SIZE, COMBAT_DESC_PANEL_MARGIN)
 	_desc_panel.visible = false
 	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(_desc_panel)
 
 	var desc_vbox := VBoxContainer.new()
-	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.add_theme_constant_override("separation", COMBAT_DESC_SEPARATION)
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
-	_desc_title = _make_pixel_label("", 14, GOLD)
+	_desc_title = _make_pixel_label("", COMBAT_DESC_TITLE_FONT_SIZE, GOLD)
 	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desc_vbox.add_child(_desc_title)
 
-	_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_desc_body = _make_pixel_label("", COMBAT_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_vbox.add_child(_desc_body)
@@ -463,63 +441,86 @@ func _build_result_overlay() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_result_overlay.add_child(center)
 
-	_result_panel = _make_panel(Color(0.12, 0.12, 0.12, 0.98), GOLD, Vector2(760, 0), 24)
+	_result_panel = _make_panel(
+		Color(0.12, 0.12, 0.12, 0.98),
+		GOLD,
+		COMBAT_RESULT_PANEL_SIZE,
+		COMBAT_RESULT_PANEL_MARGIN
+	)
 	_result_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(_result_panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 20)
+	vbox.add_theme_constant_override("separation", COMBAT_RESULT_SEPARATION)
 	_result_panel.add_child(vbox)
 
-	_result_message = _make_pixel_label("", 32)
+	_result_message = _make_pixel_label("", COMBAT_RESULT_MESSAGE_FONT_SIZE)
 	_result_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_result_message.custom_minimum_size = Vector2(660, 0)
+	_result_message.custom_minimum_size = COMBAT_RESULT_MESSAGE_WIDTH
 	_result_message.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_message)
 
-	_result_score_label = _make_pixel_label("", 40, GOLD)
+	_result_score_label = _make_pixel_label("", COMBAT_RESULT_SCORE_FONT_SIZE, GOLD)
 	_result_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_score_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_score_label)
 
-	_result_sub_label = _make_pixel_label("", 16, Color("aaaaaa"))
+	_result_sub_label = _make_pixel_label("", COMBAT_RESULT_SUB_FONT_SIZE, Color("aaaaaa"))
 	_result_sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_result_sub_label.custom_minimum_size = Vector2(660, 0)
+	_result_sub_label.custom_minimum_size = COMBAT_RESULT_MESSAGE_WIDTH
 	_result_sub_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_sub_label)
 
-	_result_coins_label = _make_pixel_label("", 20, GOLD)
+	_result_coins_label = _make_pixel_label("", COMBAT_RESULT_COINS_FONT_SIZE, GOLD)
 	_result_coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_coins_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_coins_label)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 12)
+	spacer.custom_minimum_size = Vector2(0, COMBAT_RESULT_BUTTON_SPACER_HEIGHT)
 	vbox.add_child(spacer)
 
-	_result_next_btn = _make_pixel_button("NEXT ROUND", Vector2(280, 60), 16)
+	_result_next_btn = _make_pixel_button(
+		"NEXT ROUND",
+		COMBAT_RESULT_BUTTON_SIZE,
+		COMBAT_RESULT_NEXT_BUTTON_FONT_SIZE
+	)
 	_result_next_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_next_btn.pressed.connect(_on_next_round_pressed)
 	_result_next_btn.visible = false
 	vbox.add_child(_result_next_btn)
 
-	_result_retry_btn = _make_colored_button("RETRY TUTORIAL", Vector2(280, 60), PINK, PINK.lightened(0.15), 14)
+	_result_retry_btn = _make_colored_button(
+		"RETRY TUTORIAL",
+		COMBAT_RESULT_BUTTON_SIZE,
+		PINK,
+		PINK.lightened(0.15),
+		COMBAT_RESULT_RETRY_BUTTON_FONT_SIZE
+	)
 	_result_retry_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_retry_btn.pressed.connect(_on_retry_tutorial_pressed)
 	_result_retry_btn.visible = false
 	vbox.add_child(_result_retry_btn)
 
-	_result_survey_btn = _make_pixel_button("TAKE SURVEY", Vector2(280, 60), 14)
+	_result_survey_btn = _make_pixel_button(
+		"TAKE SURVEY",
+		COMBAT_RESULT_BUTTON_SIZE,
+		COMBAT_RESULT_SURVEY_BUTTON_FONT_SIZE
+	)
 	_result_survey_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_survey_btn.pressed.connect(_on_playtest_survey_pressed)
 	_result_survey_btn.disabled = not GameManager.has_playtest_survey_url()
 	_result_survey_btn.visible = false
 	vbox.add_child(_result_survey_btn)
 
-	_result_menu_btn = _make_pixel_button("BACK TO MENU", Vector2(280, 60), 14)
+	_result_menu_btn = _make_pixel_button(
+		"BACK TO MENU",
+		COMBAT_RESULT_BUTTON_SIZE,
+		COMBAT_RESULT_MENU_BUTTON_FONT_SIZE
+	)
 	_result_menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_menu_btn.pressed.connect(_go_to_main_menu)
 	_result_menu_btn.visible = false
@@ -540,22 +541,32 @@ func _build_pause_overlay() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 24)
+	vbox.add_theme_constant_override("separation", COMBAT_PAUSE_SEPARATION)
 	center.add_child(vbox)
 
-	var title := _make_pixel_label("PAUSED", 36, GOLD)
+	var title := _make_pixel_label("PAUSED", COMBAT_PAUSE_TITLE_FONT_SIZE, GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 20)
+	spacer.custom_minimum_size = Vector2(0, COMBAT_PAUSE_BUTTON_SPACER_HEIGHT)
 	vbox.add_child(spacer)
 
-	var resume_btn := _make_colored_button("RESUME", Vector2(280, 60), GREEN, GREEN.lightened(0.15), 16)
+	var resume_btn := _make_colored_button(
+		"RESUME",
+		COMBAT_PAUSE_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		COMBAT_PAUSE_RESUME_BUTTON_FONT_SIZE
+	)
 	resume_btn.pressed.connect(_on_resume_pressed)
 	vbox.add_child(resume_btn)
 
-	var quit_btn := _make_pixel_button("QUIT TO MENU", Vector2(280, 60), 14)
+	var quit_btn := _make_pixel_button(
+		"QUIT TO MENU",
+		COMBAT_PAUSE_BUTTON_SIZE,
+		COMBAT_PAUSE_QUIT_BUTTON_FONT_SIZE
+	)
 	quit_btn.pressed.connect(_on_pause_quit_pressed)
 	vbox.add_child(quit_btn)
 
@@ -573,15 +584,15 @@ func _build_combo_overlay() -> void:
 
 	_combo_dialog = VBoxContainer.new()
 	_combo_dialog.alignment = BoxContainer.ALIGNMENT_CENTER
-	_combo_dialog.add_theme_constant_override("separation", 6)
+	_combo_dialog.add_theme_constant_override("separation", COMBAT_COMBO_DIALOG_SEPARATION)
 	center.add_child(_combo_dialog)
 
-	var title := _make_pixel_label("COMBOS", 20, GOLD)
+	var title := _make_pixel_label("COMBOS", COMBAT_COMBO_DIALOG_TITLE_FONT_SIZE, GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_combo_dialog.add_child(title)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 8)
+	spacer.custom_minimum_size = Vector2(0, COMBAT_COMBO_DIALOG_TOP_SPACER)
 	_combo_dialog.add_child(spacer)
 
 	_combo_row_panels.clear()
@@ -596,10 +607,16 @@ func _build_combo_overlay() -> void:
 		})
 
 	var spacer2 := Control.new()
-	spacer2.custom_minimum_size = Vector2(0, 12)
+	spacer2.custom_minimum_size = Vector2(0, COMBAT_COMBO_DIALOG_BOTTOM_SPACER)
 	_combo_dialog.add_child(spacer2)
 
-	var close_btn := _make_colored_button("CLOSE", Vector2(200, 52), GREEN, GREEN.lightened(0.15), 14)
+	var close_btn := _make_colored_button(
+		"CLOSE",
+		COMBAT_COMBO_CLOSE_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		COMBAT_COMBO_CLOSE_BUTTON_FONT_SIZE
+	)
 	close_btn.pressed.connect(_on_combo_close_pressed)
 	_combo_dialog.add_child(close_btn)
 
@@ -662,46 +679,12 @@ func _update_rerolls_display() -> void:
 
 
 func _refresh_probability_panel() -> void:
-	if _probability_panel == null or combat_mgr == null:
+	if _probability_panel_ui == null or combat_mgr == null:
 		return
 
 	var snapshot := combat_mgr.get_probability_snapshot()
 	var held_count := _count_held_dice()
-	if snapshot.is_empty():
-		_update_probability_rows({})
-		_set_probability_notice(
-			"ROLL FIRST",
-			Color("9ca3af"),
-			Color(1, 1, 1, 0.04),
-			Color(1, 1, 1, 0.12)
-		)
-		return
-
-	_update_probability_rows(snapshot)
-
-	if held_count > 0:
-		_set_probability_notice(
-			"%d LOCKED" % held_count,
-			GOLD,
-			Color(GOLD.r, GOLD.g, GOLD.b, 0.12),
-			Color(GOLD.r, GOLD.g, GOLD.b, 0.36)
-		)
-	else:
-		_set_probability_notice(
-			"ALL OPEN",
-			BLUE.lightened(0.15),
-			Color(BLUE.r, BLUE.g, BLUE.b, 0.12),
-			Color(BLUE.r, BLUE.g, BLUE.b, 0.32)
-		)
-
-
-func _format_probability(probability_value: Variant) -> String:
-	if probability_value == null:
-		return "--"
-	var percentage := float(probability_value) * 100.0
-	if is_equal_approx(percentage, 100.0):
-		return "100%"
-	return "%.1f%%" % percentage
+	_probability_panel_ui.refresh_snapshot(snapshot, held_count)
 
 
 func _count_held_dice() -> int:
@@ -712,16 +695,6 @@ func _count_held_dice() -> int:
 		if combat_mgr.is_held(i):
 			held_count += 1
 	return held_count
-
-
-func _update_probability_rows(snapshot: Dictionary) -> void:
-	for entry in _probability_row_entries:
-		var combo_type: String = entry["type"]
-		var value_label: Label = entry["value_label"]
-		var probability_value: Variant = null
-		if snapshot.has(combo_type):
-			probability_value = snapshot[combo_type]
-		value_label.text = _format_probability(probability_value)
 
 
 func _update_hand_display() -> void:
@@ -737,9 +710,9 @@ func _update_score_bar() -> void:
 	var target := combat_mgr.target_score
 	_score_bar_label.text = "%d/%d" % [running, target]
 
-	var track_w := _score_bar_track.size.x - 4
+	var track_w := _score_bar_track.size.x - COMBAT_SCORE_BAR_TRACK_INSET
 	var ratio := clampf(float(running) / float(target), 0.0, 1.0)
-	_score_bar_fill.size = Vector2(track_w * ratio, 20)
+	_score_bar_fill.size = Vector2(track_w * ratio, COMBAT_SCORE_BAR_FILL_HEIGHT)
 
 
 func _show_combo(combo: Dictionary) -> void:
@@ -756,7 +729,7 @@ func _show_combo(combo: Dictionary) -> void:
 	var x_mult: float = preview.get("x_mult", 1.0)
 	var pts: int = preview.get("total", 0)
 
-	_score_value_label.add_theme_font_size_override("font_size", 28)
+	_score_value_label.add_theme_font_size_override("font_size", COMBAT_SCORE_VALUE_PREVIEW_FONT_SIZE)
 	_score_value_label.text = str(pts)
 	_score_pts_suffix.text = "PTS"
 	_score_pts_suffix.visible = true
@@ -948,7 +921,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_show_combo(combo)
 	else:
 		_combo_name_label.text = ""
-		_score_value_label.add_theme_font_size_override("font_size", 18)
+		_score_value_label.add_theme_font_size_override("font_size", COMBAT_SCORE_VALUE_IDLE_FONT_SIZE)
 		_score_value_label.text = "NO COMBO"
 		_score_pts_suffix.text = ""
 		_score_pts_suffix.visible = false
@@ -1016,7 +989,7 @@ func _reset_for_next_hand() -> void:
 		return
 
 	_combo_name_label.text = ""
-	_score_value_label.add_theme_font_size_override("font_size", 18)
+	_score_value_label.add_theme_font_size_override("font_size", COMBAT_SCORE_VALUE_IDLE_FONT_SIZE)
 	_score_value_label.text = "ROLL!"
 	_score_pts_suffix.text = ""
 	_score_pts_suffix.visible = false
@@ -1119,25 +1092,30 @@ func _make_combo_row(combo: Dictionary) -> Dictionary:
 	var combo_name: String = combo.get("name", "")
 	var priority: int = combo.get("priority", 0)
 
-	var default_style := _make_style(Color(0.1, 0.1, 0.1, 0.6), Color(0.2, 0.2, 0.2, 0.4), 2, 8)
+	var default_style := _make_style(
+		Color(0.1, 0.1, 0.1, 0.6),
+		Color(0.2, 0.2, 0.2, 0.4),
+		COMBAT_COMBO_ROW_STYLE_BORDER_WIDTH,
+		COMBAT_COMBO_ROW_STYLE_MARGIN
+	)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(500, 0)
+	panel.custom_minimum_size = COMBAT_COMBO_ROW_PANEL_SIZE
 	panel.add_theme_stylebox_override("panel", default_style)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", COMBAT_COMBO_ROW_SEPARATION)
 	panel.add_child(row)
 
-	var name_label := _make_pixel_label(combo_name.to_upper(), 10, Color.WHITE)
-	name_label.custom_minimum_size = Vector2(180, 0)
+	var name_label := _make_pixel_label(combo_name.to_upper(), COMBAT_COMBO_ROW_NAME_FONT_SIZE, Color.WHITE)
+	name_label.custom_minimum_size = COMBAT_COMBO_ROW_NAME_WIDTH
 	row.add_child(name_label)
 
 	var pattern_box := HBoxContainer.new()
-	pattern_box.add_theme_constant_override("separation", 4)
+	pattern_box.add_theme_constant_override("separation", COMBAT_COMBO_PATTERN_SEPARATION)
 	var colors := _get_pattern_colors(combo_type)
 	for c in colors:
 		var sq := ColorRect.new()
-		sq.custom_minimum_size = Vector2(14, 14)
+		sq.custom_minimum_size = COMBAT_COMBO_PATTERN_SQUARE_SIZE
 		sq.color = c
 		pattern_box.add_child(sq)
 	row.add_child(pattern_box)
@@ -1148,79 +1126,37 @@ func _make_combo_row(combo: Dictionary) -> Dictionary:
 
 	var mult_data := _get_effective_mult(combo)
 	if mult_data["modified"]:
-		var mult_box := HBoxContainer.new()
-		mult_box.add_theme_constant_override("separation", 6)
-		var base_label := _make_pixel_label("x%.1f" % mult_data["base"], 9, Color(0.5, 0.5, 0.5))
-		mult_box.add_child(base_label)
-		var eff_label := _make_pixel_label("x%.1f" % mult_data["effective"], 10, GOLD)
-		mult_box.add_child(eff_label)
-		row.add_child(mult_box)
+			var mult_box := HBoxContainer.new()
+			mult_box.add_theme_constant_override("separation", COMBAT_COMBO_MULT_SEPARATION)
+			var base_label := _make_pixel_label(
+				"x%.1f" % mult_data["base"],
+				COMBAT_COMBO_BASE_MULT_FONT_SIZE,
+				Color(0.5, 0.5, 0.5)
+			)
+			mult_box.add_child(base_label)
+			var eff_label := _make_pixel_label(
+				"x%.1f" % mult_data["effective"],
+				COMBAT_COMBO_EFFECTIVE_MULT_FONT_SIZE,
+				GOLD
+			)
+			mult_box.add_child(eff_label)
+			row.add_child(mult_box)
 	else:
-		var mult_label := _make_pixel_label("x%.1f" % mult_data["base"], 10, _get_combo_priority_color(priority))
-		row.add_child(mult_label)
+			var mult_label := _make_pixel_label(
+				"x%.1f" % mult_data["base"],
+				COMBAT_COMBO_EFFECTIVE_MULT_FONT_SIZE,
+				_get_combo_priority_color(priority)
+			)
+			row.add_child(mult_label)
 
 	return { "panel": panel, "default_style": default_style }
-
-
-func _make_probability_row(combo: Dictionary) -> Dictionary:
-	var combo_type: String = combo.get("type", "")
-	var combo_name := str(combo.get("name", combo_type)).to_upper()
-	var priority: int = combo.get("priority", 0)
-
-	var panel := PanelContainer.new()
-	panel.name = "ProbabilityRow_%s" % combo_type
-	panel.custom_minimum_size = Vector2(PROBABILITY_PANEL_WIDTH - 8, 0)
-	panel.add_theme_stylebox_override("panel", _make_style(Color(1, 1, 1, 0.03), Color(1, 1, 1, 0), 0, 2))
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 4)
-	panel.add_child(row)
-
-	var name_label := _make_pixel_label(combo_name, 7, Color.WHITE)
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(name_label)
-
-	var value_label := _make_pixel_label("--", 7, _get_combo_priority_color(priority))
-	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value_label.custom_minimum_size = Vector2(40, 0)
-	row.add_child(value_label)
-
-	return {
-		"panel": panel,
-		"type": combo_type,
-		"name_label": name_label,
-		"value_label": value_label,
-	}
-
-
-func _set_probability_notice(text: String, font_color: Color, bg_color: Color, border_color: Color) -> void:
-	_probability_notice_label.text = text
-	_probability_notice_label.add_theme_color_override("font_color", font_color)
-	_probability_notice_chip.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, 2, 6))
-
-
-func _update_probability_panel_visibility(refresh_layout: bool = true) -> void:
-	if _probability_toggle_btn == null or _probability_panel == null:
-		return
-	_probability_panel.visible = not _probability_panel_collapsed
-	if _probability_shadow != null:
-		_probability_shadow.visible = not _probability_panel_collapsed
-	_probability_toggle_btn.text = ">" if _probability_panel_collapsed else "<"
-	queue_redraw()
-	if refresh_layout:
-		call_deferred("_refresh_responsive_layout")
-
-
-func _on_probability_toggle_pressed() -> void:
-	_probability_panel_collapsed = not _probability_panel_collapsed
-	_update_probability_panel_visibility()
 
 
 func _get_pattern_colors(combo_type: String) -> Array:
 	var a := BLUE
 	var b := PINK
 	var g := Color("888888")
-	var s := [GREEN.darkened(0.3), GREEN.darkened(0.15), GREEN, GREEN.lightened(0.15), GREEN.lightened(0.3)]
+	var s := [BLUE.darkened(0.3), BLUE.darkened(0.15), BLUE, BLUE.lightened(0.15), BLUE.lightened(0.3)]
 
 	match combo_type:
 		"high_card":      return [a, g, g, g, g]
@@ -1278,7 +1214,12 @@ func _update_combo_highlight() -> void:
 		var combo := combat_mgr.get_current_combo()
 		current_type = combo.get("type", "")
 
-	var highlight_style := _make_style(Color(0.29, 0.62, 1.0, 0.2), BLUE, 2, 8)
+	var highlight_style := _make_style(
+		Color(0.29, 0.62, 1.0, 0.2),
+		BLUE,
+		COMBAT_COMBO_ROW_STYLE_BORDER_WIDTH,
+		COMBAT_COMBO_ROW_STYLE_MARGIN
+	)
 	for entry in _combo_row_panels:
 		if entry["type"] == current_type and not current_type.is_empty():
 			entry["panel"].add_theme_stylebox_override("panel", highlight_style)
@@ -1371,37 +1312,68 @@ func _get_tutorial_avoid_target() -> Variant:
 
 
 func _refresh_tutorial_dice_accents() -> void:
-	if not TutorialManager.is_active():
-		return
-	var show_accents := TutorialManager.step_id not in [
-		TutorialManager.STEP_INTRO_WELCOME,
-		TutorialManager.STEP_INTRO_ROLL,
-		TutorialManager.STEP_INTRO_PAIR,
-		TutorialManager.STEP_INTRO_FINISH,
-		TutorialManager.STEP_INTRO_WIN,
-		TutorialManager.STEP_COMBAT_GOOD_LUCK,
-	]
+	var show_tutorial_accents := false
+	if TutorialManager.is_active():
+		show_tutorial_accents = TutorialManager.step_id not in [
+			TutorialManager.STEP_INTRO_WELCOME,
+			TutorialManager.STEP_INTRO_ROLL,
+			TutorialManager.STEP_INTRO_PAIR,
+			TutorialManager.STEP_INTRO_FINISH,
+			TutorialManager.STEP_INTRO_WIN,
+			TutorialManager.STEP_COMBAT_GOOD_LUCK,
+		]
+
+	var in_combo: Array[bool] = []
+	var combo_colors: Array = []
+	if combat_mgr != null and combat_mgr.has_rolled:
+		var combo := combat_mgr.get_current_combo()
+		in_combo = combo.get("in_combo", [])
+		combo_colors = _get_pattern_colors(combo.get("type", ""))
+
+	var combo_color_index := 0
 	for i in range(_dice_cards.size()):
 		var card = _dice_cards[i]
 		if card is CombatDice:
-			var accent := show_accents and TutorialManager.required_combat_hold_indices.has(i)
-			(card as CombatDice).set_accent(accent, BLUE)
+			var combo_accent := false
+			var combo_accent_color := GOLD
+			if i < in_combo.size() and in_combo[i]:
+				combo_accent = true
+				if combo_color_index < combo_colors.size():
+					combo_accent_color = combo_colors[combo_color_index]
+				combo_color_index += 1
+
+			var tutorial_accent := show_tutorial_accents and TutorialManager.required_combat_hold_indices.has(i)
+			if tutorial_accent:
+				(card as CombatDice).set_accent(true, BLUE)
+			elif combo_accent:
+				(card as CombatDice).set_accent(true, combo_accent_color)
+			else:
+				(card as CombatDice).set_accent(false)
 
 
 func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:
 	return TutorialManager.get_scripted_roll_values(roll_number)
 
 
+func get_combo_highlight_indices() -> Array[int]:
+	var highlighted: Array[int] = []
+	for i in range(_dice_cards.size()):
+		var card = _dice_cards[i]
+		if card is CombatDice and (card as CombatDice).is_accented():
+			highlighted.append(i)
+	return highlighted
+
+
 func get_probability_status_text() -> String:
-	return str(_probability_notice_label.text)
+	return _probability_panel_ui.get_status_text() if _probability_panel_ui != null else ""
 
 
 func is_probability_collapsed() -> bool:
-	return _probability_panel_collapsed
+	return _probability_panel_ui.is_collapsed() if _probability_panel_ui != null else true
 
 
 func is_probability_panel_body_visible() -> bool:
-	return not _probability_panel_collapsed
+	return _probability_panel_ui.is_body_visible() if _probability_panel_ui != null else false
 
 
 func get_combo_button_right_x() -> float:
@@ -1411,38 +1383,28 @@ func get_combo_button_right_x() -> float:
 
 
 func get_probability_toggle_right_x() -> float:
-	if _probability_toggle_btn == null:
-		return 0.0
-	return _probability_toggle_btn.global_position.x + _probability_toggle_btn.size.x
+	return _probability_panel_ui.get_toggle_right_x() if _probability_panel_ui != null else 0.0
 
 
 func get_probability_row_text(combo_type: String) -> String:
-	for entry in _probability_row_entries:
-		if entry["type"] == combo_type:
-			return str(entry["value_label"].text)
-	return ""
+	return _probability_panel_ui.get_row_text(combo_type) if _probability_panel_ui != null else ""
 
 
 func get_probability_row_name_text(combo_type: String) -> String:
-	for entry in _probability_row_entries:
-		if entry["type"] == combo_type:
-			return str(entry["name_label"].text)
-	return ""
+	return _probability_panel_ui.get_row_name_text(combo_type) if _probability_panel_ui != null else ""
 
 
 func get_probability_row_count() -> int:
-	return _probability_row_entries.size()
+	return _probability_panel_ui.get_row_count() if _probability_panel_ui != null else 0
 
 
 func get_probability_display_snapshot() -> Dictionary:
-	var snapshot := {}
-	for entry in _probability_row_entries:
-		snapshot[entry["type"]] = str(entry["value_label"].text)
-	return snapshot
+	return _probability_panel_ui.get_display_snapshot() if _probability_panel_ui != null else {}
 
 
 func toggle_probability_panel() -> void:
-	_on_probability_toggle_pressed()
+	if _probability_panel_ui != null:
+		_probability_panel_ui.toggle_panel()
 
 
 func get_dice_tray_global_x() -> float:

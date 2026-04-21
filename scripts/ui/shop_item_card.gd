@@ -4,6 +4,12 @@ extends "res://scripts/ui/item_card.gd"
 
 signal buy_pressed
 
+const SHOP_PRICE_PANEL_SIZE := Vector2(56, 32)
+const SHOP_PRICE_PANEL_BORDER_WIDTH := 3
+const SHOP_PRICE_PANEL_MARGIN := 4
+const SHOP_PRICE_ROW_SEPARATION := 4
+const SHOP_PRICE_FONT_SIZE := 12
+
 var buy_button: Button
 
 
@@ -43,12 +49,15 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 
 func _build_price_panel(item: Dictionary, pixel_font: Font) -> void:
 	var price_panel := PanelContainer.new()
-	price_panel.custom_minimum_size = Vector2(56, 32)
-	price_panel.add_theme_stylebox_override("panel", _make_style(GOLD, BORDER_BLACK, 3, 4))
+	price_panel.custom_minimum_size = SHOP_PRICE_PANEL_SIZE
+	price_panel.add_theme_stylebox_override(
+		"panel",
+		_make_style(GOLD, BORDER_BLACK, SHOP_PRICE_PANEL_BORDER_WIDTH, SHOP_PRICE_PANEL_MARGIN)
+	)
 	price_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var price_hbox := HBoxContainer.new()
-	price_hbox.add_theme_constant_override("separation", 4)
+	price_hbox.add_theme_constant_override("separation", SHOP_PRICE_ROW_SEPARATION)
 	price_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	price_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	price_panel.add_child(price_hbox)
@@ -58,7 +67,7 @@ func _build_price_panel(item: Dictionary, pixel_font: Font) -> void:
 	var price_label := Label.new()
 	price_label.text = str(int(item.get("cost", 0)))
 	price_label.add_theme_font_override("font", pixel_font)
-	price_label.add_theme_font_size_override("font_size", 12)
+	price_label.add_theme_font_size_override("font_size", SHOP_PRICE_FONT_SIZE)
 	price_label.add_theme_color_override("font_color", DARK)
 	price_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	price_hbox.add_child(price_label)

@@ -1,6 +1,10 @@
 class_name CombatManager
 extends Node
 
+const ComboDetectorScript = preload("res://scripts/scoring/combo_detector.gd")
+const ComboOddsHelperScript = preload("res://scripts/scoring/combo_odds_helper.gd")
+const ScoringEngineScript = preload("res://scripts/scoring/scoring_engine.gd")
+
 enum HandState { HAND_ACTIVE, HAND_TRANSITION, COMBAT_ENDED }
 
 signal dice_rolled(values: Array[int])
@@ -17,9 +21,9 @@ var held_dice: Array[bool] = [false, false, false, false, false]
 var running_score: int = 0
 var target_score: int = 150
 var active_dice: Array[Die] = []
-var combo_detector := ComboDetector.new()
-var combo_odds_helper := ComboOddsHelper.new()
-var scoring_engine := ScoringEngine.new()
+var combo_detector = ComboDetectorScript.new()
+var combo_odds_helper = ComboOddsHelperScript.new()
+var scoring_engine = ScoringEngineScript.new()
 var probability_snapshot: Dictionary = {}
 var has_rolled: bool = false
 var hand_state: HandState = HandState.HAND_ACTIVE

@@ -14,6 +14,27 @@ const BLUE := Color("4a9eff")
 const CARD_BG := Color("c8e6f5")
 const DISABLED_BG := Color("99a1af")
 const DISABLED_TEXT := Color("4a5565")
+const BG_GRID_CELL := 32.0
+const DARK_BUTTON_BORDER_WIDTH := 4
+const DARK_BUTTON_MARGIN := 8
+const COLORED_BUTTON_BORDER_WIDTH := 4
+const COLORED_BUTTON_MARGIN := 18
+const PANEL_BORDER_WIDTH := 4
+const DEFAULT_PANEL_MARGIN := 8
+const SCREEN_CONTENT_SEPARATION := 32
+const SCREEN_OUTER_SEPARATION := 32
+const SCREEN_ACTION_BAR_SEPARATION := 24
+const SCREEN_MARGIN_LEFT := 32
+const SCREEN_MARGIN_RIGHT := 32
+const SCREEN_MARGIN_TOP := 64
+const SCREEN_MARGIN_BOTTOM := 24
+const TITLE_BAR_SEPARATION := 8
+const TITLE_UNDERLINE_SIZE := Vector2(296, 4)
+const TITLE_SUB_FONT_SIZE := 12
+const MENU_BUTTON_SIZE := Vector2(96, 56)
+const MENU_BUTTON_FONT_SIZE := 14
+const BUTTON_SHADOW_OFFSET := Vector2(8, 8)
+const BUTTON_PRESSED_SHADOW_OFFSET := Vector2(3, 3)
 
 const DIE_COLORS := {
 	"colorless": Color.WHITE,
@@ -44,7 +65,7 @@ func _ready() -> void:
 func _draw_all_bg() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BG_COLOR)
 	var col := Color(0, 0, 0, 0.10)
-	var cell := 32.0
+	var cell := BG_GRID_CELL
 	for i in range(1, int(size.x / cell)):
 		var x := float(i) * cell
 		draw_line(Vector2(x, 0), Vector2(x, size.y), col, 1.0)
@@ -103,9 +124,9 @@ func _make_colored_button(text: String, min_size: Vector2, bg_color: Color,
 	btn.add_theme_font_override("font", _pixel_font)
 	btn.add_theme_font_size_override("font_size", font_size)
 
-	btn.add_theme_stylebox_override("normal", _make_style(bg_color, BORDER_BLACK, 4, 18))
-	btn.add_theme_stylebox_override("hover", _make_style(hover_color, BORDER_BLACK, 4, 18))
-	btn.add_theme_stylebox_override("disabled", _make_style(DISABLED_BG, BORDER_BLACK, 4, 18))
+	btn.add_theme_stylebox_override("normal", _make_style(bg_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override("hover", _make_style(hover_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override("disabled", _make_style(DISABLED_BG, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
 
 	btn.add_theme_color_override("font_color", DARK)
 	btn.add_theme_color_override("font_hover_color", DARK)
@@ -120,7 +141,7 @@ func _make_panel(bg_color: Color, border_color: Color, min_size: Vector2,
 		margin: int = 8) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = min_size
-	panel.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, 4, margin))
+	panel.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, PANEL_BORDER_WIDTH, margin))
 	return panel
 
 
@@ -141,7 +162,7 @@ func _make_screen_layout(content_separation: int = 32, clip_content: bool = fals
 	add_child(margin)
 
 	var outer := VBoxContainer.new()
-	outer.add_theme_constant_override("separation", 32)
+	outer.add_theme_constant_override("separation", SCREEN_OUTER_SEPARATION)
 	margin.add_child(outer)
 
 	var content := VBoxContainer.new()
@@ -154,7 +175,7 @@ func _make_screen_layout(content_separation: int = 32, clip_content: bool = fals
 	outer.add_child(center)
 
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 24)
+	bar.add_theme_constant_override("separation", SCREEN_ACTION_BAR_SEPARATION)
 	center.add_child(bar)
 
 	return { "content": content, "action_bar": bar }
@@ -164,29 +185,29 @@ func _make_screen_layout(content_separation: int = 32, clip_content: bool = fals
 func _make_screen_margin() -> MarginContainer:
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 64)
-	margin.add_theme_constant_override("margin_bottom", 24)
+	margin.add_theme_constant_override("margin_left", SCREEN_MARGIN_LEFT)
+	margin.add_theme_constant_override("margin_right", SCREEN_MARGIN_RIGHT)
+	margin.add_theme_constant_override("margin_top", SCREEN_MARGIN_TOP)
+	margin.add_theme_constant_override("margin_bottom", SCREEN_MARGIN_BOTTOM)
 	return margin
 
 
 ## Create a centered title label with a dark underline bar and round/target subtitle.
 func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", TITLE_BAR_SEPARATION)
 
 	var title := _make_pixel_label(title_text, font_size, DARK)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
 	var underline := ColorRect.new()
-	underline.custom_minimum_size = Vector2(296, 4)
+	underline.custom_minimum_size = TITLE_UNDERLINE_SIZE
 	underline.color = DARK
 	vbox.add_child(underline)
 
 	var sub := _make_pixel_label(
-		"Round %d. Target %d." % [GameManager.current_round, GameManager.target_score], 12, DARK)
+		"Round %d. Target %d." % [GameManager.current_round, GameManager.target_score], TITLE_SUB_FONT_SIZE, DARK)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(sub)
 
@@ -196,7 +217,7 @@ func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 ## Create the standard "MENU" button that returns to the main menu.
 ## Override _go_to_main_menu() in subclasses to customize transition behavior.
 func _make_menu_button() -> Button:
-	var btn := _make_pixel_button("MENU", Vector2(96, 56), 14)
+	var btn := _make_pixel_button("MENU", MENU_BUTTON_SIZE, MENU_BUTTON_FONT_SIZE)
 	btn.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	btn.pressed.connect(_go_to_main_menu)
 	_sync_menu_button_tutorial_lock(btn)
@@ -235,7 +256,7 @@ func _connect_button_sfx(btn: Button) -> void:
 
 
 ## Draw drop-shadow rectangles behind a list of buttons.
-func _draw_button_shadows(buttons: Array, shadow_offset := Vector2(8, 8)) -> void:
+func _draw_button_shadows(buttons: Array, shadow_offset := BUTTON_SHADOW_OFFSET) -> void:
 	for btn in buttons:
 		if not is_instance_valid(btn) or not btn.visible:
 			continue
@@ -243,7 +264,7 @@ func _draw_button_shadows(buttons: Array, shadow_offset := Vector2(8, 8)) -> voi
 		var off := shadow_offset
 		var mode: int = b.get_draw_mode()
 		if mode == BaseButton.DRAW_PRESSED or mode == BaseButton.DRAW_HOVER_PRESSED:
-			off = Vector2(3, 3)
+			off = BUTTON_PRESSED_SHADOW_OFFSET
 		draw_rect(
 			Rect2(btn.global_position - global_position + off, btn.size),
 			SHADOW_COLOR

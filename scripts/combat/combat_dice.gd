@@ -2,10 +2,12 @@ extends "res://scripts/ui/item_card.gd"
 ## Combat-specific dice card with procedurally drawn face, hold state, and roll helpers.
 
 const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
+const COMBAT_CARD_SIZE := Vector2(110, 110)
+const COMBAT_CARD_LABEL_FONT_SIZE := 12
+const COMBAT_CARD_LABEL_HEIGHT := 18
 
 var _face_panel: Control
 var _display_name: String = ""
-const COMBAT_CARD_SIZE := Vector2(110, 110)
 
 
 func setup(die: Die, pixel_font: Font) -> void:
@@ -28,10 +30,10 @@ func setup(die: Die, pixel_font: Font) -> void:
 	var name_label := Label.new()
 	name_label.text = _display_name
 	name_label.add_theme_font_override("font", pixel_font)
-	name_label.add_theme_font_size_override("font_size", 12)
+	name_label.add_theme_font_size_override("font_size", COMBAT_CARD_LABEL_FONT_SIZE)
 	name_label.add_theme_color_override("font_color", DARK)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.custom_minimum_size = Vector2(COMBAT_CARD_SIZE.x, 18)
+	name_label.custom_minimum_size = Vector2(COMBAT_CARD_SIZE.x, COMBAT_CARD_LABEL_HEIGHT)
 	bottom_control = name_label
 	_vbox.add_child(bottom_control)
 

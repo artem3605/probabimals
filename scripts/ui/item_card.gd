@@ -27,6 +27,26 @@ const DIE_NAMES := {
 	"purple": "PURPLE",
 }
 
+const ITEM_CARD_DEFAULT_SIZE := Vector2(96, 96)
+const ITEM_CARD_CONTENT_SEPARATION := 8
+const ITEM_CARD_NAME_FONT_SIZE := 12
+const ITEM_CARD_NAME_MIN_SIZE := Vector2(96, 18)
+const ITEM_CARD_MAIN_BORDER_WIDTH := 4
+const ITEM_CARD_MAIN_MARGIN := 4
+const ITEM_CARD_MAIN_FONT_SIZE := 24
+const FRAME_BG := Color("c8e6f5")
+const ITEM_CARD_FRAME_MARGIN := 12
+const ACTION_BUTTON_SIZE := Vector2(96, 28)
+const ACTION_BUTTON_FONT_SIZE := 10
+const ACTION_BUTTON_BORDER_WIDTH := 3
+const ACTION_BUTTON_MARGIN := 4
+const COUNTER_ROW_SEPARATION := 0
+const COUNTER_BUTTON_SIZE := Vector2(28, 28)
+const COUNTER_BUTTON_FONT_SIZE := 12
+const COUNTER_LABEL_SIZE := Vector2(40, 28)
+const COUNTER_LABEL_FONT_SIZE := 10
+const COIN_ICON_SIZE := 18
+
 var main_button: Button
 var bottom_control: Control
 var hover_name: String = ""
@@ -61,20 +81,20 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	var name_label := Label.new()
 	name_label.text = DIE_NAMES.get(die.color, "BASIC")
 	name_label.add_theme_font_override("font", pixel_font)
-	name_label.add_theme_font_size_override("font_size", 12)
+	name_label.add_theme_font_size_override("font_size", ITEM_CARD_NAME_FONT_SIZE)
 	name_label.add_theme_color_override("font_color", DARK)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.custom_minimum_size = Vector2(96, 18)
+	name_label.custom_minimum_size = ITEM_CARD_NAME_MIN_SIZE
 	bottom_control = name_label
 	_vbox.add_child(bottom_control)
 
 
 func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
-		card_size: Vector2 = Vector2(96, 96)) -> void:
+		card_size: Vector2 = ITEM_CARD_DEFAULT_SIZE) -> void:
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	_vbox = VBoxContainer.new()
-	_vbox.add_theme_constant_override("separation", 8)
+	_vbox.add_theme_constant_override("separation", ITEM_CARD_CONTENT_SEPARATION)
 	_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_vbox)
@@ -85,10 +105,10 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
 	main_button = Button.new()
 	main_button.custom_minimum_size = card_size
 	main_button.pivot_offset = card_size / 2.0
-	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, 4, 4))
-	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, 4, 4))
+	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	main_button.add_theme_font_override("font", pixel_font)
-	main_button.add_theme_font_size_override("font_size", 24)
+	main_button.add_theme_font_size_override("font_size", ITEM_CARD_MAIN_FONT_SIZE)
 	main_button.add_theme_color_override("font_color", text_color)
 	main_button.add_theme_color_override("font_hover_color", text_color)
 	main_button.text = label_text
@@ -118,14 +138,11 @@ func set_accent(accented: bool, accent_color: Color = GOLD) -> void:
 func is_accented() -> bool:
 	return _accent_active
 
-
-const FRAME_BG := Color("c8e6f5")
-
 func setup_frame() -> void:
 	_is_framed = true
-	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, 12))
+	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, ITEM_CARD_FRAME_MARGIN))
 	main_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	main_button.add_theme_stylebox_override("hover", _make_style(_card_color, BORDER_BLACK, 4, 4))
+	main_button.add_theme_stylebox_override("hover", _make_style(_card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	for conn in main_button.mouse_entered.get_connections():
 		main_button.mouse_entered.disconnect(conn["callable"])
 	for conn in main_button.mouse_exited.get_connections():
@@ -138,9 +155,9 @@ func setup_frame() -> void:
 
 func create_action_button(text: String, pixel_font: Font) -> Button:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(96, 28)
+	btn.custom_minimum_size = ACTION_BUTTON_SIZE
 	btn.add_theme_font_override("font", pixel_font)
-	btn.add_theme_font_size_override("font_size", 10)
+	btn.add_theme_font_size_override("font_size", ACTION_BUTTON_FONT_SIZE)
 	btn.text = text
 	btn.mouse_entered.connect(_on_frame_hover_in)
 	btn.mouse_exited.connect(_on_frame_hover_out)
@@ -151,24 +168,24 @@ func create_action_button(text: String, pixel_font: Font) -> Button:
 
 func create_counter_row(pixel_font: Font) -> Dictionary:
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 0)
+	hbox.add_theme_constant_override("separation", COUNTER_ROW_SEPARATION)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	hbox.mouse_filter = Control.MOUSE_FILTER_PASS
 	hbox.mouse_entered.connect(_on_frame_hover_in)
 	hbox.mouse_exited.connect(_on_frame_hover_out)
 
 	var minus_btn := Button.new()
-	minus_btn.custom_minimum_size = Vector2(28, 28)
+	minus_btn.custom_minimum_size = COUNTER_BUTTON_SIZE
 	minus_btn.add_theme_font_override("font", pixel_font)
-	minus_btn.add_theme_font_size_override("font_size", 12)
+	minus_btn.add_theme_font_size_override("font_size", COUNTER_BUTTON_FONT_SIZE)
 	minus_btn.text = "-"
 	_apply_action_button_style(minus_btn)
 	hbox.add_child(minus_btn)
 
 	var count_label := Label.new()
-	count_label.custom_minimum_size = Vector2(40, 28)
+	count_label.custom_minimum_size = COUNTER_LABEL_SIZE
 	count_label.add_theme_font_override("font", pixel_font)
-	count_label.add_theme_font_size_override("font_size", 10)
+	count_label.add_theme_font_size_override("font_size", COUNTER_LABEL_FONT_SIZE)
 	count_label.add_theme_color_override("font_color", DARK)
 	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -177,9 +194,9 @@ func create_counter_row(pixel_font: Font) -> Dictionary:
 	hbox.add_child(count_label)
 
 	var plus_btn := Button.new()
-	plus_btn.custom_minimum_size = Vector2(28, 28)
+	plus_btn.custom_minimum_size = COUNTER_BUTTON_SIZE
 	plus_btn.add_theme_font_override("font", pixel_font)
-	plus_btn.add_theme_font_size_override("font_size", 12)
+	plus_btn.add_theme_font_size_override("font_size", COUNTER_BUTTON_FONT_SIZE)
 	plus_btn.text = "+"
 	_apply_action_button_style(plus_btn)
 	hbox.add_child(plus_btn)
@@ -189,12 +206,10 @@ func create_counter_row(pixel_font: Font) -> Dictionary:
 
 
 func _apply_action_button_style(btn: Button) -> void:
-	const BW := 3
-	const MG := 4
-	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, BW, MG))
-	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), BW, MG))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, BW, MG))
-	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), BW, MG))
+	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
 	btn.add_theme_color_override("font_color", GOLD)
 	btn.add_theme_color_override("font_hover_color", GOLD)
 	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
@@ -215,7 +230,7 @@ func _on_frame_click(event: InputEvent) -> void:
 		card_pressed.emit()
 
 
-static func _create_coin_icon(display_size: int = 18) -> TextureRect:
+static func _create_coin_icon(display_size: int = COIN_ICON_SIZE) -> TextureRect:
 	var rect := TextureRect.new()
 	rect.texture = preload("res://assets/art/ui/coin.png")
 	rect.custom_minimum_size = Vector2(display_size, display_size)
@@ -249,12 +264,12 @@ func _refresh_button_frame() -> void:
 	if _is_framed:
 		var frame_border_width := 4 if _accent_active else 0
 		var frame_border := _accent_color if _accent_active else FRAME_BG
-		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, 12))
+		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, ITEM_CARD_FRAME_MARGIN))
 
 	var border := GOLD if _is_selected else (_accent_color if _accent_active else BORDER_BLACK)
-	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, 4, 4))
+	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	if _is_framed:
-		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, 4, 4))
+		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	else:
 		var hover_border := _accent_color if _accent_active else GOLD
-		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, hover_border, 4, 4))
+		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, hover_border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))

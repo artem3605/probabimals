@@ -43,8 +43,8 @@ func test_combat_probability_panel_renders_and_updates_with_hold_changes_in_wide
 	assert_true(combat.is_probability_collapsed())
 	assert_eq(combat.get_probability_row_count(), DataManager.get_combo_rules().size())
 	assert_eq(combat.get_probability_row_name_text("pair"), "PAIR")
-	assert_eq(combat.get_probability_row_name_text("small_straight"), "SMALL STRAIGHT")
-	assert_eq(combat.get_probability_row_name_text("large_straight"), "LARGE STRAIGHT")
+	assert_eq(combat.get_probability_row_name_text("small_straight"), "SMALL\nSTRAIGHT")
+	assert_eq(combat.get_probability_row_name_text("large_straight"), "LARGE\nSTRAIGHT")
 	assert_eq(combat.get_probability_row_text("pair"), "--")
 	assert_eq(combat.get_probability_status_text(), "ROLL FIRST")
 	var tray_x_before_toggle: float = combat.get_dice_tray_global_x()
@@ -56,9 +56,16 @@ func test_combat_probability_panel_renders_and_updates_with_hold_changes_in_wide
 	await wait_process_frames(1)
 
 	var open_display: Dictionary = combat.get_probability_display_snapshot()
+	var combo: Dictionary = combat.combat_mgr.get_current_combo()
+	var expected_highlight_indices: Array[int] = []
+	var in_combo: Array = combo.get("in_combo", [])
+	for i in range(in_combo.size()):
+		if bool(in_combo[i]):
+			expected_highlight_indices.append(i)
 	assert_eq(open_display.size(), DataManager.get_combo_rules().size())
 	assert_eq(combat.get_probability_row_text("pair"), "37.0%")
 	assert_eq(combat.get_probability_status_text(), "ALL OPEN")
+	assert_eq_deep(combat.get_combo_highlight_indices(), expected_highlight_indices)
 	assert_eq(combat.get_dice_tray_global_x(), tray_x_before_toggle)
 	assert_eq(combat.get_dice_tray_center_x(), score_panel_center)
 

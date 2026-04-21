@@ -3,6 +3,20 @@ extends "res://scripts/ui/pixel_bg.gd"
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const MAX_SELECTION := 5
+const DICE_SELECT_CONTENT_SEPARATION := 32
+const DICE_SELECT_TOP_BAR_SEPARATION := 16
+const DICE_SELECT_CONFIRM_BUTTON_SIZE := Vector2(216, 64)
+const DICE_SELECT_CONFIRM_BUTTON_FONT_SIZE := 16
+const DICE_SELECT_RIGHT_PLACEHOLDER_SIZE := Vector2(96, 0)
+const DICE_SELECT_SUBTITLE_FONT_SIZE := 14
+const DICE_SELECT_GRID_COLUMNS := 7
+const DICE_SELECT_GRID_H_SEPARATION := 32
+const DICE_SELECT_GRID_V_SEPARATION := 24
+const DICE_SELECT_DESC_PANEL_SIZE := Vector2(420, 0)
+const DICE_SELECT_DESC_PANEL_MARGIN := 16
+const DICE_SELECT_DESC_SEPARATION := 12
+const DICE_SELECT_DESC_TITLE_FONT_SIZE := 14
+const DICE_SELECT_DESC_BODY_FONT_SIZE := 12
 
 var _groups: Array[Dictionary] = []
 var _subtitle_label: Label
@@ -38,7 +52,7 @@ func _draw() -> void:
 
 
 func _build_ui() -> void:
-	var layout := _make_screen_layout(32, true)
+	var layout := _make_screen_layout(DICE_SELECT_CONTENT_SEPARATION, true)
 	var content: VBoxContainer = layout["content"]
 	var action_bar: HBoxContainer = layout["action_bar"]
 
@@ -48,7 +62,13 @@ func _build_ui() -> void:
 	_build_description_panel(content)
 	_build_tutorial_overlay()
 
-	_confirm_btn = _make_colored_button("CONFIRM", Vector2(216, 64), GREEN, GREEN.lightened(0.15), 16)
+	_confirm_btn = _make_colored_button(
+		"CONFIRM",
+		DICE_SELECT_CONFIRM_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		DICE_SELECT_CONFIRM_BUTTON_FONT_SIZE
+	)
 	_confirm_btn.add_theme_stylebox_override("disabled", _make_style(Color("121212"), Color("262626")))
 	_confirm_btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
 	_confirm_btn.disabled = true
@@ -58,7 +78,7 @@ func _build_ui() -> void:
 
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", 16)
+	bar.add_theme_constant_override("separation", DICE_SELECT_TOP_BAR_SEPARATION)
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
@@ -76,12 +96,12 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	bar.add_child(spacer2)
 
 	var right_placeholder := Control.new()
-	right_placeholder.custom_minimum_size = Vector2(96, 0)
+	right_placeholder.custom_minimum_size = DICE_SELECT_RIGHT_PLACEHOLDER_SIZE
 	bar.add_child(right_placeholder)
 
 
 func _build_subtitle(parent: VBoxContainer) -> void:
-	_subtitle_label = _make_pixel_label("", 14)
+	_subtitle_label = _make_pixel_label("", DICE_SELECT_SUBTITLE_FONT_SIZE)
 	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	parent.add_child(_subtitle_label)
 
@@ -91,9 +111,9 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 	parent.add_child(center)
 
 	_dice_container = GridContainer.new()
-	_dice_container.columns = 7
-	_dice_container.add_theme_constant_override("h_separation", 32)
-	_dice_container.add_theme_constant_override("v_separation", 24)
+	_dice_container.columns = DICE_SELECT_GRID_COLUMNS
+	_dice_container.add_theme_constant_override("h_separation", DICE_SELECT_GRID_H_SEPARATION)
+	_dice_container.add_theme_constant_override("v_separation", DICE_SELECT_GRID_V_SEPARATION)
 	center.add_child(_dice_container)
 
 	_build_groups()
@@ -193,21 +213,21 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_desc_panel = _make_panel(DARK, GOLD, Vector2(420, 0), 16)
+	_desc_panel = _make_panel(DARK, GOLD, DICE_SELECT_DESC_PANEL_SIZE, DICE_SELECT_DESC_PANEL_MARGIN)
 	_desc_panel.visible = false
 	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(_desc_panel)
 
 	var desc_vbox := VBoxContainer.new()
-	desc_vbox.add_theme_constant_override("separation", 12)
+	desc_vbox.add_theme_constant_override("separation", DICE_SELECT_DESC_SEPARATION)
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
-	_desc_title = _make_pixel_label("", 14, GOLD)
+	_desc_title = _make_pixel_label("", DICE_SELECT_DESC_TITLE_FONT_SIZE, GOLD)
 	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desc_vbox.add_child(_desc_title)
 
-	_desc_body = _make_pixel_label("", 12, Color.WHITE)
+	_desc_body = _make_pixel_label("", DICE_SELECT_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_vbox.add_child(_desc_body)
