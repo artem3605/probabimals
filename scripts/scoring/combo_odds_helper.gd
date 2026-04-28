@@ -3,7 +3,7 @@ extends RefCounted
 
 func calculate_probabilities(current_roll: Array[DiceFace], held_dice: Array,
 		combo_rules: Array, die_face_options: Array = []) -> Dictionary:
-	if current_roll.size() == 0 or current_roll.size() != held_dice.size():
+	if held_dice.is_empty():
 		return {}
 
 	var probabilities := _make_zeroed_probabilities(combo_rules)
@@ -11,8 +11,11 @@ func calculate_probabilities(current_roll: Array[DiceFace], held_dice: Array,
 	detector.set_combo_rules(combo_rules)
 
 	var working_roll: Array[DiceFace] = []
-	for face in current_roll:
-		working_roll.append(face.duplicate_face())
+	for i in range(held_dice.size()):
+		if current_roll.size() > i:
+			working_roll.append(current_roll[i].duplicate_face())
+		else:
+			working_roll.append(DiceFace.make_basic(1))
 
 	var total_outcomes := _count_outcomes(0, working_roll, held_dice, die_face_options, detector, probabilities)
 	if total_outcomes == 0:

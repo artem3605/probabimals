@@ -2,9 +2,10 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
+const ShopGeneratorScript = preload("res://scripts/shop/shop_generator.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const REROLL_COST := 10
-const SHOP_SLOTS := 7
+const SHOP_SLOTS := ShopGeneratorScript.DEFAULT_SHOP_SLOTS
 const FLEA_MARKET_CONTENT_SEPARATION := 48
 const FLEA_MARKET_TOP_BAR_SEPARATION := 16
 const FLEA_MARKET_STATS_SEPARATION := 12
@@ -61,10 +62,12 @@ var _pending_face_item: Dictionary = {}
 var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
 var _tutorial_overlay: Control
+var _shop_generator = ShopGeneratorScript.new()
 
 
 func _ready() -> void:
 	super._ready()
+	_shop_generator.randomize_seed()
 	_build_ui()
 	_generate_offerings()
 	_update_coins()
@@ -237,11 +240,8 @@ func _generate_offerings() -> void:
 	if catalogue.is_empty():
 		return
 
-	var shuffled := catalogue.duplicate()
-	shuffled.shuffle()
-	var count := mini(SHOP_SLOTS, shuffled.size())
-	for i in count:
-		_shop_offerings.append(shuffled[i])
+	_shop_offerings = _shop_generator.generate_offerings(catalogue, SHOP_SLOTS)
+	for _i in range(_shop_offerings.size()):
 		_sold.append(false)
 
 	_refresh_shop_display()
@@ -309,9 +309,9 @@ func _update_buy_buttons() -> void:
 			elif TutorialManager.is_active():
 				var item_id := str(_shop_offerings[i].get("id", ""))
 				var allowed := TutorialManager.is_shop_item_allowed(item_id)
-				card.set_accent(allowed, GOLD)
+				card.set_accent(_should_accent_tutorial_shop_item(item_id), GOLD)
 				if allowed and GameManager.coins >= _shop_offerings[i].get("cost", 0):
-					card.set_buy_status("guide")
+					card.set_buy_status("buy")
 				elif allowed:
 					card.set_buy_status("no_money")
 				else:
@@ -322,6 +322,15 @@ func _update_buy_buttons() -> void:
 			else:
 				card.set_buy_status("buy")
 				card.set_accent(false)
+
+
+func _should_accent_tutorial_shop_item(item_id: String) -> bool:
+	if not TutorialManager.is_shop_item_allowed(item_id):
+		return false
+	return TutorialManager.step_id not in [
+		TutorialManager.STEP_BUY_LOADED_DIE,
+		TutorialManager.STEP_BUY_EXTRA_SIX,
+	]
 
 
 # -- Callbacks -----------------------------------------------------------------

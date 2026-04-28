@@ -11,6 +11,37 @@ func after_each() -> void:
 	TutorialManager.clear_active_tutorial()
 
 
+func test_combat_tutorial_prompts_are_anchored_below_dice() -> void:
+	var combat_prompt_steps := [
+		TutorialManager.STEP_INTRO_ROLL,
+		TutorialManager.STEP_INTRO_HOLD,
+		TutorialManager.STEP_INTRO_REROLL,
+		TutorialManager.STEP_INTRO_PAIR,
+		TutorialManager.STEP_INTRO_FINISH,
+		TutorialManager.STEP_COMBAT_GOOD_LUCK,
+	]
+
+	for step_id in combat_prompt_steps:
+		var config: Dictionary = TutorialManager.STEP_TEXT[step_id]
+		var anchor: Vector2 = config.get("panel_anchor", Vector2.ZERO)
+		assert_ge(anchor.y, 0.82, "%s should render below the dice row" % step_id)
+
+
+func test_fixed_tutorial_shop_uses_current_shop_size() -> void:
+	var offerings := TutorialManager.get_fixed_shop_offerings()
+
+	assert_eq(offerings.size(), 5)
+	assert_ne(_find_item_index(offerings, "loaded_die"), -1)
+	assert_ne(_find_item_index(offerings, "extra_6"), -1)
+
+
+func test_extra_six_prompt_is_shifted_right_in_shop_tutorial() -> void:
+	var config: Dictionary = TutorialManager.STEP_TEXT[TutorialManager.STEP_BUY_EXTRA_SIX]
+	var anchor: Vector2 = config.get("panel_anchor", Vector2.ZERO)
+
+	assert_gt(anchor.x, 0.5)
+
+
 func test_first_run_progress_tracks_required_indices_and_scripted_rolls() -> void:
 	TutorialManager.start_first_run()
 
@@ -59,6 +90,13 @@ func test_first_run_progress_tracks_required_indices_and_scripted_rolls() -> voi
 	assert_true(TutorialManager.report_action("combat_roll", {"roll_number": 0}))
 	assert_true(TutorialManager.completed)
 	assert_false(TutorialManager.is_active())
+
+
+func _find_item_index(items: Array, item_id: String) -> int:
+	for i in range(items.size()):
+		if items[i].get("id", "") == item_id:
+			return i
+	return -1
 
 
 func test_face_swap_step_only_advances_after_successful_swap_commit() -> void:

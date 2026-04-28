@@ -64,32 +64,32 @@ const STEP_TEXT := {
 		"title": "ROLL THE DICE!",
 		"body": "Press the Roll button to roll your dice!",
 		"panel_width": 550,
-		"panel_anchor": Vector2(0.5, 0.72),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 	"intro_hold": {
 		"title": "NICE, A SIX!",
 		"body": "Wow, 6 is a lot! Tap this die to hold it -- held dice won't be rerolled.",
 		"panel_width": 450,
-		"panel_anchor": Vector2(0.57, 0.5),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 	"intro_reroll": {
 		"title": "ROLL AGAIN!",
 		"body": "Now press Roll to reroll the rest!",
 		"panel_width": 550,
-		"panel_anchor": Vector2(0.5, 0.72),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 	"intro_pair": {
 		"title": "COMBO!",
 		"body": "Two 6s -- that's a Pair! Pairs give bonus points. The panel above lists every scoring pattern and its odds.",
 		"show_next": true,
 		"panel_width": 630,
-		"panel_anchor": Vector2(0.5, 0.72),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 	"intro_finish": {
 		"title": "TURNS",
 		"body": "When you're out of rerolls or happy with your result, press Finish Round. One turn might not be enough, but you have several turns and their scores add up!",
 		"panel_width": 630,
-		"panel_anchor": Vector2(0.5, 0.72),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 	"intro_win": {
 		"title": "COINS!",
@@ -121,7 +121,7 @@ const STEP_TEXT := {
 		"title": "GET EXTRA SIX",
 		"body": "Nice! Now pick up Extra Six. We'll use it to soup up one of your basic dice.",
 		"panel_width": 450,
-		"panel_anchor": Vector2(0.5, 0.5),
+		"panel_anchor": Vector2(0.7, 0.5),
 	},
 	"go_to_dice_select": {
 		"title": "LOOKING GOOD!",
@@ -139,7 +139,7 @@ const STEP_TEXT := {
 		"title": "GOOD LUCK!",
 		"body": "We're back in combat. You already know the ropes -- roll, hold, and score your way to victory!",
 		"panel_width": 550,
-		"panel_anchor": Vector2(0.5, 0.72),
+		"panel_anchor": Vector2(0.5, 0.84),
 	},
 }
 
@@ -148,9 +148,7 @@ const TUTORIAL_SHOP_IDS := [
 	"extra_6",
 	"pair_boost",
 	"basic_die",
-	"extra_5",
 	"balanced_die",
-	"reroll_plus",
 ]
 
 var mode: String = MODE_INACTIVE

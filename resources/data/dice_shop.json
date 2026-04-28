@@ -4,6 +4,8 @@
     "name": "Basic Die",
     "description": "An extra standard six-sided die",
     "category": "die",
+    "rarity": "common",
+    "shop_weight": 18,
     "cost": 15,
     "params": {
       "color": "colorless"
@@ -14,6 +16,8 @@
     "name": "Loaded Die",
     "description": "A die weighted toward high rolls",
     "category": "die",
+    "rarity": "rare",
+    "shop_weight": 5,
     "cost": 25,
     "params": {
       "faces": [1, 5, 5, 6, 6, 6],
@@ -25,6 +29,8 @@
     "name": "Balanced Die",
     "description": "A die with mid-range faces",
     "category": "die",
+    "rarity": "uncommon",
+    "shop_weight": 10,
     "cost": 20,
     "params": {
       "faces": [3, 3, 4, 4, 5, 5],
@@ -36,6 +42,8 @@
     "name": "Extra Six",
     "description": "Replace a face with an extra 6",
     "category": "face",
+    "rarity": "uncommon",
+    "shop_weight": 2,
     "cost": 10,
     "params": {
       "face_id": "extra_6",
@@ -47,6 +55,8 @@
     "name": "Extra Five",
     "description": "Replace a face with an extra 5",
     "category": "face",
+    "rarity": "common",
+    "shop_weight": 2,
     "cost": 8,
     "params": {
       "face_id": "extra_5",
@@ -58,6 +68,8 @@
     "name": "Extra Four",
     "description": "Replace a face with an extra 4",
     "category": "face",
+    "rarity": "common",
+    "shop_weight": 3,
     "cost": 5,
     "params": {
       "face_id": "extra_4",
@@ -69,6 +81,8 @@
     "name": "Lucky Six",
     "description": "A rare lucky 6 face",
     "category": "face",
+    "rarity": "rare",
+    "shop_weight": 1,
     "cost": 15,
     "params": {
       "face_id": "lucky_6",
@@ -80,6 +94,8 @@
     "name": "Double Three",
     "description": "Replace a face with a double 3",
     "category": "face",
+    "rarity": "common",
+    "shop_weight": 3,
     "cost": 4,
     "params": {
       "face_id": "double_3",
@@ -89,25 +105,29 @@
   {
     "id": "pair_boost",
     "name": "Pair Boost",
-    "description": "+4 mult on Pairs or better",
+    "description": "+1 mult on Pairs",
     "category": "modifier",
-    "cost": 12,
+    "rarity": "common",
+    "shop_weight": 8,
+    "cost": 10,
     "params": {
       "effect": "add_mult",
       "condition": "pair",
-      "value": 4.0
+      "value": 1.0
     }
   },
   {
     "id": "full_house_master",
     "name": "Full House Master",
-    "description": "+8 mult on Full Houses",
+    "description": "+4 mult on Full Houses",
     "category": "modifier",
-    "cost": 18,
+    "rarity": "rare",
+    "shop_weight": 3,
+    "cost": 30,
     "params": {
       "effect": "add_mult",
       "condition": "full_house",
-      "value": 8.0
+      "value": 4.0
     }
   },
   {
@@ -115,7 +135,9 @@
     "name": "Reroll Plus",
     "description": "+1 reroll per hand",
     "category": "modifier",
-    "cost": 10,
+    "rarity": "uncommon",
+    "shop_weight": 5,
+    "cost": 25,
     "params": {
       "effect": "add_rerolls",
       "value": 1
@@ -126,7 +148,9 @@
     "name": "Yahtzee Hunter",
     "description": "x3 on Yahtzees",
     "category": "modifier",
-    "cost": 22,
+    "rarity": "rare",
+    "shop_weight": 2,
+    "cost": 34,
     "params": {
       "effect": "x_mult",
       "condition": "yahtzee",

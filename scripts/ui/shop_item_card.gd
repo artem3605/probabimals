@@ -98,7 +98,7 @@ func set_buy_status(status: String) -> void:
 			buy_button.disabled = true
 			modulate = Color(1, 1, 1, 1)
 		"guide":
-			buy_button.text = "BUY THIS"
+			buy_button.text = "BUY"
 			buy_button.disabled = false
 			modulate = Color(1, 1, 1, 1)
 

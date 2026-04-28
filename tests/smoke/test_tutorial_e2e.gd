@@ -84,6 +84,8 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 		0.05,
 		"intro finish step"
 	))
+	assert_true(intro_combat._tutorial_overlay._highlight_targets.has(intro_combat._end_turn_btn))
+	assert_true(intro_combat._tutorial_overlay._highlight_targets.has(intro_combat._turn_pill))
 
 	GameManager.target_score = 31
 	intro_combat.combat_mgr.target_score = 31
@@ -118,7 +120,8 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	var loaded_index := _find_shop_index(flea_market._shop_offerings, "loaded_die")
 	var loaded_card = flea_market._shop_cards[loaded_index]
 	assert_false(loaded_card.buy_button.disabled)
-	assert_eq(loaded_card.buy_button.text, "BUY THIS")
+	assert_eq(loaded_card.buy_button.text, "BUY")
+	assert_false(loaded_card.is_accented())
 
 	loaded_card.buy_button.emit_signal("pressed")
 	await wait_process_frames(2)
@@ -126,7 +129,8 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	var extra_six_index := _find_shop_index(flea_market._shop_offerings, "extra_6")
 	var extra_six_card = flea_market._shop_cards[extra_six_index]
 	assert_false(extra_six_card.buy_button.disabled)
-	assert_eq(extra_six_card.buy_button.text, "BUY THIS")
+	assert_eq(extra_six_card.buy_button.text, "BUY")
+	assert_false(extra_six_card.is_accented())
 
 	extra_six_card.buy_button.emit_signal("pressed")
 	await wait_process_frames(2)

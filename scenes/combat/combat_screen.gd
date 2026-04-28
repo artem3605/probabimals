@@ -36,6 +36,11 @@ const COMBAT_DESC_PANEL_MARGIN := 16
 const COMBAT_DESC_SEPARATION := 12
 const COMBAT_DESC_TITLE_FONT_SIZE := 14
 const COMBAT_DESC_BODY_FONT_SIZE := 12
+const COMBAT_DESC_COMBO_SQUARE_SIZE := 20
+const COMBAT_DESC_COMBO_SQUARE_GAP := 4
+const COMBAT_DESC_COMBO_SQUARE_BORDER := 1
+const COMBAT_DESC_COMBO_MULT_FONT_SIZE := 18
+const COMBAT_DESC_COMBO_ROW_SEPARATION := 16
 const COMBAT_RESULT_PANEL_SIZE := Vector2(760, 0)
 const COMBAT_RESULT_PANEL_MARGIN := 24
 const COMBAT_RESULT_SEPARATION := 20
@@ -70,10 +75,14 @@ var _score_breakdown_label: Label
 var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
+var _turn_pill: PanelContainer
 var _dice_container: HBoxContainer
 var _desc_panel: PanelContainer
 var _desc_title: Label
 var _desc_body: Label
+var _desc_combo_row: HBoxContainer
+var _desc_combo_squares: Array[PanelContainer] = []
+var _desc_combo_mult_label: Label
 var _probability_panel_ui
 var _probability_dock: Control
 var _probability_panel: PanelContainer
@@ -258,11 +267,11 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 
 
 func _build_turn_pill(parent: HBoxContainer) -> void:
-	var pill := PanelContainer.new()
-	pill.name = "TurnPill"
-	pill.custom_minimum_size = Vector2(0, MENU_BUTTON_SIZE.y)
-	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	pill.add_theme_stylebox_override(
+	_turn_pill = PanelContainer.new()
+	_turn_pill.name = "TurnPill"
+	_turn_pill.custom_minimum_size = Vector2(0, MENU_BUTTON_SIZE.y)
+	_turn_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_turn_pill.add_theme_stylebox_override(
 		"panel",
 		_make_style(DARK, BORDER_BLACK, COMBAT_TURN_PILL_BORDER_WIDTH, COMBAT_TURN_PILL_MARGIN)
 	)
@@ -270,17 +279,17 @@ func _build_turn_pill(parent: HBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", COMBAT_TURN_PILL_SEPARATION)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	pill.add_child(row)
+	_turn_pill.add_child(row)
 
 	var label := _make_pixel_label("TURN", COMBAT_TURN_PILL_LABEL_FONT_SIZE, GOLD)
 	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(label)
 
-	_hand_info_label = _make_pixel_label("", COMBAT_TURN_PILL_VALUE_FONT_SIZE, PINK)
+	_hand_info_label = _make_pixel_label("", COMBAT_TURN_PILL_VALUE_FONT_SIZE, Color.WHITE)
 	_hand_info_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_hand_info_label)
 
-	parent.add_child(pill)
+	parent.add_child(_turn_pill)
 
 
 func _build_score_bar(parent: HBoxContainer) -> void:
@@ -336,6 +345,8 @@ func _build_probability_panel(parent: VBoxContainer) -> void:
 	_probability_panel_ui = CombatProbabilityPanelScript.new()
 	center.add_child(_probability_panel_ui)
 	_probability_panel_ui.setup(_pixel_font, DataManager.get_combo_rules())
+	_probability_panel_ui.combo_row_hover_entered.connect(_on_combo_row_hover_enter)
+	_probability_panel_ui.combo_row_hover_exited.connect(_on_combo_row_hover_exit)
 	_probability_dock = center
 	_probability_panel = _probability_panel_ui.get_panel_node()
 
@@ -411,6 +422,43 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_desc_body.max_lines_visible = 2
 	desc_vbox.add_child(_desc_body)
+
+	_desc_combo_row = HBoxContainer.new()
+	_desc_combo_row.add_theme_constant_override("separation", COMBAT_DESC_COMBO_ROW_SEPARATION)
+	_desc_combo_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_desc_combo_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_combo_row.visible = false
+	desc_vbox.add_child(_desc_combo_row)
+
+	var squares_row := HBoxContainer.new()
+	squares_row.add_theme_constant_override("separation", COMBAT_DESC_COMBO_SQUARE_GAP)
+	squares_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+	squares_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	squares_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_combo_row.add_child(squares_row)
+
+	_desc_combo_squares.clear()
+	for _i in range(5):
+		var square := PanelContainer.new()
+		square.custom_minimum_size = Vector2(COMBAT_DESC_COMBO_SQUARE_SIZE, COMBAT_DESC_COMBO_SQUARE_SIZE)
+		square.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		square.add_theme_stylebox_override("panel", _make_combo_square_style(Color.WHITE))
+		squares_row.add_child(square)
+		_desc_combo_squares.append(square)
+
+	_desc_combo_mult_label = _make_pixel_label("", COMBAT_DESC_COMBO_MULT_FONT_SIZE, GOLD)
+	_desc_combo_mult_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_combo_mult_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_desc_combo_row.add_child(_desc_combo_mult_label)
+
+
+func _make_combo_square_style(color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.border_color = Color("1a1a1a")
+	sb.set_border_width_all(COMBAT_DESC_COMBO_SQUARE_BORDER)
+	sb.set_corner_radius_all(0)
+	return sb
 
 
 func _build_result_overlay() -> void:
@@ -652,8 +700,8 @@ func _show_combo(combo: Dictionary) -> void:
 	var combo_name: String = combo.get("name", "")
 	_combo_name_label.text = combo_name.to_upper()
 
-	var priority: int = combo.get("priority", 0)
-	_combo_name_label.add_theme_color_override("font_color", _get_combo_priority_color(priority))
+	var combo_type: String = combo.get("type", "")
+	_combo_name_label.add_theme_color_override("font_color", _get_combo_display_color(combo_type))
 
 	var preview := _calculate_combo_preview(combo)
 
@@ -869,7 +917,7 @@ func _play_pending_combo_reveal() -> void:
 	var combo := _pending_combo_reveal.duplicate(true)
 	_pending_combo_reveal.clear()
 	var priority := int(combo.get("priority", 0))
-	var color := _get_combo_priority_color(priority)
+	var color := _get_combo_display_color(combo.get("type", ""))
 	var in_combo: Array = combo.get("in_combo", [])
 
 	AudioManager.play_sfx(&"combo_detect")
@@ -898,7 +946,7 @@ func _pulse_combo_hud(color: Color, priority: int) -> void:
 	if _combo_name_label != null:
 		_combo_name_label.scale = Vector2.ONE
 		_combo_name_label.modulate = Color.WHITE
-		_combo_name_label.pivot_offset = _combo_name_label.size * 0.5
+		_combo_name_label.pivot_offset = Vector2(0.0, _combo_name_label.size.y * 0.5)
 	if _score_value_label != null:
 		_score_value_label.scale = Vector2.ONE
 		_score_value_label.modulate = Color.WHITE
@@ -1012,11 +1060,36 @@ func _on_card_hover_enter(card: Control) -> void:
 	_desc_title.add_theme_color_override("font_color", GOLD)
 	_desc_title.text = card.hover_name
 	_desc_body.text = card.hover_description
+	_desc_body.visible = true
+	_desc_combo_row.visible = false
 	_desc_panel.visible = true
 
 
 func _on_card_hover_exit() -> void:
 	_desc_panel.visible = false
+
+
+func _on_combo_row_hover_enter(combo_type: String) -> void:
+	if _probability_panel_ui == null:
+		return
+	var info: Dictionary = _probability_panel_ui.get_combo_row_info(combo_type)
+	if info.is_empty():
+		return
+	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.text = str(info.get("name", ""))
+	_desc_body.visible = false
+	var pattern_colors: Array = info.get("pattern_colors", [])
+	for i in range(_desc_combo_squares.size()):
+		var color: Color = pattern_colors[i] if i < pattern_colors.size() else Color.TRANSPARENT
+		_desc_combo_squares[i].add_theme_stylebox_override("panel", _make_combo_square_style(color))
+	_desc_combo_mult_label.text = "x%.1f" % float(info.get("mult", 1.0))
+	_desc_combo_row.visible = true
+	_desc_panel.visible = true
+
+
+func _on_combo_row_hover_exit() -> void:
+	_desc_panel.visible = false
+	_desc_combo_row.visible = false
 
 
 func _on_hands_changed(_remaining: int) -> void:
@@ -1159,7 +1232,7 @@ func _get_tutorial_highlight_target() -> Variant:
 		TutorialManager.STEP_INTRO_ROLL, TutorialManager.STEP_COMBAT_GOOD_LUCK: return _reroll_btn
 		TutorialManager.STEP_INTRO_HOLD: return _find_required_hold_targets()
 		TutorialManager.STEP_INTRO_REROLL: return _reroll_btn
-		TutorialManager.STEP_INTRO_FINISH: return _end_turn_btn
+		TutorialManager.STEP_INTRO_FINISH: return [_turn_pill, _end_turn_btn]
 		TutorialManager.STEP_INTRO_WIN: return _result_next_btn
 		TutorialManager.STEP_INTRO_WELCOME:
 			var targets: Array[Control] = [_title_bar_vbox, _score_bar_container]
@@ -1305,19 +1378,10 @@ func _find_required_hold_targets() -> Array[Control]:
 	return targets
 
 
-func _get_combo_priority_color(priority: int) -> Color:
-	match priority:
-		0, 1:
-			return Color("888888")
-		2, 3:
-			return Color("ff6b4a")
-		4, 5:
-			return BLUE
-		6, 7:
-			return GOLD
-		8:
-			return PINK
-	return Color.WHITE
+func _get_combo_display_color(combo_type: String) -> Color:
+	if _probability_panel_ui == null or String(combo_type).is_empty():
+		return Color.WHITE
+	return _probability_panel_ui.get_combo_color(combo_type)
 
 
 func _on_retry_tutorial_pressed() -> void:

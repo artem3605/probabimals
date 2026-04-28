@@ -5,25 +5,28 @@ extends PanelContainer
 ## breakdown. The bottom grid shows every combo's odds in three columns.
 ## See Figma: Probabimals – Combat Screen Redesign, node 28:909 (ScorePanel).
 
-const RAIL_WIDTH := 978
-const RAIL_HEIGHT := 180
+signal combo_row_hover_entered(combo_type: String)
+signal combo_row_hover_exited()
+
+const RAIL_WIDTH := 700
+const RAIL_HEIGHT := 150
 const RAIL_BORDER_WIDTH := 0
-const RAIL_PAD_TOP := 18
-const RAIL_PAD_BOTTOM := 20
-const RAIL_PAD_H := 24
+const RAIL_PAD_TOP := 12
+const RAIL_PAD_BOTTOM := 14
+const RAIL_PAD_H := 16
 const RAIL_SHADOW_OFFSET := Vector2(6, 6)
 
-const SCORE_HEADER_HEIGHT := 48
+const SCORE_HEADER_HEIGHT := 40
 const SCORE_COMBO_NAME_WIDTH := 240
 const SCORE_COMBO_NAME_FONT_SIZE := 16
 const SCORE_VALUE_IDLE_FONT_SIZE := 18
 const SCORE_VALUE_PREVIEW_FONT_SIZE := 28
 const SCORE_PTS_FONT_SIZE := 16
-const SCORE_BREAKDOWN_WIDTH := 240
+const SCORE_BREAKDOWN_WIDTH := 260
 const SCORE_BREAKDOWN_FONT_SIZE := 14
 const SCORE_PTS_SEPARATION := 6
 
-const CONTENT_SEPARATION := 12
+const CONTENT_SEPARATION := 8
 const BODY_COLUMN_GAP := 10
 const BODY_ROW_SEPARATION := 4
 
@@ -34,34 +37,25 @@ const ROW_V_PADDING := 3
 const ROW_GAP := 5
 const ROW_FONT_SIZE := 9
 const ROW_NAME_WIDTH := 128
-const ROW_MULT_WIDTH := 44
-const ROW_BAR_WIDTH := 18
-const ROW_BAR_HEIGHT := 4
-const ROW_PCT_WIDTH := 36
-const PATTERN_SQUARE := 7
-const PATTERN_BORDER := 1
-const PATTERN_GAP := 1
+const ROW_PCT_WIDTH := 56
 
 const RAIL_BG := Color("bfeeff")
 const RAIL_BORDER := Color("1a1a1a")
 const RAIL_SHADOW := Color(0, 0, 0, 0.55)
 const HEADER_COLOR := Color("1a1a1a")
-const BAR_TRACK := Color("333333")
-const BAR_MUTED_FILL := Color("666666")
 
 const GREY := Color("888888")
-const ORANGE := Color("ff6b4a")
 const BLUE := Color("4a9eff")
-const GOLD := Color("ffd700")
 const PINK := Color("ff69b4")
-const GREEN := Color("9acd32")
+const ORANGE := Color("ff8c33")
 
 const HIGHLIGHT_BG := Color(0.29, 0.62, 1.0, 0.22)
 const HIGHLIGHT_BORDER := Color("4a9eff")
 const HIGHLIGHT_NAME := Color("ffffff")
 
-const PCT_LOW_MAX := 0.20
-const PCT_MID_MAX := 0.50
+const PCT_GRADIENT_LOW := Color("b8c4cc")
+const PCT_GRADIENT_HIGH := Color("000000")
+const PCT_NULL_COLOR := Color("b8c4cc")
 
 var _pixel_font: Font
 var _combo_rules: Array = []
@@ -200,6 +194,24 @@ func get_row_count() -> int:
 	return _row_entries.size()
 
 
+func get_combo_color(combo_type: String) -> Color:
+	for entry in _row_entries:
+		if entry["type"] == combo_type:
+			return entry["column_color"]
+	return HEADER_COLOR
+
+
+func get_combo_row_info(combo_type: String) -> Dictionary:
+	for entry in _row_entries:
+		if entry["type"] == combo_type:
+			return {
+				"name": entry["name"],
+				"mult": entry["mult"],
+				"pattern_colors": entry["pattern_colors"],
+			}
+	return {}
+
+
 func get_display_snapshot() -> Dictionary:
 	var snapshot := {}
 	for entry in _row_entries:
@@ -305,17 +317,17 @@ func _build_body(parent: VBoxContainer) -> void:
 			var combo_index := col * column_size + row_index
 			if combo_index >= _combo_rules.size():
 				break
-			var row_entry := _build_row(_combo_rules[combo_index])
+			var row_entry := _build_row(_combo_rules[combo_index], col)
 			column.add_child(row_entry["panel"])
 			_row_entries.append(row_entry)
 
 
-func _build_row(combo: Dictionary) -> Dictionary:
+func _build_row(combo: Dictionary, column_index: int = 0) -> Dictionary:
 	var combo_type: String = combo.get("type", "")
 	var combo_name: String = str(combo.get("name", combo_type)).to_upper()
-	var priority: int = int(combo.get("priority", 0))
 	var mult: float = float(combo.get("combo_mult", 1.0))
-	var priority_color := _priority_color(priority)
+	var priority_color := _column_color(column_index)
+	var pattern_colors := _get_pattern_colors(combo_type)
 
 	var default_style := _build_row_style(Color(0, 0, 0, 0), Color(0, 0, 0, 0))
 
@@ -323,8 +335,10 @@ func _build_row(combo: Dictionary) -> Dictionary:
 	panel.name = "ProbabilityRow_%s" % combo_type
 	panel.custom_minimum_size = Vector2(0, ROW_HEIGHT)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel", default_style)
+	panel.mouse_entered.connect(func(): combo_row_hover_entered.emit(combo_type))
+	panel.mouse_exited.connect(func(): combo_row_hover_exited.emit())
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", ROW_GAP)
@@ -338,42 +352,7 @@ func _build_row(combo: Dictionary) -> Dictionary:
 	name_label.clip_text = true
 	row.add_child(name_label)
 
-	var pattern_row := HBoxContainer.new()
-	pattern_row.add_theme_constant_override("separation", PATTERN_GAP)
-	pattern_row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	pattern_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	pattern_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(pattern_row)
-
-	var pattern_colors := _get_pattern_colors(combo_type)
-	for color in pattern_colors:
-		var square := PanelContainer.new()
-		square.custom_minimum_size = Vector2(PATTERN_SQUARE, PATTERN_SQUARE)
-		square.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		square.add_theme_stylebox_override("panel", _build_square_style(color))
-		pattern_row.add_child(square)
-
-	var mult_label := _make_label("x%.1f" % mult, ROW_FONT_SIZE, priority_color)
-	mult_label.custom_minimum_size = Vector2(ROW_MULT_WIDTH, 0)
-	mult_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	mult_label.clip_text = true
-	row.add_child(mult_label)
-
-	var bar_wrapper := PanelContainer.new()
-	bar_wrapper.custom_minimum_size = Vector2(ROW_BAR_WIDTH, ROW_BAR_HEIGHT)
-	bar_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar_wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar_wrapper.clip_contents = true
-	bar_wrapper.add_theme_stylebox_override("panel", _build_bar_track_style())
-	row.add_child(bar_wrapper)
-
-	var bar_fill := ColorRect.new()
-	bar_fill.color = BAR_MUTED_FILL
-	bar_fill.custom_minimum_size = Vector2(0, ROW_BAR_HEIGHT)
-	bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bar_wrapper.add_child(bar_fill)
-
-	var pct_label := _make_label("--", ROW_FONT_SIZE, GREY)
+	var pct_label := _make_label("--", ROW_FONT_SIZE, PCT_NULL_COLOR)
 	pct_label.custom_minimum_size = Vector2(ROW_PCT_WIDTH, 0)
 	pct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	pct_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -383,12 +362,13 @@ func _build_row(combo: Dictionary) -> Dictionary:
 	return {
 		"panel": panel,
 		"type": combo_type,
+		"name": combo_name,
+		"mult": mult,
+		"pattern_colors": pattern_colors,
 		"name_label": name_label,
-		"mult_label": mult_label,
-		"bar_wrapper": bar_wrapper,
-		"bar_fill": bar_fill,
 		"pct_label": pct_label,
 		"priority_color": priority_color,
+		"column_color": priority_color,
 		"default_style": default_style,
 	}
 
@@ -397,8 +377,6 @@ func _refresh_rows(snapshot: Dictionary) -> void:
 	for entry in _row_entries:
 		var combo_type: String = entry["type"]
 		var pct_label: Label = entry["pct_label"]
-		var bar_fill: ColorRect = entry["bar_fill"]
-		var bar_wrapper: PanelContainer = entry["bar_wrapper"]
 
 		var probability_value: Variant = null
 		if snapshot.has(combo_type):
@@ -406,14 +384,6 @@ func _refresh_rows(snapshot: Dictionary) -> void:
 
 		pct_label.text = _format_pct(probability_value)
 		pct_label.add_theme_color_override("font_color", _pct_color(probability_value))
-
-		var fill_color := _bar_fill_color(probability_value)
-		bar_fill.color = fill_color
-		var track_width := maxf(bar_wrapper.size.x, ROW_BAR_WIDTH)
-		var pct := 0.0
-		if probability_value != null:
-			pct = clampf(float(probability_value), 0.0, 1.0)
-		bar_fill.size = Vector2(track_width * pct, ROW_BAR_HEIGHT)
 
 	_apply_row_styles()
 
@@ -427,10 +397,9 @@ func _apply_row_styles() -> void:
 				"panel",
 				_build_row_style(HIGHLIGHT_BG, HIGHLIGHT_BORDER)
 			)
-			name_label.add_theme_color_override("font_color", HIGHLIGHT_NAME)
 		else:
 			panel.add_theme_stylebox_override("panel", entry["default_style"])
-			name_label.add_theme_color_override("font_color", entry["priority_color"])
+		name_label.add_theme_color_override("font_color", entry["priority_color"])
 
 
 # -- Formatting helpers ------------------------------------------------------
@@ -448,38 +417,20 @@ func _format_pct(probability_value: Variant) -> String:
 
 func _pct_color(probability_value: Variant) -> Color:
 	if probability_value == null:
-		return GREY
+		return PCT_NULL_COLOR
 	var pct := clampf(float(probability_value), 0.0, 1.0)
-	if pct <= PCT_LOW_MAX:
-		return GREY
-	if pct <= PCT_MID_MAX:
-		return GOLD
-	return GREEN
+	var t := clampf(pct / 0.5, 0.0, 1.0)
+	return PCT_GRADIENT_LOW.lerp(PCT_GRADIENT_HIGH, t)
 
 
-func _bar_fill_color(probability_value: Variant) -> Color:
-	if probability_value == null:
-		return BAR_MUTED_FILL
-	var pct := clampf(float(probability_value), 0.0, 1.0)
-	if pct <= PCT_LOW_MAX:
-		return BAR_MUTED_FILL
-	if pct <= PCT_MID_MAX:
-		return GOLD
-	return GREEN
-
-
-func _priority_color(priority: int) -> Color:
-	match priority:
-		0, 1:
-			return GREY
-		2, 3:
-			return ORANGE
-		4, 5:
-			return BLUE
-		6, 7:
-			return GOLD
-		8:
+func _column_color(column_index: int) -> Color:
+	match column_index:
+		0:
 			return PINK
+		1:
+			return BLUE
+		2:
+			return ORANGE
 	return HEADER_COLOR
 
 
@@ -521,23 +472,6 @@ func _build_row_style(bg: Color, border: Color) -> StyleBoxFlat:
 	sb.content_margin_right = ROW_H_PADDING
 	sb.content_margin_top = ROW_V_PADDING
 	sb.content_margin_bottom = ROW_V_PADDING
-	return sb
-
-
-func _build_square_style(color: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = color
-	sb.border_color = RAIL_BORDER
-	sb.set_border_width_all(PATTERN_BORDER)
-	sb.set_corner_radius_all(0)
-	return sb
-
-
-func _build_bar_track_style() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = BAR_TRACK
-	sb.set_corner_radius_all(0)
-	sb.set_content_margin_all(0)
 	return sb
 
 
