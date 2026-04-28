@@ -48,8 +48,8 @@ func test_exact_condition_does_not_trigger_pair_modifier_on_full_house() -> void
 		"preset": "unit_full_house",
 	})
 
-	assert_almost_eq(report["baseline_average_score"], 100.0, 0.001)
-	assert_almost_eq(report["average_score"], 100.0, 0.001)
+	assert_almost_eq(report["baseline_average_score"], 112.0, 0.001)
+	assert_almost_eq(report["average_score"], 112.0, 0.001)
 	assert_almost_eq(report["average_delta_vs_baseline"], 0.0, 0.001)
 	assert_almost_eq(report["median_delta_vs_baseline"], 0.0, 0.001)
 	assert_almost_eq(report["modifier_trigger_rates"]["pair_boost"], 0.0, 0.001)

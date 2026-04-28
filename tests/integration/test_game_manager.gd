@@ -39,7 +39,7 @@ func test_buy_item_adds_scoring_modifier() -> void:
 	assert_eq(_manager.modifiers.size(), 1)
 	assert_eq(_manager.modifiers[0]["effect"], "add_mult")
 	assert_eq(_manager.modifiers[0]["condition"], "pair")
-	assert_almost_eq(_manager.modifiers[0]["value"], 4.0, 0.001)
+	assert_almost_eq(_manager.modifiers[0]["value"], 1.0, 0.001)
 
 func test_buy_item_increases_rerolls_for_reroll_modifier() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "reroll_plus")

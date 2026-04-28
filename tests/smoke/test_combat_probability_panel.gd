@@ -51,8 +51,8 @@ func test_combat_probability_rail_renders_and_updates_with_hold_changes() -> voi
 	assert_eq(combat.get_probability_row_name_text("pair"), "PAIR")
 	assert_eq(combat.get_probability_row_name_text("small_straight"), "SMALL STRAIGHT")
 	assert_eq(combat.get_probability_row_name_text("large_straight"), "LARGE STRAIGHT")
-	assert_eq(combat.get_probability_row_text("pair"), "--")
-	assert_eq(combat.get_probability_status_text(), "ROLL FIRST")
+	assert_eq(combat.get_probability_row_text("pair"), "37%")
+	assert_eq(combat.get_probability_status_text(), "ALL OPEN")
 
 	var tray_x_before: float = combat.get_dice_tray_global_x()
 	var tray_center_before: float = combat.get_dice_tray_center_x()

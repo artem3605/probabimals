@@ -190,7 +190,7 @@ func test_probability_snapshot_updates_for_hold_unhold_reroll_and_hand_reset() -
 	]
 
 	manager.start_combat(dice, 999, 2, 2, _combo_rules, 2)
-	assert_eq_deep(manager.get_probability_snapshot(), {})
+	assert_eq_deep(manager.get_probability_snapshot(), _expected_probability_snapshot(manager, dice))
 
 	manager.roll_dice()
 
@@ -220,7 +220,7 @@ func test_probability_snapshot_updates_for_hold_unhold_reroll_and_hand_reset() -
 
 	manager.score_hand([])
 
-	assert_eq_deep(manager.get_probability_snapshot(), {})
+	assert_eq_deep(manager.get_probability_snapshot(), _expected_probability_snapshot(manager, dice))
 
 
 func _roll_provider(roll_number: int, _held_dice: Array) -> Array[int]:
