@@ -8,6 +8,13 @@ signal card_hover_exited
 const DARK := Color("1a1a1a")
 const GOLD := Color("ffd700")
 const BORDER_BLACK := Color("000000")
+const RARITY_COMMON := "common"
+const RARITY_UNCOMMON := "uncommon"
+const RARITY_RARE := "rare"
+const RARITY_COMMON_COLOR := Color("000000")
+const RARITY_UNCOMMON_COLOR := Color("8ec3ff")
+const RARITY_RARE_COLOR := Color("ffd700")
+const RARITY_RARE_ALT_COLOR := Color("ff69b4")
 
 const DIE_COLORS := {
 	"colorless": Color.WHITE,
@@ -59,6 +66,9 @@ var _accent_active: bool = false
 var _accent_color: Color = GOLD
 var _is_selected: bool = false
 var _is_framed: bool = false
+var _rarity: String = RARITY_COMMON
+var _rarity_animation_active: bool = false
+var _rarity_phase: float = 0.0
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
@@ -67,7 +77,8 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	var vals := die.get_face_values()
 	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
 	hover_name = die.die_name
-	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
+	hover_description = _with_rarity_line("%s\nFaces: (%s)" % [die.description, faces_str], die.rarity)
+	_set_rarity(die.rarity)
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	_setup_card(card_color, "", pixel_font)
 
@@ -87,6 +98,13 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	name_label.custom_minimum_size = ITEM_CARD_NAME_MIN_SIZE
 	bottom_control = name_label
 	_vbox.add_child(bottom_control)
+
+
+func _process(delta: float) -> void:
+	if not _rarity_animation_active:
+		return
+	_rarity_phase = fmod(_rarity_phase + delta, TAU)
+	_refresh_button_frame()
 
 
 func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
@@ -137,6 +155,10 @@ func set_accent(accented: bool, accent_color: Color = GOLD) -> void:
 
 func is_accented() -> bool:
 	return _accent_active
+
+
+func is_rarity_animation_active() -> bool:
+	return _rarity_animation_active
 
 func setup_frame() -> void:
 	_is_framed = true
@@ -258,15 +280,70 @@ func _get_text_color(bg: Color) -> Color:
 	return Color.WHITE
 
 
+func _set_rarity(rarity: String) -> void:
+	_rarity = _normalize_rarity(rarity)
+	_rarity_animation_active = true
+	set_process(true)
+	_refresh_button_frame()
+
+
+func _with_rarity_line(description: String, rarity: String) -> String:
+	var rarity_line := "RARITY: %s" % _normalize_rarity(rarity).to_upper()
+	var trimmed := description.strip_edges()
+	if trimmed.is_empty():
+		return rarity_line
+	return "%s\n%s" % [trimmed, rarity_line]
+
+
+func _normalize_rarity(rarity: String) -> String:
+	var normalized := rarity.to_lower().strip_edges()
+	match normalized:
+		RARITY_UNCOMMON, RARITY_RARE:
+			return normalized
+	return RARITY_COMMON
+
+
+func _rarity_pulse() -> float:
+	return (sin(_rarity_phase * 3.0) + 1.0) * 0.5
+
+
+func _rarity_border_width() -> int:
+	match _rarity:
+		RARITY_UNCOMMON:
+			return 3
+		RARITY_RARE:
+			return 4
+	return 1
+
+
+func _rarity_border_color() -> Color:
+	var pulse := _rarity_pulse()
+	match _rarity:
+		RARITY_COMMON:
+			return RARITY_COMMON_COLOR
+		RARITY_UNCOMMON:
+			return RARITY_UNCOMMON_COLOR.lerp(Color.WHITE, pulse * 0.25)
+		RARITY_RARE:
+			return RARITY_RARE_COLOR.lerp(RARITY_RARE_ALT_COLOR, pulse)
+	return RARITY_COMMON_COLOR
+
+
 func _refresh_button_frame() -> void:
 	if main_button == null:
 		return
 	if _is_framed:
-		var frame_border_width := 4 if _accent_active else 0
-		var frame_border := _accent_color if _accent_active else FRAME_BG
+		var frame_border_width := 0
+		var frame_border := FRAME_BG
+		if _accent_active:
+			frame_border_width = 4
+			frame_border = _accent_color
+		elif _rarity_animation_active:
+			frame_border_width = _rarity_border_width()
+			frame_border = _rarity_border_color()
 		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, ITEM_CARD_FRAME_MARGIN))
 
-	var border := GOLD if _is_selected else (_accent_color if _accent_active else BORDER_BLACK)
+	var rarity_border := _rarity_border_color() if _rarity_animation_active else BORDER_BLACK
+	var border := GOLD if _is_selected else (_accent_color if _accent_active else rarity_border)
 	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	if _is_framed:
 		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))

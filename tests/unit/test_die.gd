@@ -9,6 +9,7 @@ func test_from_values_creates_die_with_faces_and_metadata() -> void:
 	assert_eq(die.color, "red")
 	assert_eq(die.die_name, "Loaded Die")
 	assert_eq(die.description, "High-roll bias")
+	assert_eq(die.get("rarity"), "common")
 
 func test_swap_face_uses_a_copy_of_the_supplied_face() -> void:
 	var die := Die.new()
@@ -37,6 +38,7 @@ func test_duplicate_die_creates_deep_copy() -> void:
 		TestData.face("wild", 0, DiceFace.Type.WILD),
 		TestData.basic_face(4),
 	], "blue", "Chaos Die", "Test description")
+	die.set("rarity", "rare")
 	var duplicate := die.duplicate_die()
 
 	duplicate.swap_face(0, TestData.basic_face(6))
@@ -45,3 +47,4 @@ func test_duplicate_die_creates_deep_copy() -> void:
 	assert_eq_deep(duplicate.get_face_values(), [6, 6, 2, 1, 0, 4])
 	assert_eq(die.color, duplicate.color)
 	assert_eq(die.die_name, duplicate.die_name)
+	assert_eq(duplicate.get("rarity"), "rare")

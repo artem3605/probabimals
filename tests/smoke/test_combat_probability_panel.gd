@@ -148,6 +148,49 @@ func test_large_straight_row_name_has_enough_width_for_text() -> void:
 
 	assert_true(name_label.custom_minimum_size.x >= required_width)
 
+func test_x_mult_score_breakdown_uses_compact_two_line_layout() -> void:
+	GameManager.modifiers = [TestData.modifier("x_mult", 4.0, "always", "test_x_mult", "Test X Mult")]
+	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
+	var combat = scene["combat"]
+
+	combat.combat_mgr.roll_dice()
+	await wait_process_frames(1)
+
+	var label: Label = combat._score_breakdown_label
+	assert_eq(label.text, "17 SUM x2 MULT\nx4 X_MULT")
+
+	var slot: Control = combat._probability_panel_ui.find_child("ScoreBreakdownSlot", true, false)
+	assert_not_null(slot)
+	if slot == null:
+		return
+	var font: Font = label.get_theme_font("font")
+	var font_size: int = label.get_theme_font_size("font_size")
+	for line in label.text.split("\n"):
+		var required_width: float = ceil(font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) + 1.0
+		assert_true(required_width <= slot.custom_minimum_size.x)
+
+func test_combat_multiplier_formatter_hides_zero_decimal_for_integers() -> void:
+	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
+	var combat = scene["combat"]
+
+	assert_eq(combat._format_tutorial_factor(2.0), "2")
+	assert_eq(combat._format_tutorial_factor(15.0), "15")
+	assert_eq(combat._format_tutorial_factor(2.5), "2.5")
+
+func test_combo_hover_multiplier_includes_owned_scoring_modifiers() -> void:
+	GameManager.modifiers = [
+		TestData.modifier("add_mult", 1.0, "pair", "pair_boost", "Pair Boost"),
+		TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter"),
+		TestData.modifier("bonus", 7.0, "always", "golden_sum", "Golden Sum"),
+	]
+	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
+	var combat = scene["combat"]
+
+	combat._on_combo_row_hover_enter("pair")
+	assert_eq(combat._desc_combo_mult_label.text, "x3")
+
+	combat._on_combo_row_hover_enter("yahtzee")
+	assert_eq(combat._desc_combo_mult_label.text, "x45")
 
 func _spawn_combat_scene(view_size: Vector2) -> Dictionary:
 	var root := Control.new()

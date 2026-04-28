@@ -7,13 +7,14 @@ const APP_VERSION_SETTING := "application/config/version"
 const DEFAULT_APP_VERSION := "v0.0.0"
 const SAVE_FORMAT_VERSION := 1
 const PLAYTEST_SURVEY_URL_SETTING := "playtest/survey_url"
+const STARTING_COINS: int = 10
 
 signal phase_changed(new_phase: Phase)
 signal coins_changed(new_amount: int)
 signal score_changed(new_score: int)
 
 var current_phase: Phase = Phase.MAIN_MENU
-var coins: int = 50
+var coins: int = STARTING_COINS
 var dice_bag: DiceBag = DiceBag.new()
 var modifiers: Array = []
 var total_score: int = 0
@@ -66,6 +67,14 @@ func start_tutorial_replay() -> void:
 	_change_phase(Phase.COMBAT)
 
 
+func skip_active_tutorial() -> void:
+	if not TutorialManager.is_active():
+		return
+	_reset_run_state()
+	TutorialManager.complete_tutorial()
+	_change_phase(Phase.FLEA_MARKET)
+
+
 func _setup_intro_combat() -> void:
 	current_round = 0
 	target_score = 60
@@ -76,7 +85,7 @@ func _setup_intro_combat() -> void:
 
 
 func _reset_run_state() -> void:
-	coins = 50
+	coins = STARTING_COINS
 	total_score = 0
 	current_round = 1
 	target_score = BASE_TARGET
@@ -102,13 +111,14 @@ func buy_item(item: Dictionary) -> bool:
 			var die_color: String = params.get("color", "colorless")
 			var die_name_str: String = item.get("name", "Basic Die")
 			var die_desc: String = item.get("description", "A standard six-sided die")
+			var die_rarity: String = item.get("rarity", "common")
 			if params.has("faces"):
 				var int_faces: Array[int] = []
 				for f in params["faces"]:
 					int_faces.append(int(f))
-				dice_bag.add_die(Die.from_values(int_faces, die_color, die_name_str, die_desc))
+				dice_bag.add_die(Die.from_values(int_faces, die_color, die_name_str, die_desc, die_rarity))
 			else:
-				dice_bag.add_die(Die.new([], die_color, die_name_str, die_desc))
+				dice_bag.add_die(Die.new([], die_color, die_name_str, die_desc, die_rarity))
 		"face":
 			pass
 		"modifier":
@@ -123,6 +133,7 @@ func buy_item(item: Dictionary) -> bool:
 					"effect": effect,
 					"value": params.get("value", 1.0),
 					"condition": params.get("condition", ""),
+					"rarity": item.get("rarity", "common"),
 				}
 				modifiers.append(mod)
 	return true
@@ -267,7 +278,7 @@ func apply_save_data(data: Dictionary) -> Phase:
 
 
 func _apply_normalized_save_data(data: Dictionary) -> Phase:
-	coins = int(data.get("coins", 50))
+	coins = int(data.get("coins", STARTING_COINS))
 	total_score = int(data.get("total_score", 0))
 	target_score = int(data.get("target_score", 150))
 	hands_per_round = int(data.get("hands_per_round", 4))
@@ -403,6 +414,7 @@ func _serialize_die(die: Die) -> Dictionary:
 		"color": die.color,
 		"name": die.die_name,
 		"description": die.description,
+		"rarity": die.rarity,
 	}
 
 
@@ -445,7 +457,8 @@ func _deserialize_die(raw_die: Dictionary) -> Die:
 			die_faces.append(DiceFace.make_basic(int(f)))
 	var die_name_str: String = str(raw_die.get("name", "Basic Die"))
 	var die_desc: String = str(raw_die.get("description", "A standard six-sided die"))
-	return Die.new(die_faces, str(raw_die.get("color", "colorless")), die_name_str, die_desc)
+	var die_rarity: String = str(raw_die.get("rarity", "common"))
+	return Die.new(die_faces, str(raw_die.get("color", "colorless")), die_name_str, die_desc, die_rarity)
 
 
 func _deserialize_face(raw_face: Dictionary) -> DiceFace:

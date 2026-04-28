@@ -38,6 +38,45 @@
     }
   },
   {
+    "id": "extra_1",
+    "name": "Extra One",
+    "description": "Replace a face with an extra 1",
+    "category": "face",
+    "rarity": "common",
+    "shop_weight": 4,
+    "cost": 2,
+    "params": {
+      "face_id": "extra_1",
+      "value": 1
+    }
+  },
+  {
+    "id": "extra_2",
+    "name": "Extra Two",
+    "description": "Replace a face with an extra 2",
+    "category": "face",
+    "rarity": "common",
+    "shop_weight": 4,
+    "cost": 3,
+    "params": {
+      "face_id": "extra_2",
+      "value": 2
+    }
+  },
+  {
+    "id": "extra_3",
+    "name": "Extra Three",
+    "description": "Replace a face with an extra 3",
+    "category": "face",
+    "rarity": "common",
+    "shop_weight": 3,
+    "cost": 4,
+    "params": {
+      "face_id": "extra_3",
+      "value": 3
+    }
+  },
+  {
     "id": "extra_6",
     "name": "Extra Six",
     "description": "Replace a face with an extra 6",
@@ -141,6 +180,48 @@
     "params": {
       "effect": "add_rerolls",
       "value": 1
+    }
+  },
+  {
+    "id": "steady_sum",
+    "name": "Steady Sum",
+    "description": "+2 sum every hand",
+    "category": "modifier",
+    "rarity": "common",
+    "shop_weight": 7,
+    "cost": 12,
+    "params": {
+      "effect": "bonus",
+      "condition": "always",
+      "value": 2.0
+    }
+  },
+  {
+    "id": "solid_sum",
+    "name": "Solid Sum",
+    "description": "+4 sum every hand",
+    "category": "modifier",
+    "rarity": "uncommon",
+    "shop_weight": 5,
+    "cost": 22,
+    "params": {
+      "effect": "bonus",
+      "condition": "always",
+      "value": 4.0
+    }
+  },
+  {
+    "id": "golden_sum",
+    "name": "Golden Sum",
+    "description": "+7 sum every hand",
+    "category": "modifier",
+    "rarity": "rare",
+    "shop_weight": 2,
+    "cost": 36,
+    "params": {
+      "effect": "bonus",
+      "condition": "always",
+      "value": 7.0
     }
   },
   {

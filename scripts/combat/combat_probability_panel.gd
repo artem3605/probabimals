@@ -288,6 +288,7 @@ func _build_score_header(parent: VBoxContainer) -> void:
 	_score_breakdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_score_breakdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_score_breakdown_label.clip_text = true
+	_score_breakdown_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	breakdown_slot.add_child(_score_breakdown_label)
 
 
