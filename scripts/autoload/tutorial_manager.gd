@@ -50,6 +50,8 @@ const OVERLAY_STYLE := {
 	"panel_anchor": Vector2(0.0, 1.0),
 	"next_btn_size": Vector2(164, 52),
 	"next_btn_font_size": 14,
+	"skip_btn_size": Vector2(220, 52),
+	"skip_btn_font_size": 10,
 }
 
 const STEP_TEXT := {
@@ -57,6 +59,8 @@ const STEP_TEXT := {
 		"title": "WELCOME!",
 		"body": "In this game you will roll dice! Your goal this round: score 60 points. See the target there? Let's go!",
 		"show_next": true,
+		"show_skip": true,
+		"skip_text": "SKIP TUTORIAL",
 		"panel_width": 560,
 		"panel_anchor": Vector2(0.5, 0.5),
 	},

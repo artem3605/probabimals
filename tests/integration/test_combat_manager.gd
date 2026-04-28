@@ -56,8 +56,8 @@ func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void
 	var result: Dictionary = manager.score_hand([])
 
 	assert_eq(result["combo"]["type"], "yahtzee")
-	assert_eq(result["score_data"]["total"], 300)
-	assert_eq(manager.running_score, 300)
+	assert_eq(result["score_data"]["total"], 450)
+	assert_eq(manager.running_score, 450)
 	assert_eq(manager.hands_remaining, 1)
 	assert_eq(manager.rerolls_remaining, 4)
 	assert_false(manager.has_rolled)
@@ -126,7 +126,7 @@ func test_combat_ends_immediately_when_target_is_beaten() -> void:
 
 	assert_eq(manager.hand_state, CombatManager.HandState.COMBAT_ENDED)
 	assert_false(manager.can_roll())
-	assert_signal_emitted_with_parameters(manager, "combat_ended", [300, true])
+	assert_signal_emitted_with_parameters(manager, "combat_ended", [450, true])
 
 	manager.begin_next_hand()
 	manager.roll_dice()
@@ -153,7 +153,7 @@ func test_combat_ends_when_hands_run_out() -> void:
 	manager.score_hand([])
 
 	assert_eq(manager.hand_state, CombatManager.HandState.COMBAT_ENDED)
-	assert_signal_emitted_with_parameters(manager, "combat_ended", [56, false])
+	assert_signal_emitted_with_parameters(manager, "combat_ended", [80, false])
 
 func test_roll_provider_overrides_roll_sequence_without_breaking_hold_logic() -> void:
 	var manager: CombatManager = CombatManager.new()

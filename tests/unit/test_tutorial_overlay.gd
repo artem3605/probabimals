@@ -43,3 +43,31 @@ func test_overlay_places_explanation_panel_outside_multi_target_highlights() -> 
 	var panel_rect := Rect2(overlay._panel.position, overlay._panel.size)
 
 	assert_false(panel_rect.intersects(highlight_bounds))
+
+func test_overlay_can_show_skip_tutorial_button() -> void:
+	var root := Control.new()
+	root.size = Vector2(960, 540)
+	add_child_autofree(root)
+
+	var overlay := TutorialOverlay.new()
+	root.add_child(overlay)
+	autoqfree(overlay)
+	overlay.size = root.size
+	overlay.setup(PIXEL_FONT)
+
+	watch_signals(overlay)
+	overlay.show_step("WELCOME!", "Intro text.", null, true, "NEXT", null, true, "SKIP TUTORIAL")
+	await wait_process_frames(2)
+
+	assert_true(overlay._skip_btn_wrapper.visible)
+	assert_eq(overlay._skip_btn.text, "SKIP TUTORIAL")
+
+	overlay._skip_btn.emit_signal("pressed")
+	await wait_process_frames(1)
+
+	assert_signal_emitted(overlay, "skip_pressed")
+
+	overlay.show_step("NEXT STEP", "No skip here.", null, true)
+	await wait_process_frames(1)
+
+	assert_false(overlay._skip_btn_wrapper.visible)

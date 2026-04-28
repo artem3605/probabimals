@@ -5,9 +5,11 @@ var faces: Array[DiceFace] = []
 var color: String = "colorless"
 var die_name: String = "Basic Die"
 var description: String = "A standard six-sided die"
+var rarity: String = "common"
 
 func _init(initial_faces: Variant = null, die_color: String = "colorless",
-		p_name: String = "Basic Die", p_description: String = "A standard six-sided die") -> void:
+		p_name: String = "Basic Die", p_description: String = "A standard six-sided die",
+		p_rarity: String = "common") -> void:
 	if initial_faces == null or (initial_faces is Array and initial_faces.is_empty()):
 		for v in [1, 2, 3, 4, 5, 6]:
 			faces.append(DiceFace.make_basic(v))
@@ -17,6 +19,7 @@ func _init(initial_faces: Variant = null, die_color: String = "colorless",
 	color = die_color
 	die_name = p_name
 	description = p_description
+	rarity = p_rarity
 
 func roll() -> DiceFace:
 	return faces[randi() % faces.size()]
@@ -43,11 +46,12 @@ func duplicate_die() -> Die:
 	var duped_faces: Array[DiceFace] = []
 	for f in faces:
 		duped_faces.append(f.duplicate_face())
-	return Die.new(duped_faces, color, die_name, description)
+	return Die.new(duped_faces, color, die_name, description, rarity)
 
 static func from_values(values: Array[int], die_color: String = "colorless",
-		p_name: String = "Basic Die", p_description: String = "A standard six-sided die") -> Die:
+		p_name: String = "Basic Die", p_description: String = "A standard six-sided die",
+		p_rarity: String = "common") -> Die:
 	var face_arr: Array[DiceFace] = []
 	for v in values:
 		face_arr.append(DiceFace.make_basic(v))
-	return Die.new(face_arr, die_color, p_name, p_description)
+	return Die.new(face_arr, die_color, p_name, p_description, p_rarity)

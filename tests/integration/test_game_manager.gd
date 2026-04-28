@@ -22,6 +22,7 @@ func after_each() -> void:
 func test_buy_item_adds_die_from_catalogue_entry() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "loaded_die")
 	var starting_size: int = _manager.dice_bag.size()
+	_manager.coins = 50
 
 	var success: bool = _manager.buy_item(item)
 	var bought_die: Die = _manager.dice_bag.get_die(_manager.dice_bag.size() - 1)
@@ -30,6 +31,7 @@ func test_buy_item_adds_die_from_catalogue_entry() -> void:
 	assert_eq(_manager.coins, 25)
 	assert_eq(_manager.dice_bag.size(), starting_size + 1)
 	assert_eq(bought_die.color, "red")
+	assert_eq(bought_die.get("rarity"), "rare")
 	assert_eq_deep(bought_die.get_face_values(), [1, 5, 5, 6, 6, 6])
 
 func test_buy_item_adds_scoring_modifier() -> void:
@@ -40,9 +42,11 @@ func test_buy_item_adds_scoring_modifier() -> void:
 	assert_eq(_manager.modifiers[0]["effect"], "add_mult")
 	assert_eq(_manager.modifiers[0]["condition"], "pair")
 	assert_almost_eq(_manager.modifiers[0]["value"], 1.0, 0.001)
+	assert_eq(_manager.modifiers[0]["rarity"], "common")
 
 func test_buy_item_increases_rerolls_for_reroll_modifier() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "reroll_plus")
+	_manager.coins = 50
 
 	assert_true(_manager.buy_item(item))
 	assert_eq(_manager.rerolls_per_hand, 4)
@@ -103,9 +107,11 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 		TestData.face("wild", 0, DiceFace.Type.WILD),
 		TestData.basic_face(4),
 	], "red", "Chaos Die", "Stateful test die"))
+	_manager.dice_bag.get_die(0).set("rarity", "rare")
 	_manager.modifiers = [
 		TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")
 	]
+	_manager.modifiers[0]["rarity"] = "rare"
 	var selected: Array[Die] = [_manager.dice_bag.get_die(0)]
 	_manager.selected_dice = selected
 	TutorialManager.start_replay()
@@ -134,8 +140,10 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	assert_eq(restored.dice_bag.size(), 1)
 	assert_eq(restored.selected_dice.size(), 1)
 	assert_eq(restored.dice_bag.get_die(0).color, "red")
+	assert_eq(restored.dice_bag.get_die(0).get("rarity"), "rare")
 	assert_eq(restored.dice_bag.get_die(0).get_face(1).id, "pip_6")
 	assert_eq(restored.dice_bag.get_die(0).get_face(2).face_type, DiceFace.Type.MULT)
+	assert_eq(restored.modifiers[0]["rarity"], "rare")
 	assert_eq(TutorialManager.mode, TutorialManager.MODE_REPLAY)
 	assert_eq(TutorialManager.checkpoint_scene, TutorialManager.SCENE_DICE_SELECT)
 	assert_eq_deep(restored.build_save_data(), data)
@@ -157,6 +165,28 @@ func test_start_tutorial_replay_resets_run_and_enters_intro_combat() -> void:
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WELCOME)
 	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.COMBAT])
+
+func test_skip_active_tutorial_completes_and_enters_normal_market_run() -> void:
+	_manager.current_phase = _manager.Phase.COMBAT
+	_manager.coins = 25
+	_manager.current_round = 0
+	_manager.target_score = 60
+	_manager.modifiers = [TestData.modifier("x_mult", 3.0, "yahtzee")]
+	var selected_dice: Array[Die] = [TestData.die_from_values([6, 6, 6, 6, 6])]
+	_manager.selected_dice = selected_dice
+	TutorialManager.start_first_run()
+
+	_manager.skip_active_tutorial()
+
+	assert_true(TutorialManager.completed)
+	assert_false(TutorialManager.is_active())
+	assert_eq(_manager.coins, 10)
+	assert_eq(_manager.current_round, 1)
+	assert_eq(_manager.target_score, _manager.BASE_TARGET)
+	assert_eq(_manager.modifiers.size(), 0)
+	assert_eq(_manager.dice_bag.size(), 5)
+	assert_eq(_manager.selected_dice.size(), 0)
+	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
 
 
 func test_apply_save_data_migrates_legacy_save_without_version() -> void:

@@ -3,6 +3,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 const CombatDice = preload("res://scripts/combat/combat_dice.gd")
 const CombatProbabilityPanelScript = preload("res://scripts/combat/combat_probability_panel.gd")
 const ComboRevealFxScript = preload("res://scripts/ui/combo_reveal_fx.gd")
+const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const COMBAT_CONTENT_SEPARATION := 32
 const COMBAT_TOP_BAR_SEPARATION := 16
@@ -19,6 +20,8 @@ const COMBAT_TOP_BAR_CLUSTER_MIN_WIDTH := 320
 const COMBAT_SCORE_LABEL_FONT_SIZE := 14
 const COMBAT_SCORE_VALUE_IDLE_FONT_SIZE := 18
 const COMBAT_SCORE_VALUE_PREVIEW_FONT_SIZE := 28
+const COMBAT_SCORE_BREAKDOWN_FONT_SIZE := 14
+const COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE := 11
 const COMBAT_SCORE_BAR_SEPARATION := 10
 const COMBAT_SCORE_BAR_TRACK_SIZE := Vector2(170, 20)
 const COMBAT_SCORE_BAR_FILL_OFFSET := Vector2(2, 2)
@@ -716,9 +719,18 @@ func _show_combo(combo: Dictionary) -> void:
 	_score_pts_suffix.visible = true
 
 	if x_mult > 1.0:
-		_score_breakdown_label.text = "%d SUM x%.1f MULT x%.1f" % [face_sum, mult, x_mult]
+		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE)
+		_score_breakdown_label.text = "%d SUM %s MULT\n%s X_MULT" % [
+			face_sum,
+			ScoreFormat.prefixed_multiplier(mult),
+			ScoreFormat.prefixed_multiplier(x_mult),
+		]
 	else:
-		_score_breakdown_label.text = "%d SUM x%.1f MULT" % [face_sum, mult]
+		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+		_score_breakdown_label.text = "%d SUM %s MULT" % [
+			face_sum,
+			ScoreFormat.prefixed_multiplier(mult),
+		]
 
 
 func _calculate_combo_preview(combo: Dictionary) -> Dictionary:
@@ -771,7 +783,7 @@ func _build_combo_tutorial_body() -> String:
 
 
 func _format_tutorial_factor(value: float) -> String:
-	return "%.1f" % value
+	return ScoreFormat.multiplier(value)
 
 
 # -- Signal handlers -----------------------------------------------------------
@@ -899,6 +911,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_score_value_label.text = "NO COMBO"
 		_score_pts_suffix.text = ""
 		_score_pts_suffix.visible = false
+		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 		_score_breakdown_label.text = ""
 
 	_update_rerolls_display()
@@ -1012,6 +1025,7 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 		_score_pts_suffix.text = "PTS"
 		_score_pts_suffix.visible = true
 		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
+		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 		_score_breakdown_label.text = ""
 		_update_score_bar()
 		_update_hand_display()
@@ -1040,6 +1054,7 @@ func _reset_for_next_hand() -> void:
 	_score_value_label.text = "ROLL!"
 	_score_pts_suffix.text = ""
 	_score_pts_suffix.visible = false
+	_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 	_score_breakdown_label.text = ""
 
 	for i in range(_current_values.size()):
@@ -1082,9 +1097,22 @@ func _on_combo_row_hover_enter(combo_type: String) -> void:
 	for i in range(_desc_combo_squares.size()):
 		var color: Color = pattern_colors[i] if i < pattern_colors.size() else Color.TRANSPARENT
 		_desc_combo_squares[i].add_theme_stylebox_override("panel", _make_combo_square_style(color))
-	_desc_combo_mult_label.text = "x%.1f" % float(info.get("mult", 1.0))
+	_desc_combo_mult_label.text = ScoreFormat.prefixed_multiplier(
+		_combo_hover_multiplier(combo_type, float(info.get("mult", 1.0)))
+	)
 	_desc_combo_row.visible = true
 	_desc_panel.visible = true
+
+
+func _combo_hover_multiplier(combo_type: String, base_mult: float) -> float:
+	var scorer: ScoringEngine = combat_mgr.scoring_engine if combat_mgr != null else ScoringEngine.new()
+	var score_data := scorer.calculate_score(
+		{"type": combo_type, "combo_mult": base_mult},
+		[],
+		[],
+		GameManager.modifiers
+	)
+	return float(score_data.get("mult", base_mult)) * float(score_data.get("x_mult", 1.0))
 
 
 func _on_combo_row_hover_exit() -> void:
@@ -1202,6 +1230,7 @@ func _build_tutorial_overlay() -> void:
 	add_child(_tutorial_overlay)
 	_tutorial_overlay.setup(_pixel_font)
 	_tutorial_overlay.next_pressed.connect(_on_tutorial_next_pressed)
+	_tutorial_overlay.skip_pressed.connect(_on_tutorial_skip_pressed)
 
 
 func _refresh_tutorial_ui() -> void:
@@ -1395,6 +1424,10 @@ func _on_tutorial_next_pressed() -> void:
 	match TutorialManager.step_id:
 		TutorialManager.STEP_INTRO_WELCOME, TutorialManager.STEP_INTRO_PAIR:
 			TutorialManager.report_action("advance_intro")
+
+
+func _on_tutorial_skip_pressed() -> void:
+	GameManager.skip_active_tutorial()
 
 
 func _on_tutorial_step_changed(_step: String) -> void:

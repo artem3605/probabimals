@@ -1,6 +1,7 @@
 extends Control
 
 signal next_pressed
+signal skip_pressed
 
 var _highlight_targets: Array[Control] = []
 var _avoid_targets: Array[Control] = []
@@ -8,7 +9,10 @@ var _panel: PanelContainer
 var _title_label: Label
 var _body_label: Label
 var _next_btn: Button
+var _skip_btn: Button
+var _button_box: VBoxContainer
 var _btn_wrapper: CenterContainer
+var _skip_btn_wrapper: CenterContainer
 var _font: Font
 var _step_panel_width: float = -1.0
 var _step_panel_anchor: Variant = null
@@ -55,26 +59,43 @@ func setup(pixel_font: Font) -> void:
 	_body_label.custom_minimum_size = Vector2(panel_width - content_margin * 2.0, 0)
 	text_vbox.add_child(_body_label)
 
+	_button_box = VBoxContainer.new()
+	_button_box.add_theme_constant_override("separation", 10)
+	_button_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	content_hbox.add_child(_button_box)
+
 	_btn_wrapper = CenterContainer.new()
 	_btn_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	content_hbox.add_child(_btn_wrapper)
+	_button_box.add_child(_btn_wrapper)
 
 	_next_btn = _make_green_button("NEXT", _s("next_btn_size"), _s("next_btn_font_size"))
 	_next_btn.pressed.connect(func(): next_pressed.emit())
 	_btn_wrapper.add_child(_next_btn)
 
+	_skip_btn_wrapper = CenterContainer.new()
+	_skip_btn_wrapper.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_button_box.add_child(_skip_btn_wrapper)
+
+	_skip_btn = _make_skip_button("SKIP TUTORIAL", _s("skip_btn_size"), _s("skip_btn_font_size"))
+	_skip_btn.pressed.connect(func(): skip_pressed.emit())
+	_skip_btn_wrapper.add_child(_skip_btn)
+
 	hide_overlay()
 
 
 func show_step(title: String, body: String, highlight_targets: Variant = null,
-		show_next: bool = false, next_text: String = "NEXT", avoid_targets: Variant = null) -> void:
+		show_next: bool = false, next_text: String = "NEXT", avoid_targets: Variant = null,
+		show_skip: bool = false, skip_text: String = "SKIP TUTORIAL") -> void:
 	visible = true
 	_highlight_targets = _normalize_targets(highlight_targets)
 	_avoid_targets = _normalize_targets(avoid_targets)
 	_title_label.text = title
 	_body_label.text = body
+	_button_box.visible = show_next or show_skip
 	_btn_wrapper.visible = show_next
 	_next_btn.text = next_text
+	_skip_btn_wrapper.visible = show_skip
+	_skip_btn.text = skip_text
 	_update_panel_layout()
 	queue_redraw()
 
@@ -90,6 +111,8 @@ func show_step_from_config(config: Dictionary, highlight_targets: Variant = null
 		config.get("show_next", false),
 		config.get("next_text", "NEXT"),
 		avoid_targets,
+		config.get("show_skip", false),
+		config.get("skip_text", "SKIP TUTORIAL"),
 	)
 
 
@@ -197,8 +220,9 @@ func _update_panel_layout() -> void:
 
 	var available_width := maxf(280.0, size.x - margin_l - margin_r)
 	var btn_space := 0.0
-	if _btn_wrapper.visible:
-		btn_space = _s("next_btn_size").x + 16.0
+	if _button_box.visible:
+		var button_width: float = maxf(_s("next_btn_size").x, _s("skip_btn_size").x)
+		btn_space = button_width + 16.0
 	var label_width := maxf(200.0, minf(panel_width - content_margin * 2.0 - btn_space, available_width - content_margin * 2.0 - btn_space))
 	_body_label.custom_minimum_size = Vector2(label_width, 0)
 	_body_label.size.x = label_width
@@ -317,6 +341,20 @@ func _make_green_button(text: String, min_size: Vector2, font_size: int) -> Butt
 	button.add_theme_stylebox_override("normal", _make_style(Color("9acd32"), Color("000000"), 4, 16))
 	button.add_theme_stylebox_override("hover", _make_style(Color("b5e067"), Color("000000"), 4, 16))
 	button.add_theme_stylebox_override("pressed", _make_style(Color("84a528"), Color("000000"), 4, 16))
+	button.add_theme_color_override("font_color", Color("1a1a1a"))
+	button.add_theme_color_override("font_hover_color", Color("1a1a1a"))
+	return button
+
+
+func _make_skip_button(text: String, min_size: Vector2, font_size: int) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = min_size
+	button.add_theme_font_override("font", _font)
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_stylebox_override("normal", _make_style(Color("f4f4f4"), Color("000000"), 4, 16))
+	button.add_theme_stylebox_override("hover", _make_style(Color.WHITE, Color("000000"), 4, 16))
+	button.add_theme_stylebox_override("pressed", _make_style(Color("d0d0d0"), Color("000000"), 4, 16))
 	button.add_theme_color_override("font_color", Color("1a1a1a"))
 	button.add_theme_color_override("font_hover_color", Color("1a1a1a"))
 	return button

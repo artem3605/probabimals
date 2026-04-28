@@ -9,6 +9,7 @@ const SHOP_PRICE_PANEL_BORDER_WIDTH := 3
 const SHOP_PRICE_PANEL_MARGIN := 4
 const SHOP_PRICE_ROW_SEPARATION := 4
 const SHOP_PRICE_FONT_SIZE := 12
+const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 
 var buy_button: Button
 
@@ -25,6 +26,8 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 		var face_vals: Array = params.get("faces", [1, 2, 3, 4, 5, 6])
 		var faces_str := ",".join(face_vals.map(func(f: Variant) -> String: return str(int(f))))
 		hover_description += "\nFaces: (%s)" % faces_str
+	hover_description = _with_rarity_line(hover_description, item.get("rarity", "common"))
+	_set_rarity(item.get("rarity", "common"))
 
 	var card_color := _get_item_color(item)
 	var label_text := _get_card_label(item)
@@ -125,6 +128,15 @@ func _get_card_label(item: Dictionary) -> String:
 			var val: int = item.get("params", {}).get("value", 0)
 			return str(val)
 		"modifier":
-			var val = item.get("params", {}).get("value", 2.0)
-			return "x%s" % str(int(val))
+			var params: Dictionary = item.get("params", {})
+			var val = params.get("value", 2.0)
+			match str(params.get("effect", "")):
+				"bonus":
+					return "+%d" % int(val)
+				"add_mult":
+					return "+%dM" % int(val)
+				"x_mult":
+					return ScoreFormat.prefixed_multiplier(float(val))
+				"add_rerolls":
+					return "+%dR" % int(val)
 	return "?"

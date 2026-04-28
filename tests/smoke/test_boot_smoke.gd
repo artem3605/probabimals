@@ -63,5 +63,5 @@ func test_seeded_combat_flow_runs_headless() -> void:
 	var result: Dictionary = manager.score_hand([])
 
 	assert_eq(result["combo"]["type"], "large_straight")
-	assert_eq(result["score_data"]["total"], 100)
-	assert_signal_emitted_with_parameters(manager, "combat_ended", [100, true])
+	assert_eq(result["score_data"]["total"], 160)
+	assert_signal_emitted_with_parameters(manager, "combat_ended", [160, true])

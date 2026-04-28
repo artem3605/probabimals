@@ -3,6 +3,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
 const ShopGeneratorScript = preload("res://scripts/shop/shop_generator.gd")
+const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := ShopGeneratorScript.DEFAULT_SHOP_SLOTS
@@ -566,7 +567,7 @@ func _show_face_picker(die_index: int) -> void:
 				DiceFace.Type.MULT:
 					effect_text = "+%dM" % int(face.effect_value)
 				DiceFace.Type.XMULT:
-					effect_text = "x%s" % str(face.effect_value)
+					effect_text = ScoreFormat.prefixed_multiplier(face.effect_value)
 				DiceFace.Type.WILD:
 					effect_text = "WILD"
 			var effect_label := Label.new()
@@ -688,6 +689,7 @@ func _build_tutorial_overlay() -> void:
 	add_child(_tutorial_overlay)
 	_tutorial_overlay.setup(_pixel_font)
 	_tutorial_overlay.next_pressed.connect(_on_tutorial_next_pressed)
+	_tutorial_overlay.skip_pressed.connect(_on_tutorial_skip_pressed)
 
 
 func _refresh_tutorial_ui() -> void:
@@ -742,6 +744,10 @@ func _on_tutorial_next_pressed() -> void:
 		TutorialManager.STEP_MARKET_SCORE,
 	]:
 		TutorialManager.report_action("advance_intro")
+
+
+func _on_tutorial_skip_pressed() -> void:
+	GameManager.skip_active_tutorial()
 
 
 func _on_tutorial_step_changed(_step: String) -> void:
