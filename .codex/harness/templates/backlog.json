@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": "pb-01",
+      "title": "<short vertical slice title>",
+      "goal": "<concrete observable outcome>",
+      "acceptance_criteria": [
+        "<observable criterion>"
+      ],
+      "dependencies": [],
+      "status": "todo"
+    }
+  ]
+}

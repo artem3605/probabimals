@@ -5,6 +5,7 @@ const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
 const ShopGeneratorScript = preload("res://scripts/shop/shop_generator.gd")
 const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
+const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := ShopGeneratorScript.DEFAULT_SHOP_SLOTS
 const FLEA_MARKET_CONTENT_SEPARATION := 48
@@ -48,8 +49,9 @@ var _ready_btn: Button
 var _my_dice_btn: Button
 var _stats_vbox: VBoxContainer
 var _desc_panel: PanelContainer
-var _desc_title: Label
-var _desc_body: Label
+var _desc_title: RichTextLabel
+var _desc_rarity: RichTextLabel
+var _desc_body: RichTextLabel
 var _all_buttons: Array = []
 
 var _face_swap_overlay: ColorRect
@@ -57,8 +59,9 @@ var _face_swap_title: Label
 var _face_swap_cards: HBoxContainer
 var _face_swap_action_btn: Button
 var _swap_desc_panel: PanelContainer
-var _swap_desc_title: Label
-var _swap_desc_body: Label
+var _swap_desc_title: RichTextLabel
+var _swap_desc_rarity: RichTextLabel
+var _swap_desc_body: RichTextLabel
 var _pending_face_item: Dictionary = {}
 var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
@@ -215,12 +218,22 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
-	_desc_title = _make_pixel_label("", FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
-	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	desc_vbox.add_child(_desc_title)
+	var title_row := HBoxContainer.new()
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_vbox.add_child(title_row)
 
-	_desc_body = _make_pixel_label("", FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_desc_title = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(_desc_title)
+
+	_desc_rarity = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_row.add_child(_desc_rarity)
+
+	_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_vbox.add_child(_desc_body)
 
@@ -369,7 +382,8 @@ func _on_my_dice_hover_enter() -> void:
 		groups[key] += 1
 
 	_desc_title.text = "MY BAG"
-	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.add_theme_color_override("default_color", GOLD)
+	_desc_rarity.text = ""
 	var lines := ""
 	for key: String in groups:
 		var count: int = groups[key]
@@ -386,12 +400,10 @@ func _on_my_dice_hover_exit() -> void:
 
 
 func _on_card_hover_enter(card: Control) -> void:
-	_desc_title.add_theme_color_override("font_color", GOLD)
-	if card.hover_cost >= 0:
-		_desc_title.text = "%s  -  %d coins" % [card.hover_name, card.hover_cost]
-	else:
-		_desc_title.text = card.hover_name
-	_desc_body.text = card.hover_description
+	_desc_title.add_theme_color_override("default_color", GOLD)
+	_desc_title.text = card.hover_name
+	_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
+	_desc_body.text = SemanticMarkup.format_description(card.hover_description)
 	_desc_panel.visible = true
 
 
@@ -427,7 +439,8 @@ func _on_shop_item_buy(index: int) -> void:
 		AudioManager.play_sfx(&"purchase")
 		_sold[index] = true
 		_desc_title.text = "Purchased!"
-		_desc_title.add_theme_color_override("font_color", GREEN)
+		_desc_title.add_theme_color_override("default_color", GREEN)
+		_desc_rarity.text = ""
 		_desc_body.text = item.get("name", "")
 		_desc_panel.visible = true
 		_update_coins()
@@ -483,12 +496,22 @@ func _build_face_swap_overlay() -> void:
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_swap_desc_panel.add_child(desc_vbox)
 
-	_swap_desc_title = _make_pixel_label("", FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
-	_swap_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	desc_vbox.add_child(_swap_desc_title)
+	var swap_title_row := HBoxContainer.new()
+	swap_title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	swap_title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_vbox.add_child(swap_title_row)
 
-	_swap_desc_body = _make_pixel_label("", FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_swap_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_swap_desc_title = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	_swap_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	swap_title_row.add_child(_swap_desc_title)
+
+	_swap_desc_rarity = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_swap_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_swap_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_swap_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	swap_title_row.add_child(_swap_desc_rarity)
+
+	_swap_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_swap_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_vbox.add_child(_swap_desc_body)
 
@@ -517,6 +540,8 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 	_clear_swap_cards()
 	_swap_desc_panel.visible = false
 	var all_dice := GameManager.dice_bag.get_all()
+	var tutorial_picking_swap_die := TutorialManager.is_active() \
+		and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_DIE
 	for i in all_dice.size():
 		var die: Die = all_dice[i]
 		var card := ItemCard.new()
@@ -524,6 +549,11 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 		card.card_pressed.connect(_on_swap_die_selected.bind(i))
 		card.card_hover_entered.connect(_on_swap_card_hover_enter.bind(card))
 		card.card_hover_exited.connect(_on_swap_card_hover_exit)
+		if tutorial_picking_swap_die:
+			if TutorialManager.is_swap_die_allowed(die, i):
+				card.set_accent(true, GOLD)
+			else:
+				_disable_swap_card(card)
 		_face_swap_cards.add_child(card)
 
 	_face_swap_action_btn.text = "CANCEL"
@@ -633,7 +663,8 @@ func _on_swap_face_selected(face_index: int) -> void:
 		AudioManager.play_sfx(&"purchase")
 		_sold[shop_idx] = true
 		_desc_title.text = "Purchased!"
-		_desc_title.add_theme_color_override("font_color", GREEN)
+		_desc_title.add_theme_color_override("default_color", GREEN)
+		_desc_rarity.text = ""
 		_desc_body.text = item_name
 		_desc_panel.visible = true
 		_update_coins()
@@ -663,9 +694,10 @@ func _close_face_swap() -> void:
 
 
 func _on_swap_card_hover_enter(card: Control) -> void:
-	_swap_desc_title.add_theme_color_override("font_color", GOLD)
+	_swap_desc_title.add_theme_color_override("default_color", GOLD)
 	_swap_desc_title.text = card.hover_name
-	_swap_desc_body.text = card.hover_description
+	_swap_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
+	_swap_desc_body.text = SemanticMarkup.format_description(card.hover_description)
 	_swap_desc_panel.visible = true
 
 
@@ -682,6 +714,13 @@ func _reconnect_swap_btn(target: Callable) -> void:
 func _clear_swap_cards() -> void:
 	for child in _face_swap_cards.get_children():
 		child.queue_free()
+
+
+func _disable_swap_card(card: Control) -> void:
+	card.modulate = Color(1, 1, 1, 0.35)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for descendant in card.find_children("*", "Control", true, false):
+		(descendant as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _build_tutorial_overlay() -> void:
@@ -702,7 +741,8 @@ func _refresh_tutorial_ui() -> void:
 		_tutorial_overlay.hide_overlay()
 		return
 
-	if _face_swap_overlay != null and _face_swap_overlay.visible:
+	if _face_swap_overlay != null and _face_swap_overlay.visible \
+			and TutorialManager.step_id != TutorialManager.STEP_CHOOSE_SWAP_DIE:
 		_tutorial_overlay.hide_overlay()
 		return
 
@@ -720,6 +760,7 @@ func _get_tutorial_highlight_target() -> Variant:
 		TutorialManager.STEP_MARKET_SCORE: return _stats_vbox
 		TutorialManager.STEP_BUY_LOADED_DIE: return _find_shop_action_target("loaded_die")
 		TutorialManager.STEP_BUY_EXTRA_SIX: return _find_shop_action_target("extra_6")
+		TutorialManager.STEP_CHOOSE_SWAP_DIE: return _find_first_swap_card(true)
 		TutorialManager.STEP_GO_TO_DICE_SELECT: return _ready_btn
 		_: return null
 
@@ -744,6 +785,18 @@ func _on_tutorial_next_pressed() -> void:
 		TutorialManager.STEP_MARKET_SCORE,
 	]:
 		TutorialManager.report_action("advance_intro")
+
+
+func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.add_theme_font_override("normal_font", _pixel_font)
+	rtl.add_theme_font_size_override("normal_font_size", font_size)
+	rtl.add_theme_color_override("default_color", color)
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rtl
 
 
 func _on_tutorial_skip_pressed() -> void:

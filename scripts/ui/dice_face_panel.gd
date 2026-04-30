@@ -4,7 +4,8 @@ extends Control
 
 var _value: int = 0
 var _face_color: Color = Color.WHITE
-const PIP_COLOR := Color("1a1a1a")
+var _pip_color: Color = Color("1a1a1a")
+
 const FACE_INSET := 0.12
 const PIP_SIZE_FRAC := 0.14
 const FACE_DARKEN := 0.12
@@ -55,4 +56,4 @@ func _draw() -> void:
 	for pos: Vector2 in positions:
 		var px := inner_pos.x + pos.x * inner_size.x - pip_sz * 0.5
 		var py := inner_pos.y + pos.y * inner_size.y - pip_sz * 0.5
-		draw_rect(Rect2(px, py, pip_sz, pip_sz), PIP_COLOR)
+		draw_rect(Rect2(px, py, pip_sz, pip_sz), _pip_color)

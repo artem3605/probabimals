@@ -24,15 +24,15 @@ func setup_as_shop_item(item: Dictionary, pixel_font: Font) -> void:
 	if item.get("category", "") == "die":
 		var params: Dictionary = item.get("params", {})
 		var face_vals: Array = params.get("faces", [1, 2, 3, 4, 5, 6])
-		var faces_str := ",".join(face_vals.map(func(f: Variant) -> String: return str(int(f))))
-		hover_description += "\nFaces: (%s)" % faces_str
-	hover_description = _with_rarity_line(hover_description, item.get("rarity", "common"))
-	_set_rarity(item.get("rarity", "common"))
+		hover_description = "Faces: (%s)" % SemanticMarkup.format_faces_list(face_vals)
+	hover_rarity = _normalize_rarity(item.get("rarity", "common")).to_upper()
 
 	var card_color := _get_item_color(item)
 	var label_text := _get_card_label(item)
 
 	_setup_card(card_color, label_text, pixel_font)
+	if not label_text.is_empty():
+		_apply_main_label_color(_get_card_label_color(item, card_color))
 
 	if item.get("category", "") == "die":
 		var face_panel := DiceFacePanel.new()
@@ -140,3 +140,27 @@ func _get_card_label(item: Dictionary) -> String:
 				"add_rerolls":
 					return "+%dR" % int(val)
 	return "?"
+
+
+func _get_card_label_color(item: Dictionary, card_color: Color) -> Color:
+	var category: String = item.get("category", "")
+	match category:
+		"face":
+			return SemanticColors.FACE_VALUE
+		"modifier":
+			var params: Dictionary = item.get("params", {})
+			match str(params.get("effect", "")):
+				"bonus":
+					return SemanticColors.ADDITIVE
+				"add_mult", "x_mult":
+					return SemanticColors.MULTIPLICATIVE
+				"add_rerolls":
+					return SemanticColors.REROLL
+	return _get_text_color(card_color)
+
+
+func _apply_main_label_color(color: Color) -> void:
+	main_button.add_theme_color_override("font_color", color)
+	main_button.add_theme_color_override("font_hover_color", color)
+	main_button.add_theme_color_override("font_pressed_color", color)
+	main_button.add_theme_color_override("font_focus_color", color)

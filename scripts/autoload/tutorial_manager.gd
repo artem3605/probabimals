@@ -127,6 +127,12 @@ const STEP_TEXT := {
 		"panel_width": 450,
 		"panel_anchor": Vector2(0.7, 0.5),
 	},
+	"choose_swap_die": {
+		"title": "PICK A DIE",
+		"body": "Let's choose this die to upgrade!",
+		"panel_width": 450,
+		"panel_anchor": Vector2(0.5, 0.85),
+	},
 	"go_to_dice_select": {
 		"title": "LOOKING GOOD!",
 		"body": "You ran out of money! Hit Ready to go further.",
@@ -396,7 +402,7 @@ func is_swap_die_allowed(die: Die, die_index: int) -> bool:
 	if not is_active():
 		return true
 	if step_id == STEP_CHOOSE_SWAP_DIE:
-		return die_index >= 0 and die.color == "colorless"
+		return die_index == 0 and die.color == "colorless"
 	return true
 
 

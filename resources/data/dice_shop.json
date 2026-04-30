@@ -172,7 +172,7 @@
   {
     "id": "reroll_plus",
     "name": "Reroll Plus",
-    "description": "+1 reroll per hand",
+    "description": "+1 reroll per turn",
     "category": "modifier",
     "rarity": "uncommon",
     "shop_weight": 5,

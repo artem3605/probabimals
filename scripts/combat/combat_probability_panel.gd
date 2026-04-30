@@ -57,18 +57,21 @@ const PCT_GRADIENT_LOW := Color("b8c4cc")
 const PCT_GRADIENT_HIGH := Color("000000")
 const PCT_NULL_COLOR := Color("b8c4cc")
 
+const SCRAMBLE_INTERVAL := 0.05
+
 var _pixel_font: Font
 var _combo_rules: Array = []
 var _row_entries: Array = []
 var _current_combo_type: String = ""
 var _status_text: String = "ROLL FIRST"
 var _has_rolled: bool = false
+var _scramble_timer: Timer
 
 var _score_header_row: HBoxContainer
 var _combo_name_label: Label
 var _score_value_label: Label
 var _score_pts_suffix: Label
-var _score_breakdown_label: Label
+var _score_breakdown_label: RichTextLabel
 var _body_root: HBoxContainer
 
 
@@ -138,6 +141,32 @@ func clear_current_combo_highlight() -> void:
 	highlight_current_combo("")
 
 
+func start_scramble() -> void:
+	if _row_entries.is_empty():
+		return
+	if _scramble_timer == null:
+		_scramble_timer = Timer.new()
+		_scramble_timer.wait_time = SCRAMBLE_INTERVAL
+		_scramble_timer.one_shot = false
+		_scramble_timer.timeout.connect(_scramble_tick)
+		add_child(_scramble_timer)
+	_scramble_tick()
+	_scramble_timer.start()
+
+
+func stop_scramble() -> void:
+	if _scramble_timer != null and not _scramble_timer.is_stopped():
+		_scramble_timer.stop()
+
+
+func _scramble_tick() -> void:
+	for entry in _row_entries:
+		var pct_label: Label = entry["pct_label"]
+		var fake_value := randf()
+		pct_label.text = _format_pct(fake_value)
+		pct_label.add_theme_color_override("font_color", _pct_color(fake_value))
+
+
 # -- Accessors used by tests and combat screen -------------------------------
 
 func get_combo_name_label() -> Label:
@@ -152,7 +181,7 @@ func get_score_pts_suffix_label() -> Label:
 	return _score_pts_suffix
 
 
-func get_score_breakdown_label() -> Label:
+func get_score_breakdown_label() -> RichTextLabel:
 	return _score_breakdown_label
 
 
@@ -282,13 +311,10 @@ func _build_score_header(parent: VBoxContainer) -> void:
 	var breakdown_slot := _make_header_slot(SCORE_BREAKDOWN_WIDTH, "ScoreBreakdownSlot")
 	_score_header_row.add_child(breakdown_slot)
 
-	_score_breakdown_label = _make_label("", SCORE_BREAKDOWN_FONT_SIZE, HEADER_COLOR)
+	_score_breakdown_label = _make_rtl(SCORE_BREAKDOWN_FONT_SIZE, HEADER_COLOR)
 	_score_breakdown_label.name = "ScoreBreakdownLabel"
 	_score_breakdown_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_score_breakdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_score_breakdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_score_breakdown_label.clip_text = true
-	_score_breakdown_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	breakdown_slot.add_child(_score_breakdown_label)
 
 
@@ -494,3 +520,16 @@ func _make_label(text: String, font_size: int, color: Color) -> Label:
 	lbl.add_theme_color_override("font_color", color)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return lbl
+
+
+func _make_rtl(font_size: int, color: Color) -> RichTextLabel:
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rtl.add_theme_font_override("normal_font", _pixel_font)
+	rtl.add_theme_font_size_override("normal_font_size", font_size)
+	rtl.add_theme_color_override("default_color", color)
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rtl
