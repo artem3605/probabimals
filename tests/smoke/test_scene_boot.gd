@@ -88,6 +88,17 @@ func test_combat_wrapped_description_label_does_not_fit_to_content_width() -> vo
 	assert_eq(combat._desc_body.custom_minimum_size.x, 388.0)
 
 
+func test_dice_select_wrapped_description_label_does_not_fit_to_content_width() -> void:
+	var dice_select := DICE_SELECT_SCENE.instantiate()
+	autoqfree(dice_select)
+	add_child_autofree(dice_select)
+	await wait_process_frames(2)
+
+	assert_eq(dice_select._desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(dice_select._desc_body.fit_content)
+	assert_eq(dice_select._desc_body.custom_minimum_size.x, 388.0)
+
+
 func test_main_menu_moves_tutorial_replay_into_settings() -> void:
 	var main_menu = MAIN_MENU_SCENE.instantiate()
 	autoqfree(main_menu)

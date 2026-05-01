@@ -18,6 +18,7 @@ const DICE_SELECT_DESC_PANEL_MARGIN := 16
 const DICE_SELECT_DESC_SEPARATION := 12
 const DICE_SELECT_DESC_TITLE_FONT_SIZE := 14
 const DICE_SELECT_DESC_BODY_FONT_SIZE := 12
+const DICE_SELECT_DESC_BODY_WIDTH := DICE_SELECT_DESC_PANEL_SIZE.x - DICE_SELECT_DESC_PANEL_MARGIN * 2
 
 var _groups: Array[Dictionary] = []
 var _subtitle_label: Label
@@ -241,7 +242,7 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	title_row.add_child(_desc_rarity)
 
 	_desc_body = _make_pixel_rtl(DICE_SELECT_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
 
@@ -376,3 +377,11 @@ func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
 	rtl.add_theme_color_override("default_color", color)
 	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rtl
+
+
+func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rtl.custom_minimum_size.x = DICE_SELECT_DESC_BODY_WIDTH
+	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
