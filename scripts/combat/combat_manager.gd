@@ -114,7 +114,7 @@ func get_current_combo() -> Dictionary:
 func get_probability_snapshot() -> Dictionary:
 	return probability_snapshot.duplicate(true)
 
-func score_hand(modifiers: Array) -> Dictionary:
+func score_hand(modifiers: Array[Modifier]) -> Dictionary:
 	if not can_score():
 		return {}
 	var combo := get_current_combo()

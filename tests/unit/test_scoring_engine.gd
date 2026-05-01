@@ -16,7 +16,7 @@ func test_calculate_score_applies_all_three_layers() -> void:
 		TestData.basic_face(4),
 		TestData.basic_face(6),
 	]
-	var modifiers := [
+	var modifiers: Array[Modifier] = [
 		TestData.modifier("bonus", 5.0, "pair"),
 		TestData.modifier("add_mult", 1.0, "pair"),
 		TestData.modifier("x_mult", 2.0, "pair"),
@@ -32,7 +32,7 @@ func test_calculate_score_applies_all_three_layers() -> void:
 func test_non_matching_modifiers_are_ignored() -> void:
 	var combo := {"type": "full_house", "combo_mult": 4.0}
 	var faces: Array[DiceFace] = TestData.faces_from_values([3, 3, 3, 5, 5])
-	var modifiers := [
+	var modifiers: Array[Modifier] = [
 		TestData.modifier("bonus", 7.0, "pair"),
 		TestData.modifier("add_mult", 3.0, "pair"),
 		TestData.modifier("x_mult", 9.0, "pair"),
@@ -47,7 +47,7 @@ func test_non_matching_modifiers_are_ignored() -> void:
 func test_total_is_floored_after_all_math() -> void:
 	var combo := {"type": "high_card", "combo_mult": 1.3}
 	var faces: Array[DiceFace] = TestData.faces_from_values([1, 2, 3])
-	var modifiers := [TestData.modifier("x_mult", 1.1)]
+	var modifiers: Array[Modifier] = [TestData.modifier("x_mult", 1.1)]
 	var result := _engine.calculate_score(combo, faces, [false, false, true], modifiers)
 
 	assert_eq(result["total"], 8)
@@ -55,7 +55,7 @@ func test_total_is_floored_after_all_math() -> void:
 func test_always_bonus_modifier_permanently_adds_to_face_sum() -> void:
 	var combo := {"type": "high_card", "combo_mult": 2.0}
 	var faces: Array[DiceFace] = TestData.faces_from_values([1, 2, 3])
-	var modifiers := [TestData.modifier("bonus", 4.0, "always", "solid_sum", "Solid Sum")]
+	var modifiers: Array[Modifier] = [TestData.modifier("bonus", 4.0, "always", "solid_sum", "Solid Sum")]
 	var result := _engine.calculate_score(combo, faces, [false, false, true], modifiers)
 
 	assert_almost_eq(result["face_sum"], 10.0, 0.001)

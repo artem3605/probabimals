@@ -10,21 +10,23 @@ var _rng := RandomNumberGenerator.new()
 
 func compare_modifier(config: Dictionary) -> Dictionary:
 	var modifier_item: Dictionary = config.get("modifier_item", {})
-	var modifier := _modifier_from_item(modifier_item)
-	var modifiers: Array = []
-	if not modifier.is_empty():
-		modifiers.append(modifier)
-	var extra_rerolls := _extra_rerolls_from_item(modifier_item)
+	var mod := Modifier.from_shop_item(modifier_item)
+	var modifiers: Array[Modifier] = []
+	var extra_rerolls := 0
+	if mod != null:
+		if mod.effect == Modifier.Effect.ADD_REROLLS:
+			extra_rerolls = int(mod.value)
+		else:
+			modifiers.append(mod)
 	var rerolls_per_hand := int(config.get("rerolls_per_hand", 0))
 
-	var baseline := _run_group(config, [], 0)
+	var baseline := _run_group(config, [] as Array[Modifier], 0)
 	var with_modifier := _run_group(config, modifiers, extra_rerolls)
 	var deltas := _score_deltas(baseline["scores"], with_modifier["scores"])
 	var cost := int(modifier_item.get("cost", 0))
 	var modifier_ids: Array[String] = []
-	var modifier_id := str(modifier_item.get("id", ""))
-	if not modifier_id.is_empty():
-		modifier_ids.append(modifier_id)
+	if mod != null:
+		modifier_ids.append(mod.id)
 
 	return {
 		"simulations": int(config.get("simulations", 1000)),
@@ -54,7 +56,7 @@ func compare_modifier(config: Dictionary) -> Dictionary:
 func run_modifier_report(config: Dictionary) -> Dictionary:
 	return compare_modifier(config)
 
-func _run_group(config: Dictionary, modifiers: Array, extra_rerolls: int) -> Dictionary:
+func _run_group(config: Dictionary, modifiers: Array[Modifier], extra_rerolls: int) -> Dictionary:
 	var simulations := int(config.get("simulations", 1000))
 	var seed_value := int(config.get("seed", 1))
 	var target_score := int(config.get("target_score", 150))
@@ -81,11 +83,10 @@ func _run_group(config: Dictionary, modifiers: Array, extra_rerolls: int) -> Dic
 			var combo_type := str(combo.get("type", "none"))
 			combo_distribution[combo_type] = int(combo_distribution.get(combo_type, 0)) + 1
 			for modifier in modifiers:
-				var modifier_id := str(modifier.get("id", ""))
-				if _modifier_triggered(modifier, combo_type):
-					trigger_counts[modifier_id] = int(trigger_counts.get(modifier_id, 0)) + 1
+				if modifier.applies_to_combo(combo_type):
+					trigger_counts[modifier.id] = int(trigger_counts.get(modifier.id, 0)) + 1
 				else:
-					trigger_counts[modifier_id] = int(trigger_counts.get(modifier_id, 0))
+					trigger_counts[modifier.id] = int(trigger_counts.get(modifier.id, 0))
 
 		scores.append(float(total_score))
 		if total_score >= target_score:
@@ -152,25 +153,6 @@ func _typed_dice(raw_dice: Array) -> Array[Die]:
 			dice.append(die.duplicate_die())
 	return dice
 
-func _modifier_from_item(item: Dictionary) -> Dictionary:
-	var params: Dictionary = item.get("params", {})
-	var effect := str(params.get("effect", ""))
-	if effect.is_empty() or effect == "add_rerolls":
-		return {}
-	return {
-		"id": str(item.get("id", "")),
-		"name": str(item.get("name", "")),
-		"effect": effect,
-		"value": params.get("value", 1.0),
-		"condition": str(params.get("condition", "")),
-	}
-
-func _extra_rerolls_from_item(item: Dictionary) -> int:
-	var params: Dictionary = item.get("params", {})
-	if str(params.get("effect", "")) == "add_rerolls":
-		return int(params.get("value", 0))
-	return 0
-
 func _condition_warnings(item: Dictionary) -> Array[String]:
 	var warnings: Array[String] = []
 	var description := str(item.get("description", "")).to_lower()
@@ -179,12 +161,6 @@ func _condition_warnings(item: Dictionary) -> Array[String]:
 	if description.contains("or better") and not condition.is_empty():
 		warnings.append("%s description says 'or better', but current condition matching is exact." % str(item.get("id", "")))
 	return warnings
-
-func _modifier_triggered(modifier: Dictionary, combo_type: String) -> bool:
-	var condition := str(modifier.get("condition", ""))
-	if condition.is_empty() or condition == "always":
-		return true
-	return condition == combo_type
 
 func _trigger_rates(trigger_counts: Dictionary, hands: int) -> Dictionary:
 	var result := {}

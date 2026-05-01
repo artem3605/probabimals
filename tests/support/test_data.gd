@@ -59,11 +59,15 @@ static func deterministic_die(roll_values: Array[int], initial_values: Variant =
 	return DETERMINISTIC_DIE.new(roll_faces, initial_faces, die_color, die_name, description)
 
 static func modifier(effect: String, value: Variant, condition: String = "always",
-		id: String = "", name: String = "") -> Dictionary:
-	return {
-		"id": id,
-		"name": name if not name.is_empty() else effect,
-		"effect": effect,
-		"value": value,
-		"condition": condition,
-	}
+		id: String = "", name: String = "") -> Modifier:
+	var effect_enum := Modifier.effect_from_string(effect)
+	if effect_enum == -1:
+		return null
+	return Modifier.new(
+		id,
+		name if not name.is_empty() else effect,
+		effect_enum,
+		float(value),
+		condition,
+		"common",
+	)

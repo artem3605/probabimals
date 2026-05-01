@@ -5,7 +5,7 @@ enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT }
 const SAVE_PATH := "user://save_game.json"
 const APP_VERSION_SETTING := "application/config/version"
 const DEFAULT_APP_VERSION := "v0.0.0"
-const SAVE_FORMAT_VERSION := 1
+const SAVE_FORMAT_VERSION := 2
 const PLAYTEST_SURVEY_URL_SETTING := "playtest/survey_url"
 const STARTING_COINS: int = 10
 
@@ -16,7 +16,7 @@ signal score_changed(new_score: int)
 var current_phase: Phase = Phase.MAIN_MENU
 var coins: int = STARTING_COINS
 var dice_bag: DiceBag = DiceBag.new()
-var modifiers: Array = []
+var modifiers: Array[Modifier] = []
 var total_score: int = 0
 var target_score: int = 150
 var hands_per_round: int = 4
@@ -122,19 +122,12 @@ func buy_item(item: Dictionary) -> bool:
 		"face":
 			pass
 		"modifier":
-			var params = item.get("params", {})
-			var effect: String = params.get("effect", "")
-			if effect == "add_rerolls":
-				rerolls_per_hand += int(params.get("value", 1))
+			var mod := Modifier.from_shop_item(item)
+			if mod == null:
+				return false
+			if mod.effect == Modifier.Effect.ADD_REROLLS:
+				rerolls_per_hand += int(mod.value)
 			else:
-				var mod := {
-					"id": item.get("id", ""),
-					"name": item.get("name", ""),
-					"effect": effect,
-					"value": params.get("value", 1.0),
-					"condition": params.get("condition", ""),
-					"rarity": item.get("rarity", "common"),
-				}
 				modifiers.append(mod)
 	return true
 
@@ -262,7 +255,7 @@ func build_save_data() -> Dictionary:
 		"current_round": current_round,
 		"dice_bag": _serialize_dice_bag(),
 		"selected_dice_indices": _serialize_selected_dice_indices(),
-		"modifiers": modifiers.duplicate(true),
+		"modifiers": _serialize_modifiers(),
 		"tutorial_completed": TutorialManager.completed,
 		"tutorial_mode": TutorialManager.mode,
 		"tutorial_step_id": TutorialManager.step_id,
@@ -285,7 +278,7 @@ func _apply_normalized_save_data(data: Dictionary) -> Phase:
 	rerolls_per_hand = int(data.get("rerolls_per_hand", 3))
 	current_round = int(data.get("current_round", 1))
 	dice_bag = _deserialize_dice_bag(data.get("dice_bag", []))
-	modifiers = data.get("modifiers", []).duplicate(true)
+	modifiers = _deserialize_modifiers(data.get("modifiers", []))
 	selected_dice = _deserialize_selected_dice(data.get("selected_dice_indices", []))
 	var tutorial_state: Dictionary = data.get("tutorial_state", {})
 	if tutorial_state.is_empty():
@@ -371,11 +364,6 @@ func _extract_save_version(data: Dictionary) -> int:
 
 func _migrate_save_data(data: Dictionary, from_version: int) -> Dictionary:
 	var migrated := data.duplicate(true)
-	if from_version == 0:
-		migrated["save_version"] = SAVE_FORMAT_VERSION
-		if not migrated.has("app_version"):
-			migrated["app_version"] = "legacy"
-		return migrated
 	if from_version == SAVE_FORMAT_VERSION:
 		if not migrated.has("app_version"):
 			migrated["app_version"] = get_app_version()
@@ -445,6 +433,24 @@ func _deserialize_selected_dice(raw_indices: Variant) -> Array[Die]:
 			if die != null:
 				restored.append(die)
 	return restored
+
+
+func _serialize_modifiers() -> Array:
+	var arr: Array = []
+	for m in modifiers:
+		arr.append(m.to_save_dict())
+	return arr
+
+
+func _deserialize_modifiers(raw: Variant) -> Array[Modifier]:
+	var result: Array[Modifier] = []
+	if raw is Array:
+		for entry in raw:
+			if entry is Dictionary:
+				var m := Modifier.from_save_dict(entry)
+				if m != null:
+					result.append(m)
+	return result
 
 
 func _deserialize_die(raw_die: Dictionary) -> Die:
