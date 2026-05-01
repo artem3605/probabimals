@@ -44,6 +44,26 @@ func test_buy_item_adds_scoring_modifier() -> void:
 	assert_almost_eq(_manager.modifiers[0].value, 1.0, 0.001)
 	assert_eq(_manager.modifiers[0].rarity, "common")
 
+func test_buy_item_rejects_invalid_modifier_without_charging_coins() -> void:
+	_manager.coins = 50
+	var item := {
+		"id": "bad_modifier",
+		"name": "Bad Modifier",
+		"category": "modifier",
+		"cost": 25,
+		"rarity": "common",
+		"params": {
+			"effect": "unknown_effect",
+			"value": 1.0,
+			"condition": "pair",
+		},
+	}
+
+	assert_false(_manager.buy_item(item))
+	assert_eq(_manager.coins, 50)
+	assert_eq(_manager.modifiers.size(), 0)
+	assert_eq(_manager.rerolls_per_hand, 3)
+
 func test_buy_item_increases_rerolls_for_reroll_modifier() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "reroll_plus")
 	_manager.coins = 50

@@ -52,6 +52,7 @@ const COMBAT_DESC_PANEL_MARGIN := 16
 const COMBAT_DESC_SEPARATION := 12
 const COMBAT_DESC_TITLE_FONT_SIZE := 14
 const COMBAT_DESC_BODY_FONT_SIZE := 12
+const COMBAT_DESC_BODY_WIDTH := COMBAT_DESC_PANEL_SIZE.x - COMBAT_DESC_PANEL_MARGIN * 2
 const COMBAT_DESC_COMBO_SQUARE_SIZE := 20
 const COMBAT_DESC_COMBO_SQUARE_GAP := 4
 const COMBAT_DESC_COMBO_SQUARE_BORDER := 1
@@ -470,7 +471,7 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	title_row.add_child(_desc_rarity)
 
 	_desc_body = _make_pixel_rtl(COMBAT_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
 	_desc_combo_row = HBoxContainer.new()
@@ -1663,6 +1664,14 @@ func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
 	rtl.add_theme_color_override("default_color", color)
 	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rtl
+
+
+func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rtl.custom_minimum_size.x = COMBAT_DESC_BODY_WIDTH
+	rtl.size.x = COMBAT_DESC_BODY_WIDTH
 
 
 func _get_combo_display_color(combo_type: String) -> Color:

@@ -70,6 +70,24 @@ func test_flea_market_wrapped_description_labels_do_not_fit_to_content_width() -
 	assert_false(flea_market._swap_desc_body.fit_content)
 
 
+func test_combat_wrapped_description_label_does_not_fit_to_content_width() -> void:
+	GameManager.selected_dice = [
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+	]
+	var combat := COMBAT_SCENE.instantiate()
+	autoqfree(combat)
+	add_child_autofree(combat)
+	await wait_process_frames(2)
+
+	assert_eq(combat._desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(combat._desc_body.fit_content)
+	assert_eq(combat._desc_body.custom_minimum_size.x, 388.0)
+
+
 func test_main_menu_moves_tutorial_replay_into_settings() -> void:
 	var main_menu = MAIN_MENU_SCENE.instantiate()
 	autoqfree(main_menu)

@@ -101,10 +101,15 @@ func buy_item(item: Dictionary) -> bool:
 	var cost: int = item.get("cost", 0)
 	if coins < cost:
 		return false
+	var category: String = item.get("category", "")
+	var modifier: Modifier = null
+	if category == "modifier":
+		modifier = Modifier.from_shop_item(item)
+		if modifier == null:
+			return false
 	coins -= cost
 	coins_changed.emit(coins)
 
-	var category: String = item.get("category", "")
 	match category:
 		"die":
 			var params = item.get("params", {})
@@ -122,13 +127,10 @@ func buy_item(item: Dictionary) -> bool:
 		"face":
 			pass
 		"modifier":
-			var mod := Modifier.from_shop_item(item)
-			if mod == null:
-				return false
-			if mod.effect == Modifier.Effect.ADD_REROLLS:
-				rerolls_per_hand += int(mod.value)
+			if modifier.effect == Modifier.Effect.ADD_REROLLS:
+				rerolls_per_hand += int(modifier.value)
 			else:
-				modifiers.append(mod)
+				modifiers.append(modifier)
 	return true
 
 func buy_face_swap(die_index: int, face_index: int, new_face: DiceFace, cost: int) -> bool:
