@@ -364,6 +364,11 @@ func _extract_save_version(data: Dictionary) -> int:
 
 func _migrate_save_data(data: Dictionary, from_version: int) -> Dictionary:
 	var migrated := data.duplicate(true)
+	if from_version >= 0 and from_version < SAVE_FORMAT_VERSION:
+		migrated["save_version"] = SAVE_FORMAT_VERSION
+		if not migrated.has("app_version"):
+			migrated["app_version"] = "legacy"
+		return migrated
 	if from_version == SAVE_FORMAT_VERSION:
 		if not migrated.has("app_version"):
 			migrated["app_version"] = get_app_version()

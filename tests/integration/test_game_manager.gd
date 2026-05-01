@@ -189,7 +189,7 @@ func test_skip_active_tutorial_completes_and_enters_normal_market_run() -> void:
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
 
 
-func test_apply_save_data_rejects_legacy_save_without_version() -> void:
+func test_apply_save_data_migrates_legacy_save_without_version() -> void:
 	var legacy_data := {
 		"phase": "DICE_SELECT",
 		"coins": 41,
@@ -208,15 +208,15 @@ func test_apply_save_data_rejects_legacy_save_without_version() -> void:
 		],
 		"modifiers": [],
 	}
-	_manager.coins = 7
-	_manager.current_phase = _manager.Phase.MAIN_MENU
 
 	var restored_phase: int = _manager.apply_save_data(legacy_data)
 
-	# After SAVE_FORMAT_VERSION bump to 2, legacy saves without a version
-	# are dropped — apply_save_data must not mutate state.
-	assert_eq(restored_phase, _manager.Phase.MAIN_MENU)
-	assert_eq(_manager.coins, 7)
+	assert_eq(restored_phase, _manager.Phase.DICE_SELECT)
+	assert_eq(_manager.coins, 41)
+	assert_eq(_manager.current_round, 4)
+	assert_eq(_manager.dice_bag.size(), 1)
+	assert_eq(_manager.dice_bag.get_die(0).die_name, "Legacy Die")
+	assert_eq(_manager.build_save_data()["save_version"], GameManager.SAVE_FORMAT_VERSION)
 
 func test_apply_save_data_rejects_future_save_version_without_mutating_state() -> void:
 	var future_data: Dictionary = _manager.build_save_data()
@@ -253,7 +253,7 @@ func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	assert_eq(int(saved_data["save_version"]), GameManager.SAVE_FORMAT_VERSION)
 	assert_eq(saved_data["app_version"], _manager.get_app_version())
 
-func test_can_load_save_rejects_legacy_save_without_version() -> void:
+func test_can_load_save_accepts_legacy_save_without_version() -> void:
 	var save_path := "user://gut_legacy_save_%d.json" % Time.get_ticks_usec()
 	_temp_paths.append(save_path)
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
@@ -271,9 +271,7 @@ func test_can_load_save_rejects_legacy_save_without_version() -> void:
 	}))
 	file.close()
 
-	# Legacy saves without a version field are treated as version 0
-	# and rejected after the format bump to v2.
-	assert_false(_manager.can_load_save(save_path))
+	assert_true(_manager.can_load_save(save_path))
 
 func test_can_load_save_returns_false_for_future_save_version() -> void:
 	var save_path := "user://gut_future_save_%d.json" % Time.get_ticks_usec()
@@ -320,23 +318,29 @@ func test_tutorial_completion_persists_save_without_phase_change() -> void:
 	assert_eq(str(data.get("phase", "")), "FLEA_MARKET")
 
 
-func test_old_save_version_is_rejected() -> void:
+func test_can_load_save_accepts_v1_save_version() -> void:
 	var tmp_path := "user://test_old_save.json"
+	_temp_paths.append(tmp_path)
 	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify({
 		"save_version": 1,
 		"phase": "FLEA_MARKET",
 		"coins": 99,
-		"modifiers": [],
+		"modifiers": [
+			{
+				"id": "pair_boost",
+				"name": "Pair Boost",
+				"effect": "add_mult",
+				"value": 1.0,
+				"condition": "pair",
+				"rarity": "common",
+			}
+		],
 	}))
 	file = null
 
-	assert_false(GameManager.can_load_save(tmp_path),
-			"v1 saves must be rejected after format bump to v2")
-
-	# Cleanup
-	if FileAccess.file_exists(tmp_path):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp_path))
+	assert_true(_manager.can_load_save(tmp_path),
+			"v1 saves must stay loadable after format bump to v2")
 
 
 func test_tutorial_replay_completion_persists_cleared_checkpoint_for_completed_users() -> void:
