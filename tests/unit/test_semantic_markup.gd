@@ -81,8 +81,8 @@ func test_format_description_wraps_extra_digit_only() -> void:
 	assert_false(out.contains("[color=#7fdfff]face"))
 
 
-func test_format_description_wraps_double_digit() -> void:
-	var out := SemanticMarkup.format_description("Replace a face with a double 3")
+func test_format_description_wraps_face_replacement_digit() -> void:
+	var out := SemanticMarkup.format_description("Replace a face with a 3")
 	assert_true(out.contains("[color=#7fdfff]3[/color]"))
 
 

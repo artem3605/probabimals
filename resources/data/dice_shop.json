@@ -130,8 +130,8 @@
   },
   {
     "id": "double_3",
-    "name": "Double Three",
-    "description": "Replace a face with a double 3",
+    "name": "Three",
+    "description": "Replace a face with a 3",
     "category": "face",
     "rarity": "common",
     "shop_weight": 3,

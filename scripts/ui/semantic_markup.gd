@@ -115,11 +115,15 @@ static func _apply_reroll(text: String) -> String:
 
 
 static func _apply_face_replacement_digit(text: String) -> String:
-	# In phrases like "extra 6", "double 3", wrap only the trailing digit.
+	# In face-swap phrases, wrap only the replacement digit.
 	var hex := SemanticColors.FACE_VALUE_HEX
-	var re := RegEx.new()
-	re.compile("\\b(extra|double)\\s+(\\d)\\b")
-	return re.sub(text, "$1 [color=%s]$2[/color]" % hex, true)
+	var out := text
+	var re_named := RegEx.new()
+	re_named.compile("\\b(extra)\\s+(\\d)\\b")
+	out = re_named.sub(out, "$1 [color=%s]$2[/color]" % hex, true)
+	var re_plain := RegEx.new()
+	re_plain.compile("\\bwith\\s+a\\s+(\\d)\\b")
+	return re_plain.sub(out, "with a [color=%s]$1[/color]" % hex, true)
 
 
 static func _apply_coin_icon(text: String) -> String:

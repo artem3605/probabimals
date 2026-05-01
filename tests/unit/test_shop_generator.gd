@@ -35,6 +35,13 @@ func test_shop_catalogue_includes_missing_low_face_swaps() -> void:
 		assert_eq(int(item.get("params", {}).get("value", 0)), value)
 		assert_eq(str(item.get("params", {}).get("face_id", "")), "extra_%d" % value)
 
+func test_double_three_copy_does_not_include_double_word() -> void:
+	var item := TestData.find_item_by_id(TestData.load_shop_catalogue(), "double_3")
+
+	assert_false(item.is_empty(), "double_3 should exist")
+	assert_eq(item.get("name", ""), "Three")
+	assert_eq(item.get("description", ""), "Replace a face with a 3")
+
 func test_shop_catalogue_includes_permanent_sum_bonus_modifiers() -> void:
 	var expected := {
 		"steady_sum": {"value": 2.0, "rarity": "common", "cost": 12, "shop_weight": 7},
