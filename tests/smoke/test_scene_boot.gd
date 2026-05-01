@@ -58,6 +58,18 @@ func test_primary_scenes_instantiate_without_runtime_errors() -> void:
 	assert_not_null(combat)
 
 
+func test_flea_market_wrapped_description_labels_do_not_fit_to_content_width() -> void:
+	var flea_market := FLEA_MARKET_SCENE.instantiate()
+	autoqfree(flea_market)
+	add_child_autofree(flea_market)
+	await wait_process_frames(2)
+
+	assert_eq(flea_market._desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(flea_market._desc_body.fit_content)
+	assert_eq(flea_market._swap_desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(flea_market._swap_desc_body.fit_content)
+
+
 func test_main_menu_moves_tutorial_replay_into_settings() -> void:
 	var main_menu = MAIN_MENU_SCENE.instantiate()
 	autoqfree(main_menu)

@@ -26,6 +26,7 @@ const FLEA_MARKET_DESC_PANEL_MARGIN := 16
 const FLEA_MARKET_DESC_SEPARATION := 12
 const FLEA_MARKET_DESC_TITLE_FONT_SIZE := 14
 const FLEA_MARKET_DESC_BODY_FONT_SIZE := 12
+const FLEA_MARKET_DESC_BODY_WIDTH := FLEA_MARKET_DESC_PANEL_SIZE.x - FLEA_MARKET_DESC_PANEL_MARGIN * 2
 const FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET := Vector2(4, 4)
 const FLEA_MARKET_COIN_ICON_SIZE := Vector2(24, 24)
 const FLEA_MARKET_FACE_SWAP_OUTER_SEPARATION := 32
@@ -234,7 +235,7 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	title_row.add_child(_desc_rarity)
 
 	_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
 
@@ -391,7 +392,7 @@ func _on_my_dice_hover_enter() -> void:
 			lines += "%s x%d\n" % [key, count]
 		else:
 			lines += "%s\n" % key
-	_desc_body.text = lines.strip_edges()
+	_set_description_body_text(_desc_body, lines.strip_edges())
 	_desc_panel.visible = true
 
 
@@ -403,7 +404,7 @@ func _on_card_hover_enter(card: Control) -> void:
 	_desc_title.add_theme_color_override("default_color", GOLD)
 	_desc_title.text = card.hover_name
 	_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
-	_desc_body.text = SemanticMarkup.format_description(card.hover_description)
+	_set_description_body_text(_desc_body, SemanticMarkup.format_description(card.hover_description))
 	_desc_panel.visible = true
 
 
@@ -441,7 +442,7 @@ func _on_shop_item_buy(index: int) -> void:
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("default_color", GREEN)
 		_desc_rarity.text = ""
-		_desc_body.text = item.get("name", "")
+		_set_description_body_text(_desc_body, item.get("name", ""))
 		_desc_panel.visible = true
 		_update_coins()
 		_refresh_tutorial_ui()
@@ -512,7 +513,7 @@ func _build_face_swap_overlay() -> void:
 	swap_title_row.add_child(_swap_desc_rarity)
 
 	_swap_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_swap_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_configure_wrapped_description_body(_swap_desc_body)
 	desc_vbox.add_child(_swap_desc_body)
 
 	var btn_center := CenterContainer.new()
@@ -665,7 +666,7 @@ func _on_swap_face_selected(face_index: int) -> void:
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("default_color", GREEN)
 		_desc_rarity.text = ""
-		_desc_body.text = item_name
+		_set_description_body_text(_desc_body, item_name)
 		_desc_panel.visible = true
 		_update_coins()
 		_refresh_tutorial_ui()
@@ -697,7 +698,7 @@ func _on_swap_card_hover_enter(card: Control) -> void:
 	_swap_desc_title.add_theme_color_override("default_color", GOLD)
 	_swap_desc_title.text = card.hover_name
 	_swap_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
-	_swap_desc_body.text = SemanticMarkup.format_description(card.hover_description)
+	_set_description_body_text(_swap_desc_body, SemanticMarkup.format_description(card.hover_description))
 	_swap_desc_panel.visible = true
 
 
@@ -797,6 +798,23 @@ func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
 	rtl.add_theme_color_override("default_color", color)
 	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rtl
+
+
+func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rtl.custom_minimum_size.x = FLEA_MARKET_DESC_BODY_WIDTH
+	rtl.size.x = FLEA_MARKET_DESC_BODY_WIDTH
+
+
+func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
+	rtl.text = value
+	rtl.size.x = FLEA_MARKET_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.y = maxf(
+		float(FLEA_MARKET_DESC_BODY_FONT_SIZE),
+		rtl.get_content_height()
+	)
 
 
 func _on_tutorial_skip_pressed() -> void:
