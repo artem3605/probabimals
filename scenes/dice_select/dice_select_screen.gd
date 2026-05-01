@@ -253,7 +253,7 @@ func _on_card_hover_enter(card: Control) -> void:
 	_desc_title.add_theme_color_override("default_color", GOLD)
 	_desc_title.text = card.hover_name
 	_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
-	_desc_body.text = SemanticMarkup.format_description(card.hover_description)
+	_set_description_body_text(_desc_body, SemanticMarkup.format_description(card.hover_description))
 	_desc_panel.visible = true
 
 
@@ -385,3 +385,12 @@ func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
 	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rtl.custom_minimum_size.x = DICE_SELECT_DESC_BODY_WIDTH
 	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
+
+
+func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
+	rtl.text = value
+	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.y = maxf(
+		float(DICE_SELECT_DESC_BODY_FONT_SIZE),
+		rtl.get_content_height()
+	)
