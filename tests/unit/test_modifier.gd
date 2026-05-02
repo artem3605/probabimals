@@ -60,6 +60,18 @@ func test_from_shop_item_parses_add_rerolls_effect() -> void:
 	assert_eq(mod.effect, Modifier.Effect.ADD_REROLLS)
 	assert_almost_eq(mod.value, 1.0, 0.001)
 
+func test_from_shop_item_defaults_missing_add_rerolls_value_to_one() -> void:
+	var item := {
+		"id": "legacy_reroll_plus",
+		"name": "Legacy Reroll Plus",
+		"rarity": "uncommon",
+		"params": { "effect": "add_rerolls" },
+	}
+	var mod := Modifier.from_shop_item(item)
+	assert_not_null(mod)
+	assert_eq(mod.effect, Modifier.Effect.ADD_REROLLS)
+	assert_almost_eq(mod.value, 1.0, 0.001)
+
 func test_from_shop_item_returns_null_for_unknown_effect() -> void:
 	var item := { "params": { "effect": "nonsense", "value": 1.0 } }
 	assert_null(Modifier.from_shop_item(item))

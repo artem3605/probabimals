@@ -75,6 +75,8 @@ static func effect_from_string(s: String) -> int:
 static func _default_value_for_effect(effect_enum: int) -> float:
 	if effect_enum == Effect.X_MULT:
 		return 1.0
+	if effect_enum == Effect.ADD_REROLLS:
+		return 1.0
 	return 0.0
 
 static func effect_to_string(e: Effect) -> String:
