@@ -14,6 +14,12 @@ jobs:
       image: barichello/godot-ci:4.6
 
     steps:
+      - name: Install make
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends make
+          rm -rf /var/lib/apt/lists/*
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
