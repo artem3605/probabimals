@@ -41,64 +41,73 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	intro_combat._on_pause_pressed()
 	assert_false(intro_combat._pause_overlay.visible)
 	intro_combat._tutorial_overlay._next_btn.emit_signal("pressed")
-	assert_true(await wait_until(
-		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_ROLL,
-		2.0,
-		0.05,
-		"intro roll step"
-	))
+	assert_true(
+		await wait_until(
+			func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_ROLL, 2.0, 0.05, "intro roll step"
+		)
+	)
 	var first_intro_roll := [6, 3, 2, 5, 1]
 	intro_combat._on_roll_pressed()
-	assert_true(await wait_until(
-		func():
-			return TutorialManager.step_id == TutorialManager.STEP_INTRO_HOLD \
-				and intro_combat.combat_mgr.current_roll_values() == first_intro_roll,
-		3.0,
-		0.05,
-		"intro first roll"
-	))
+	assert_true(
+		await wait_until(
+			func():
+				return (
+					TutorialManager.step_id == TutorialManager.STEP_INTRO_HOLD
+					and intro_combat.combat_mgr.current_roll_values() == first_intro_roll
+				),
+			3.0,
+			0.05,
+			"intro first roll"
+		)
+	)
 	assert_eq_deep(intro_combat.combat_mgr.current_roll_values(), [6, 3, 2, 5, 1])
 	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
 	intro_combat._on_die_clicked(0)
-	assert_true(await wait_until(
-		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_REROLL,
-		2.0,
-		0.05,
-		"intro hold step"
-	))
+	assert_true(
+		await wait_until(
+			func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_REROLL, 2.0, 0.05, "intro hold step"
+		)
+	)
 	assert_true(intro_combat.combat_mgr.is_held(0))
 	var second_intro_roll := [6, 6, 1, 3, 5]
 	intro_combat._on_roll_pressed()
-	assert_true(await wait_until(
-		func():
-			return TutorialManager.step_id == TutorialManager.STEP_INTRO_PAIR \
-				and intro_combat.combat_mgr.current_roll_values() == second_intro_roll,
-		3.0,
-		0.05,
-		"intro reroll step"
-	))
+	assert_true(
+		await wait_until(
+			func():
+				return (
+					TutorialManager.step_id == TutorialManager.STEP_INTRO_PAIR
+					and intro_combat.combat_mgr.current_roll_values() == second_intro_roll
+				),
+			3.0,
+			0.05,
+			"intro reroll step"
+		)
+	)
 	intro_combat._tutorial_overlay._next_btn.emit_signal("pressed")
-	assert_true(await wait_until(
-		func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_FINISH,
-		2.0,
-		0.05,
-		"intro finish step"
-	))
+	assert_true(
+		await wait_until(
+			func(): return TutorialManager.step_id == TutorialManager.STEP_INTRO_FINISH, 2.0, 0.05, "intro finish step"
+		)
+	)
 	assert_true(intro_combat._tutorial_overlay._highlight_targets.has(intro_combat._end_turn_btn))
 	assert_true(intro_combat._tutorial_overlay._highlight_targets.has(intro_combat._turn_pill))
 
 	GameManager.target_score = 31
 	intro_combat.combat_mgr.target_score = 31
 	intro_combat._on_score_pressed()
-	assert_true(await wait_until(
-		func():
-			return TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN \
-				and intro_combat._result_overlay.visible \
-				and intro_combat._result_target_beaten,
-		3.0,
-		0.05,
-		"intro win overlay"
-	))
+	assert_true(
+		await wait_until(
+			func():
+				return (
+					TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN
+					and intro_combat._result_overlay.visible
+					and intro_combat._result_target_beaten
+				),
+			3.0,
+			0.05,
+			"intro win overlay"
+		)
+	)
 
 	assert_true(TutorialManager.report_action("combat_next_round"))
 	GameManager.current_round = 1
@@ -185,12 +194,14 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	assert_true(combat._tutorial_overlay.visible)
 	assert_true(TutorialManager.is_combat_roll_allowed())
 	combat._on_roll_pressed()
-	assert_true(await wait_until(
-		func(): return TutorialManager.completed and not TutorialManager.is_active(),
-		3.0,
-		0.05,
-		"combat good luck completion"
-	))
+	assert_true(
+		await wait_until(
+			func(): return TutorialManager.completed and not TutorialManager.is_active(),
+			3.0,
+			0.05,
+			"combat good luck completion"
+		)
+	)
 	assert_false(combat._menu_btn.disabled)
 
 

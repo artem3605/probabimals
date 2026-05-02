@@ -158,7 +158,9 @@ func test_hovering_dice_does_not_shift_action_buttons() -> void:
 func test_large_straight_row_name_has_enough_width_for_text() -> void:
 	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
 	var combat = scene["combat"]
-	var large_row: PanelContainer = combat._probability_panel_ui.find_child("ProbabilityRow_large_straight", true, false)
+	var large_row: PanelContainer = combat._probability_panel_ui.find_child(
+		"ProbabilityRow_large_straight", true, false
+	)
 	assert_not_null(large_row)
 	if large_row == null:
 		return
@@ -167,9 +169,12 @@ func test_large_straight_row_name_has_enough_width_for_text() -> void:
 	var name_label: Label = row.get_child(0)
 	var font: Font = name_label.get_theme_font("font")
 	var font_size: int = name_label.get_theme_font_size("font_size")
-	var required_width: float = ceil(font.get_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) + 1.0
+	var required_width: float = (
+		ceil(font.get_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) + 1.0
+	)
 
 	assert_true(name_label.custom_minimum_size.x >= required_width)
+
 
 func test_x_mult_score_breakdown_uses_compact_two_line_layout() -> void:
 	GameManager.modifiers = [TestData.modifier("x_mult", 4.0, "always", "test_x_mult", "Test X Mult")]
@@ -193,6 +198,7 @@ func test_x_mult_score_breakdown_uses_compact_two_line_layout() -> void:
 	for line in plain_text.split("\n"):
 		var required_width: float = ceil(font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) + 1.0
 		assert_true(required_width <= slot.custom_minimum_size.x)
+
 
 func test_combat_multiplier_formatter_hides_zero_decimal_for_integers() -> void:
 	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
@@ -363,29 +369,18 @@ func test_last_reroll_animation_reveals_values_and_refreshes_ui_after_settle() -
 	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
 	var combat = scene["combat"]
 
-	assert_true(await wait_until(
-		func(): return not combat._animating,
-		1.0,
-		0.05,
-		"combat intro settled"
-	))
+	assert_true(await wait_until(func(): return not combat._animating, 1.0, 0.05, "combat intro settled"))
 
 	combat._on_roll_pressed()
 
 	assert_true(combat._animating)
-	assert_true(await wait_until(
-		func(): return combat._suspense_reveal_active,
-		1.0,
-		0.05,
-		"last reroll suspense buffer started"
-	))
+	assert_true(
+		await wait_until(
+			func(): return combat._suspense_reveal_active, 1.0, 0.05, "last reroll suspense buffer started"
+		)
+	)
 
-	assert_true(await wait_until(
-		func(): return not combat._animating,
-		3.0,
-		0.05,
-		"last reroll suspense settled"
-	))
+	assert_true(await wait_until(func(): return not combat._animating, 3.0, 0.05, "last reroll suspense settled"))
 
 	assert_false(combat._suspense_reveal_active)
 	assert_eq_deep(combat._current_values, [2, 3, 4, 5, 6])

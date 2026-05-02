@@ -2,6 +2,7 @@ extends GutTest
 
 const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 
+
 func test_format_description_replaces_word_coins_with_icon() -> void:
 	var out := SemanticMarkup.format_description("Costs 15 coins")
 	assert_true(out.contains("[img=18]res://assets/art/ui/coin.png[/img]"))

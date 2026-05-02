@@ -2,6 +2,7 @@ extends GutTest
 
 const TestData = preload("res://tests/support/test_data.gd")
 
+
 func test_autoloads_boot_with_game_data_loaded() -> void:
 	assert_not_null(DataManager)
 	assert_not_null(GameManager)
@@ -13,6 +14,7 @@ func test_autoloads_boot_with_game_data_loaded() -> void:
 	assert_false(configured_version.is_empty())
 	assert_eq(GameManager.get_app_version(), configured_version)
 
+
 func test_main_menu_scene_instantiates_with_playtest_button() -> void:
 	var scene: PackedScene = load("res://scenes/main_menu/main_menu.tscn")
 	assert_not_null(scene)
@@ -20,6 +22,7 @@ func test_main_menu_scene_instantiates_with_playtest_button() -> void:
 	var menu: Control = add_child_autoqfree(scene.instantiate())
 
 	assert_not_null(menu.get_node("ButtonContainer/PlaytestSurveyButton"))
+
 
 func test_combat_screen_script_loads() -> void:
 	assert_not_null(load("res://scenes/combat/combat_screen.gd"))
@@ -45,6 +48,7 @@ func test_combo_reveal_fx_layer_has_visual_only_api() -> void:
 
 	assert_eq(fx.get_reveal_tier(), 1)
 	assert_eq(fx.get_active_combo_type(), "pair")
+
 
 func test_seeded_combat_flow_runs_headless() -> void:
 	var manager: CombatManager = CombatManager.new()

@@ -6,11 +6,13 @@ const TestableGameManagerScript = preload("res://tests/support/testable_game_man
 var _manager: Variant
 var _temp_paths: Array[String] = []
 
+
 func before_each() -> void:
 	_manager = TestableGameManagerScript.new()
 	autoqfree(_manager)
 	TutorialManager.completed = false
 	TutorialManager.clear_active_tutorial()
+
 
 func after_each() -> void:
 	for path in _temp_paths:
@@ -18,6 +20,7 @@ func after_each() -> void:
 	_temp_paths.clear()
 	TutorialManager.completed = false
 	TutorialManager.clear_active_tutorial()
+
 
 func test_buy_item_adds_die_from_catalogue_entry() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "loaded_die")
@@ -34,6 +37,7 @@ func test_buy_item_adds_die_from_catalogue_entry() -> void:
 	assert_eq(bought_die.get("rarity"), "rare")
 	assert_eq_deep(bought_die.get_face_values(), [1, 5, 5, 6, 6, 6])
 
+
 func test_buy_item_adds_scoring_modifier() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "pair_boost")
 
@@ -44,6 +48,7 @@ func test_buy_item_adds_scoring_modifier() -> void:
 	assert_almost_eq(_manager.modifiers[0].value, 1.0, 0.001)
 	assert_eq(_manager.modifiers[0].rarity, "common")
 
+
 func test_buy_item_rejects_invalid_modifier_without_charging_coins() -> void:
 	_manager.coins = 50
 	var item := {
@@ -52,7 +57,8 @@ func test_buy_item_rejects_invalid_modifier_without_charging_coins() -> void:
 		"category": "modifier",
 		"cost": 25,
 		"rarity": "common",
-		"params": {
+		"params":
+		{
 			"effect": "unknown_effect",
 			"value": 1.0,
 			"condition": "pair",
@@ -64,6 +70,7 @@ func test_buy_item_rejects_invalid_modifier_without_charging_coins() -> void:
 	assert_eq(_manager.modifiers.size(), 0)
 	assert_eq(_manager.rerolls_per_hand, 3)
 
+
 func test_buy_item_increases_rerolls_for_reroll_modifier() -> void:
 	var item: Dictionary = TestData.find_item_by_id(TestData.load_shop_catalogue(), "reroll_plus")
 	_manager.coins = 50
@@ -71,6 +78,7 @@ func test_buy_item_increases_rerolls_for_reroll_modifier() -> void:
 	assert_true(_manager.buy_item(item))
 	assert_eq(_manager.rerolls_per_hand, 4)
 	assert_eq(_manager.modifiers.size(), 0)
+
 
 func test_advance_round_updates_reward_target_and_phase() -> void:
 	var selected_dice: Array[Die] = [TestData.die_from_values([1, 2, 3, 4, 5, 6])]
@@ -86,12 +94,14 @@ func test_advance_round_updates_reward_target_and_phase() -> void:
 	assert_eq(_manager.selected_dice.size(), 0)
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
 
+
 func test_build_save_data_normalizes_combat_phase() -> void:
 	_manager.current_phase = _manager.Phase.COMBAT
 
 	var data: Dictionary = _manager.build_save_data()
 
 	assert_eq(data["phase"], "FLEA_MARKET")
+
 
 func test_build_save_data_keeps_combat_phase_for_active_tutorial_checkpoint() -> void:
 	_manager.current_phase = _manager.Phase.COMBAT
@@ -110,6 +120,7 @@ func test_build_save_data_includes_version_metadata() -> void:
 	assert_eq(data["save_version"], 2)
 	assert_eq(data["app_version"], _manager.get_app_version())
 
+
 func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	_manager.current_phase = _manager.Phase.DICE_SELECT
 	_manager.coins = 37
@@ -119,18 +130,32 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	_manager.rerolls_per_hand = 4
 	_manager.current_round = 3
 	_manager.dice_bag = DiceBag.new()
-	_manager.dice_bag.add_die(Die.new([
-		TestData.basic_face(1),
-		TestData.face("pip_6", 6, DiceFace.Type.PIP, 10.0),
-		TestData.face("mult_2", 2, DiceFace.Type.MULT, 3.0),
-		TestData.face("xmult_1", 1, DiceFace.Type.XMULT, 2.0),
-		TestData.face("wild", 0, DiceFace.Type.WILD),
-		TestData.basic_face(4),
-	], "red", "Chaos Die", "Stateful test die"))
+	(
+		_manager
+		. dice_bag
+		. add_die(
+			(
+				Die
+				. new(
+					[
+						TestData.basic_face(1),
+						TestData.face("pip_6", 6, DiceFace.Type.PIP, 10.0),
+						TestData.face("mult_2", 2, DiceFace.Type.MULT, 3.0),
+						TestData.face("xmult_1", 1, DiceFace.Type.XMULT, 2.0),
+						TestData.face("wild", 0, DiceFace.Type.WILD),
+						TestData.basic_face(4),
+					],
+					"red",
+					"Chaos Die",
+					"Stateful test die"
+				)
+			)
+		)
+	)
 	_manager.dice_bag.get_die(0).set("rarity", "rare")
-	_manager.modifiers = ([
-		TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")
-	] as Array[Modifier])
+	_manager.modifiers = (
+		[TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")] as Array[Modifier]
+	)
 	_manager.modifiers[0].rarity = "rare"
 	var selected: Array[Die] = [_manager.dice_bag.get_die(0)]
 	_manager.selected_dice = selected
@@ -168,11 +193,14 @@ func test_build_and_apply_save_data_round_trip_preserves_state() -> void:
 	assert_eq(TutorialManager.checkpoint_scene, TutorialManager.SCENE_DICE_SELECT)
 	assert_eq_deep(restored.build_save_data(), data)
 
+
 func test_start_tutorial_replay_resets_run_and_enters_intro_combat() -> void:
 	_manager.coins = 7
 	_manager.current_round = 4
 	_manager.target_score = 999
-	_manager.modifiers = ([TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")] as Array[Modifier])
+	_manager.modifiers = (
+		[TestData.modifier("x_mult", 3.0, "yahtzee", "yahtzee_hunter", "Yahtzee Hunter")] as Array[Modifier]
+	)
 
 	await _manager.start_tutorial_replay()
 
@@ -185,6 +213,7 @@ func test_start_tutorial_replay_resets_run_and_enters_intro_combat() -> void:
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WELCOME)
 	assert_eq_deep(TutorialManager.required_combat_hold_indices, [0])
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.COMBAT])
+
 
 func test_skip_active_tutorial_completes_and_enters_normal_market_run() -> void:
 	_manager.current_phase = _manager.Phase.COMBAT
@@ -218,14 +247,8 @@ func test_apply_save_data_migrates_legacy_save_without_version() -> void:
 		"hands_per_round": 5,
 		"rerolls_per_hand": 2,
 		"current_round": 4,
-		"dice_bag": [
-			{
-				"faces": [1, 2, 3, 4, 5, 6],
-				"color": "green",
-				"name": "Legacy Die",
-				"description": "Old-format die"
-			}
-		],
+		"dice_bag":
+		[{"faces": [1, 2, 3, 4, 5, 6], "color": "green", "name": "Legacy Die", "description": "Old-format die"}],
 		"modifiers": [],
 	}
 
@@ -238,6 +261,7 @@ func test_apply_save_data_migrates_legacy_save_without_version() -> void:
 	assert_eq(_manager.dice_bag.get_die(0).die_name, "Legacy Die")
 	assert_eq(_manager.build_save_data()["save_version"], GameManager.SAVE_FORMAT_VERSION)
 
+
 func test_apply_save_data_rejects_future_save_version_without_mutating_state() -> void:
 	var future_data: Dictionary = _manager.build_save_data()
 	future_data["save_version"] = 99
@@ -248,6 +272,7 @@ func test_apply_save_data_rejects_future_save_version_without_mutating_state() -
 
 	assert_eq(restored_phase, _manager.Phase.MAIN_MENU)
 	assert_eq(_manager.coins, 123)
+
 
 func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	var default_path := "user://gut_default_save_%d.json" % Time.get_ticks_usec()
@@ -273,44 +298,66 @@ func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	assert_eq(int(saved_data["save_version"]), GameManager.SAVE_FORMAT_VERSION)
 	assert_eq(saved_data["app_version"], _manager.get_app_version())
 
+
 func test_can_load_save_accepts_legacy_save_without_version() -> void:
 	var save_path := "user://gut_legacy_save_%d.json" % Time.get_ticks_usec()
 	_temp_paths.append(save_path)
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	assert_not_null(file)
-	file.store_string(JSON.stringify({
-		"phase": "FLEA_MARKET",
-		"coins": 55,
-		"total_score": 10,
-		"target_score": 200,
-		"hands_per_round": 4,
-		"rerolls_per_hand": 3,
-		"current_round": 2,
-		"dice_bag": [],
-		"modifiers": [],
-	}))
+	(
+		file
+		. store_string(
+			(
+				JSON
+				. stringify(
+					{
+						"phase": "FLEA_MARKET",
+						"coins": 55,
+						"total_score": 10,
+						"target_score": 200,
+						"hands_per_round": 4,
+						"rerolls_per_hand": 3,
+						"current_round": 2,
+						"dice_bag": [],
+						"modifiers": [],
+					}
+				)
+			)
+		)
+	)
 	file.close()
 
 	assert_true(_manager.can_load_save(save_path))
+
 
 func test_can_load_save_returns_false_for_future_save_version() -> void:
 	var save_path := "user://gut_future_save_%d.json" % Time.get_ticks_usec()
 	_temp_paths.append(save_path)
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	assert_not_null(file)
-	file.store_string(JSON.stringify({
-		"save_version": 99,
-		"app_version": "v9.9.9",
-		"phase": "FLEA_MARKET",
-		"coins": 55,
-		"total_score": 10,
-		"target_score": 200,
-		"hands_per_round": 4,
-		"rerolls_per_hand": 3,
-		"current_round": 2,
-		"dice_bag": [],
-		"modifiers": [],
-	}))
+	(
+		file
+		. store_string(
+			(
+				JSON
+				. stringify(
+					{
+						"save_version": 99,
+						"app_version": "v9.9.9",
+						"phase": "FLEA_MARKET",
+						"coins": 55,
+						"total_score": 10,
+						"target_score": 200,
+						"hands_per_round": 4,
+						"rerolls_per_hand": 3,
+						"current_round": 2,
+						"dice_bag": [],
+						"modifiers": [],
+					}
+				)
+			)
+		)
+	)
 	file.close()
 
 	assert_false(_manager.can_load_save(save_path))
@@ -342,25 +389,35 @@ func test_can_load_save_accepts_v1_save_version() -> void:
 	var tmp_path := "user://test_old_save.json"
 	_temp_paths.append(tmp_path)
 	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
-	file.store_string(JSON.stringify({
-		"save_version": 1,
-		"phase": "FLEA_MARKET",
-		"coins": 99,
-		"modifiers": [
-			{
-				"id": "pair_boost",
-				"name": "Pair Boost",
-				"effect": "add_mult",
-				"value": 1.0,
-				"condition": "pair",
-				"rarity": "common",
-			}
-		],
-	}))
+	(
+		file
+		. store_string(
+			(
+				JSON
+				. stringify(
+					{
+						"save_version": 1,
+						"phase": "FLEA_MARKET",
+						"coins": 99,
+						"modifiers":
+						[
+							{
+								"id": "pair_boost",
+								"name": "Pair Boost",
+								"effect": "add_mult",
+								"value": 1.0,
+								"condition": "pair",
+								"rarity": "common",
+							}
+						],
+					}
+				)
+			)
+		)
+	)
 	file = null
 
-	assert_true(_manager.can_load_save(tmp_path),
-			"v1 saves must stay loadable after format bump to v2")
+	assert_true(_manager.can_load_save(tmp_path), "v1 saves must stay loadable after format bump to v2")
 
 
 func test_tutorial_replay_completion_persists_cleared_checkpoint_for_completed_users() -> void:

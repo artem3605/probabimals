@@ -18,15 +18,15 @@ const COMBO_TYPES = [
 var _helper
 var _combo_rules: Array
 
+
 func before_each() -> void:
 	_helper = ComboOddsHelperScript.new()
 	_combo_rules = TestData.load_combo_rules()
 
+
 func test_fully_open_roll_matches_exact_standard_distribution() -> void:
 	var probabilities: Dictionary = _helper.calculate_probabilities(
-		TestData.faces_from_values([1, 1, 1, 1, 1]),
-		[false, false, false, false, false],
-		_combo_rules
+		TestData.faces_from_values([1, 1, 1, 1, 1]), [false, false, false, false, false], _combo_rules
 	)
 
 	assert_eq(probabilities.size(), COMBO_TYPES.size())
@@ -41,11 +41,10 @@ func test_fully_open_roll_matches_exact_standard_distribution() -> void:
 	assert_almost_eq(probabilities["four_same"], 150.0 / 7776.0, 0.001)
 	assert_almost_eq(probabilities["yahtzee"], 6.0 / 7776.0, 0.001)
 
+
 func test_held_dice_only_reroll_unlocked_positions() -> void:
 	var probabilities: Dictionary = _helper.calculate_probabilities(
-		TestData.faces_from_values([2, 2, 3, 4, 6]),
-		[true, true, false, false, false],
-		_combo_rules
+		TestData.faces_from_values([2, 2, 3, 4, 6]), [true, true, false, false, false], _combo_rules
 	)
 
 	assert_almost_eq(_sum_probabilities(probabilities), 1.0, 0.001)
@@ -59,17 +58,17 @@ func test_held_dice_only_reroll_unlocked_positions() -> void:
 	assert_almost_eq(probabilities["four_same"], 15.0 / 216.0, 0.001)
 	assert_almost_eq(probabilities["yahtzee"], 1.0 / 216.0, 0.001)
 
+
 func test_fully_locked_roll_returns_current_combo_with_certainty() -> void:
 	var probabilities: Dictionary = _helper.calculate_probabilities(
-		TestData.faces_from_values([3, 3, 3, 5, 5]),
-		[true, true, true, true, true],
-		_combo_rules
+		TestData.faces_from_values([3, 3, 3, 5, 5]), [true, true, true, true, true], _combo_rules
 	)
 
 	assert_almost_eq(_sum_probabilities(probabilities), 1.0, 0.001)
 	for combo_type in COMBO_TYPES:
 		var expected := 1.0 if combo_type == "full_house" else 0.0
 		assert_almost_eq(probabilities[combo_type], expected, 0.001)
+
 
 func _sum_probabilities(probabilities: Dictionary) -> float:
 	var total := 0.0
