@@ -1541,13 +1541,12 @@ func _refresh_tutorial_dice_accents() -> void:
 		]
 
 	var in_combo: Array[bool] = []
-	var combo_colors: Array = []
+	var combo_colors_by_index: Array = []
 	if combat_mgr != null and combat_mgr.has_rolled:
 		var combo := combat_mgr.get_current_combo()
 		in_combo = combo.get("in_combo", [])
-		combo_colors = _get_pattern_colors(combo.get("type", ""))
+		combo_colors_by_index = _get_combo_accent_colors_by_index(combo, combat_mgr.current_roll_values())
 
-	var combo_color_index := 0
 	for i in range(_dice_cards.size()):
 		var card = _dice_cards[i]
 		if card is CombatDice:
@@ -1555,9 +1554,8 @@ func _refresh_tutorial_dice_accents() -> void:
 			var combo_accent_color := GOLD
 			if i < in_combo.size() and in_combo[i]:
 				combo_accent = true
-				if combo_color_index < combo_colors.size():
-					combo_accent_color = combo_colors[combo_color_index]
-				combo_color_index += 1
+				if i < combo_colors_by_index.size():
+					combo_accent_color = combo_colors_by_index[i]
 
 			var tutorial_accent := show_tutorial_accents and TutorialManager.required_combat_hold_indices.has(i)
 			if tutorial_accent:
@@ -1566,6 +1564,55 @@ func _refresh_tutorial_dice_accents() -> void:
 				(card as CombatDice).set_accent(true, combo_accent_color)
 			else:
 				(card as CombatDice).set_accent(false)
+
+
+func _get_combo_accent_colors_by_index(combo: Dictionary, values: Array[int]) -> Array:
+	var in_combo: Array = combo.get("in_combo", [])
+	var colors: Array = []
+	colors.resize(values.size())
+	for i in range(colors.size()):
+		colors[i] = GOLD
+
+	var combo_type := str(combo.get("type", ""))
+	if combo_type == "two_pair":
+		var pair_colors := _get_matching_value_colors(values, in_combo, [BLUE, PINK], 2)
+		for i in range(colors.size()):
+			if pair_colors.has(i):
+				colors[i] = pair_colors[i]
+		return colors
+
+	var pattern_colors := _get_pattern_colors(combo_type)
+	var combo_color_index := 0
+	for i in range(mini(in_combo.size(), colors.size())):
+		if not bool(in_combo[i]):
+			continue
+		if combo_color_index < pattern_colors.size():
+			colors[i] = pattern_colors[combo_color_index]
+		combo_color_index += 1
+	return colors
+
+
+func _get_matching_value_colors(values: Array[int], in_combo: Array, group_colors: Array,
+		min_count: int) -> Dictionary:
+	var counts := {}
+	for i in range(mini(values.size(), in_combo.size())):
+		if not bool(in_combo[i]):
+			continue
+		var value := values[i]
+		counts[value] = counts.get(value, 0) + 1
+
+	var color_by_value := {}
+	var group_index := 0
+	for value in counts:
+		if int(counts[value]) >= min_count and group_index < group_colors.size():
+			color_by_value[value] = group_colors[group_index]
+			group_index += 1
+
+	var colors_by_index := {}
+	for i in range(mini(values.size(), in_combo.size())):
+		if bool(in_combo[i]) and color_by_value.has(values[i]):
+			colors_by_index[i] = color_by_value[values[i]]
+	return colors_by_index
 
 
 func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:

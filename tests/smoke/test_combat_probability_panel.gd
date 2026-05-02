@@ -112,6 +112,29 @@ func test_combat_probability_rail_does_not_shift_dice_tray_in_compact_layout() -
 	assert_eq(combat.get_dice_tray_center_x(), score_center)
 
 
+func test_two_pair_accents_group_matching_values_when_pairs_are_split() -> void:
+	GameManager.selected_dice = [
+		TestData.deterministic_die([5]),
+		TestData.deterministic_die([4]),
+		TestData.deterministic_die([6]),
+		TestData.deterministic_die([4]),
+		TestData.deterministic_die([5]),
+	]
+	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
+	var combat = scene["combat"]
+
+	combat.combat_mgr.roll_dice()
+	await wait_process_frames(1)
+
+	var combo: Dictionary = combat.combat_mgr.get_current_combo()
+	assert_eq(combo["type"], "two_pair")
+	assert_eq_deep(combo["in_combo"], [true, true, false, true, true])
+	assert_eq(_card_border_color(combat._dice_cards[0]), _card_border_color(combat._dice_cards[4]))
+	assert_eq(_card_border_color(combat._dice_cards[1]), _card_border_color(combat._dice_cards[3]))
+	assert_ne(_card_border_color(combat._dice_cards[0]), _card_border_color(combat._dice_cards[1]))
+	assert_eq(_card_border_color(combat._dice_cards[2]), Color("000000"))
+
+
 func test_hovering_dice_does_not_shift_action_buttons() -> void:
 	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
 	var combat = scene["combat"]
@@ -387,3 +410,8 @@ func _spawn_combat_scene(view_size: Vector2) -> Dictionary:
 		"root": root,
 		"combat": combat,
 	}
+
+
+func _card_border_color(card: Control) -> Color:
+	var style: StyleBoxFlat = card.main_button.get_theme_stylebox("normal")
+	return style.border_color
