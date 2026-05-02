@@ -123,5 +123,10 @@ func test_format_cost_outputs_icon_then_number() -> void:
 	assert_true(out.contains("15"))
 
 
+func test_format_description_preserves_existing_coin_image_bbcode() -> void:
+	var pre := SemanticMarkup.format_cost(15)
+	assert_eq(SemanticMarkup.format_description(pre), pre)
+
+
 func test_coin_icon_returns_bbcode() -> void:
 	assert_eq(SemanticMarkup.coin_icon(), "[img=18]res://assets/art/ui/coin.png[/img]")

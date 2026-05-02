@@ -129,6 +129,27 @@ static func _apply_face_replacement_digit(text: String) -> String:
 static func _apply_coin_icon(text: String) -> String:
 	# Replace the words "coins" / "coin" with the coin icon BBCode. Word
 	# boundary so substrings like "coinage" are not affected.
+	var out := ""
+	var index := 0
+	while index < text.length():
+		var img_start := text.find("[img", index)
+		if img_start == -1:
+			out += _replace_coin_words(text.substr(index))
+			break
+
+		out += _replace_coin_words(text.substr(index, img_start - index))
+		var img_end := text.find("[/img]", img_start)
+		if img_end == -1:
+			out += text.substr(img_start)
+			break
+
+		img_end += "[/img]".length()
+		out += text.substr(img_start, img_end - img_start)
+		index = img_end
+	return out
+
+
+static func _replace_coin_words(text: String) -> String:
 	var re := RegEx.new()
 	re.compile("\\bcoin(s)?\\b")
 	return re.sub(text, _COIN_ICON, true)

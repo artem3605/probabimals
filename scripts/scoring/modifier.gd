@@ -29,7 +29,7 @@ static func from_shop_item(item: Dictionary) -> Modifier:
 	var effect_enum := effect_from_string(str(params.get("effect", "")))
 	if effect_enum == -1:
 		return null
-	var default_value := _default_shop_value_for_effect(effect_enum)
+	var default_value := _default_value_for_effect(effect_enum)
 	return Modifier.new(
 		str(item.get("id", "")),
 		str(item.get("name", "")),
@@ -43,11 +43,12 @@ static func from_save_dict(d: Dictionary) -> Modifier:
 	var effect_enum := effect_from_string(str(d.get("effect", "")))
 	if effect_enum == -1:
 		return null
+	var default_value := _default_value_for_effect(effect_enum)
 	return Modifier.new(
 		str(d.get("id", "")),
 		str(d.get("name", "")),
 		effect_enum,
-		float(d.get("value", 0.0)),
+		float(d.get("value", default_value)),
 		str(d.get("condition", "")),
 		str(d.get("rarity", "common")),
 	)
@@ -71,7 +72,7 @@ static func effect_from_string(s: String) -> int:
 		"add_rerolls": return Effect.ADD_REROLLS
 		_: return -1
 
-static func _default_shop_value_for_effect(effect_enum: int) -> float:
+static func _default_value_for_effect(effect_enum: int) -> float:
 	if effect_enum == Effect.X_MULT:
 		return 1.0
 	return 0.0

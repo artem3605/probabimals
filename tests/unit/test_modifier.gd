@@ -80,6 +80,18 @@ func test_save_dict_round_trip() -> void:
 	assert_eq(restored.condition, original.condition)
 	assert_eq(restored.rarity, original.rarity)
 
+func test_from_save_dict_defaults_missing_x_mult_value_to_neutral() -> void:
+	var restored := Modifier.from_save_dict({
+		"id": "legacy_x_mult",
+		"name": "Legacy X Mult",
+		"effect": "x_mult",
+		"condition": "yahtzee",
+		"rarity": "rare",
+	})
+	assert_not_null(restored)
+	assert_eq(restored.effect, Modifier.Effect.X_MULT)
+	assert_almost_eq(restored.value, 1.0, 0.001)
+
 func test_from_save_dict_returns_null_for_missing_effect() -> void:
 	assert_null(Modifier.from_save_dict({}))
 	assert_null(Modifier.from_save_dict({ "effect": "garbage" }))
