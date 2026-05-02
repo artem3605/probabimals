@@ -701,7 +701,11 @@ func _update_rerolls_display() -> void:
 		_reroll_btn.disabled = not combat_mgr.can_roll()
 	if _end_turn_btn:
 		_end_turn_btn.text = "END TURN"
-		_end_turn_btn.disabled = not combat_mgr.can_score()
+		_end_turn_btn.disabled = not _can_score_current_hand()
+
+
+func _can_score_current_hand() -> bool:
+	return combat_mgr != null and combat_mgr.can_score() and not _suspense_reveal_active
 
 
 func _refresh_probability_panel() -> void:
@@ -1242,7 +1246,7 @@ func _pop_score_bar() -> void:
 
 
 func _on_score_pressed() -> void:
-	if not combat_mgr.can_score():
+	if not _can_score_current_hand():
 		return
 	if TutorialManager.is_active() and not TutorialManager.is_combat_score_allowed():
 		return

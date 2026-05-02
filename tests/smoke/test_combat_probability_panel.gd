@@ -287,6 +287,31 @@ func test_last_reroll_results_can_be_buffered_until_final_reveal() -> void:
 	assert_true(combat._suspense_final_results.is_empty())
 
 
+func test_last_reroll_suspense_blocks_scoring_until_reveal_finishes() -> void:
+	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
+	var combat = scene["combat"]
+
+	combat._begin_suspense_result_buffer()
+	combat.combat_mgr.roll_dice()
+	combat._update_rerolls_display()
+
+	assert_true(combat.combat_mgr.can_score())
+	assert_true(combat._end_turn_btn.disabled)
+
+	var hands_before: int = combat.combat_mgr.hands_remaining
+	var score_before: int = combat.combat_mgr.running_score
+	combat._on_score_pressed()
+
+	assert_eq(combat.combat_mgr.hands_remaining, hands_before)
+	assert_eq(combat.combat_mgr.running_score, score_before)
+
+	combat._finish_suspense_result_buffer()
+	combat._on_dice_rolled(combat._suspense_final_results)
+	combat._update_rerolls_display()
+
+	assert_false(combat._end_turn_btn.disabled)
+
+
 func test_suspense_scramble_only_updates_requested_unrevealed_dice() -> void:
 	var scene: Dictionary = await _spawn_combat_scene(WIDE_VIEWPORT)
 	var combat = scene["combat"]
