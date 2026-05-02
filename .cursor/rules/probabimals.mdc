@@ -1,0 +1,14 @@
+---
+description: Probabimals project rules and validation workflow
+alwaysApply: true
+---
+
+# Probabimals Cursor Rules
+
+- Read `AGENTS.md`, `.codex/project-context.md`, and `knowledge/HOW_TO_RUN.md` before planning substantial changes.
+- Prefer `make validate` before handing off completed work.
+- Use focused checks while iterating: `make test`, `make static-check`, `make lint`, `make format-check`, `make typecheck`, and `make security`.
+- Use `make build` for cache-safe Web Dev export checks when export behavior is relevant.
+- Keep gameplay parameters in `resources/data/*.json` when the value is design-tunable.
+- Avoid broad edits in `addons/`, `build/`, `.godot/`, and `.godot-home/`.
+- Preserve the Godot signal-driven architecture described in `knowledge/ARCHITECTURE.md`.
