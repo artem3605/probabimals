@@ -37,6 +37,18 @@ func test_from_shop_item_parses_x_mult_effect() -> void:
 	var mod := Modifier.from_shop_item(item)
 	assert_eq(mod.effect, Modifier.Effect.X_MULT)
 
+func test_from_shop_item_defaults_missing_x_mult_value_to_neutral() -> void:
+	var item := {
+		"id": "legacy_x_mult",
+		"name": "Legacy X Mult",
+		"rarity": "rare",
+		"params": { "effect": "x_mult", "condition": "yahtzee" },
+	}
+	var mod := Modifier.from_shop_item(item)
+	assert_not_null(mod)
+	assert_eq(mod.effect, Modifier.Effect.X_MULT)
+	assert_almost_eq(mod.value, 1.0, 0.001)
+
 func test_from_shop_item_parses_add_rerolls_effect() -> void:
 	var item := {
 		"id": "reroll_plus",
