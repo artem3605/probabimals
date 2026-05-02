@@ -16,14 +16,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Import project
-        run: godot --headless --import 2>&1 || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev tooling
+        run: |
+          python3 -m pip install --upgrade pip
+          make install-dev
+
+      - name: Static checks
+        run: make static-check
         timeout-minutes: 3
+
+      - name: Lint
+        run: make lint
+
+      - name: Format check
+        run: make format-check
+
+      - name: Type check
+        run: make typecheck
+
+      - name: Security audit
+        run: make security
 
       - name: Run GUT tests
         run: |
           mkdir -p build/test-results
-          GUT_JUNIT_XML=build/test-results/gut.xml bash scripts/test/run_gut.sh
+          GUT_JUNIT_XML=build/test-results/gut.xml make test
 
       - name: Upload test results
         if: always()

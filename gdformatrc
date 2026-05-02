@@ -1,0 +1,6 @@
+line_length: 120
+excluded_directories:
+  - addons
+  - build
+  - .godot
+  - .godot-home
