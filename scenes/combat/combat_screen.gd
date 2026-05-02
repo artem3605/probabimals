@@ -176,7 +176,9 @@ func _setup_combat() -> void:
 	combat_mgr = CombatManager.new()
 	add_child(combat_mgr)
 
-	var dice: Array[Die] = GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	var dice: Array[Die] = (
+		GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	)
 	var roll_provider := Callable()
 	if TutorialManager.should_use_scripted_rolls():
 		roll_provider = Callable(self, "_provide_tutorial_roll")
@@ -220,21 +222,13 @@ func _build_ui() -> void:
 	_build_combat_workspace(content)
 
 	_reroll_btn = _make_colored_button(
-		"",
-		COMBAT_REROLL_BUTTON_SIZE,
-		PINK,
-		PINK.lightened(0.15),
-		COMBAT_REROLL_BUTTON_FONT_SIZE
+		"", COMBAT_REROLL_BUTTON_SIZE, PINK, PINK.lightened(0.15), COMBAT_REROLL_BUTTON_FONT_SIZE
 	)
 	_reroll_btn.pressed.connect(_on_roll_pressed)
 	action_bar.add_child(_reroll_btn)
 
 	_end_turn_btn = _make_colored_button(
-		"",
-		COMBAT_END_TURN_BUTTON_SIZE,
-		GREEN,
-		GREEN.lightened(0.15),
-		COMBAT_END_TURN_BUTTON_FONT_SIZE
+		"", COMBAT_END_TURN_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), COMBAT_END_TURN_BUTTON_FONT_SIZE
 	)
 	_end_turn_btn.pressed.connect(_on_score_pressed)
 	action_bar.add_child(_end_turn_btn)
@@ -248,7 +242,11 @@ func _build_ui() -> void:
 	_animating = true
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 1.0, 0.4)
-	tween.tween_callback(func(): _animating = false; queue_redraw())
+	tween.tween_callback(
+		func():
+			_animating = false
+			queue_redraw()
+	)
 
 
 func _build_top_bar(parent: VBoxContainer) -> void:
@@ -293,8 +291,7 @@ func _build_turn_pill(parent: HBoxContainer) -> void:
 	_turn_pill.custom_minimum_size = Vector2(0, MENU_BUTTON_SIZE.y)
 	_turn_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_turn_pill.add_theme_stylebox_override(
-		"panel",
-		_make_style(DARK, BORDER_BLACK, COMBAT_TURN_PILL_BORDER_WIDTH, COMBAT_TURN_PILL_MARGIN)
+		"panel", _make_style(DARK, BORDER_BLACK, COMBAT_TURN_PILL_BORDER_WIDTH, COMBAT_TURN_PILL_MARGIN)
 	)
 
 	var row := HBoxContainer.new()
@@ -393,7 +390,9 @@ func _build_dice_tray(parent: VBoxContainer) -> void:
 	center.add_child(_dice_container)
 
 	_dice_cards.clear()
-	var all_dice: Array[Die] = GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	var all_dice: Array[Die] = (
+		GameManager.selected_dice if not GameManager.selected_dice.is_empty() else GameManager.dice_bag.draw(5)
+	)
 	for i in range(all_dice.size()):
 		var die: Die = all_dice[i]
 		var card := CombatDice.new()
@@ -433,11 +432,9 @@ func _play_die_landing_bounce(index: int, final_die: bool = false) -> void:
 	var pop_scale := COMBAT_LAST_REROLL_FINAL_POP_SCALE if final_die else COMBAT_LAST_REROLL_NORMAL_POP_SCALE
 	var tween := create_tween()
 	tween.parallel().tween_property(btn, "rotation", 0.0, 0.08)
-	tween.parallel().tween_property(btn, "scale", pop_scale, 0.08) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.parallel().tween_property(btn, "scale", pop_scale, 0.08).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(btn, "scale", Vector2(1.04, 0.96), 0.06)
-	tween.tween_property(btn, "scale", Vector2.ONE, 0.10) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_property(btn, "scale", Vector2.ONE, 0.10).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func _build_description_panel(parent: VBoxContainer) -> void:
@@ -524,10 +521,7 @@ func _build_result_overlay() -> void:
 	_result_overlay.add_child(center)
 
 	_result_panel = _make_panel(
-		Color(0.12, 0.12, 0.12, 0.98),
-		GOLD,
-		COMBAT_RESULT_PANEL_SIZE,
-		COMBAT_RESULT_PANEL_MARGIN
+		Color(0.12, 0.12, 0.12, 0.98), GOLD, COMBAT_RESULT_PANEL_SIZE, COMBAT_RESULT_PANEL_MARGIN
 	)
 	_result_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(_result_panel)
@@ -564,22 +558,14 @@ func _build_result_overlay() -> void:
 	spacer.custom_minimum_size = Vector2(0, COMBAT_RESULT_BUTTON_SPACER_HEIGHT)
 	vbox.add_child(spacer)
 
-	_result_next_btn = _make_pixel_button(
-		"NEXT ROUND",
-		COMBAT_RESULT_BUTTON_SIZE,
-		COMBAT_RESULT_NEXT_BUTTON_FONT_SIZE
-	)
+	_result_next_btn = _make_pixel_button("NEXT ROUND", COMBAT_RESULT_BUTTON_SIZE, COMBAT_RESULT_NEXT_BUTTON_FONT_SIZE)
 	_result_next_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_next_btn.pressed.connect(_on_next_round_pressed)
 	_result_next_btn.visible = false
 	vbox.add_child(_result_next_btn)
 
 	_result_retry_btn = _make_colored_button(
-		"RETRY TUTORIAL",
-		COMBAT_RESULT_BUTTON_SIZE,
-		PINK,
-		PINK.lightened(0.15),
-		COMBAT_RESULT_RETRY_BUTTON_FONT_SIZE
+		"RETRY TUTORIAL", COMBAT_RESULT_BUTTON_SIZE, PINK, PINK.lightened(0.15), COMBAT_RESULT_RETRY_BUTTON_FONT_SIZE
 	)
 	_result_retry_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_retry_btn.pressed.connect(_on_retry_tutorial_pressed)
@@ -587,9 +573,7 @@ func _build_result_overlay() -> void:
 	vbox.add_child(_result_retry_btn)
 
 	_result_survey_btn = _make_pixel_button(
-		"TAKE SURVEY",
-		COMBAT_RESULT_BUTTON_SIZE,
-		COMBAT_RESULT_SURVEY_BUTTON_FONT_SIZE
+		"TAKE SURVEY", COMBAT_RESULT_BUTTON_SIZE, COMBAT_RESULT_SURVEY_BUTTON_FONT_SIZE
 	)
 	_result_survey_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_survey_btn.pressed.connect(_on_playtest_survey_pressed)
@@ -598,9 +582,7 @@ func _build_result_overlay() -> void:
 	vbox.add_child(_result_survey_btn)
 
 	_result_menu_btn = _make_pixel_button(
-		"BACK TO MENU",
-		COMBAT_RESULT_BUTTON_SIZE,
-		COMBAT_RESULT_MENU_BUTTON_FONT_SIZE
+		"BACK TO MENU", COMBAT_RESULT_BUTTON_SIZE, COMBAT_RESULT_MENU_BUTTON_FONT_SIZE
 	)
 	_result_menu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_result_menu_btn.pressed.connect(_go_to_main_menu)
@@ -634,20 +616,12 @@ func _build_pause_overlay() -> void:
 	vbox.add_child(spacer)
 
 	var resume_btn := _make_colored_button(
-		"RESUME",
-		COMBAT_PAUSE_BUTTON_SIZE,
-		GREEN,
-		GREEN.lightened(0.15),
-		COMBAT_PAUSE_RESUME_BUTTON_FONT_SIZE
+		"RESUME", COMBAT_PAUSE_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), COMBAT_PAUSE_RESUME_BUTTON_FONT_SIZE
 	)
 	resume_btn.pressed.connect(_on_resume_pressed)
 	vbox.add_child(resume_btn)
 
-	var quit_btn := _make_pixel_button(
-		"QUIT TO MENU",
-		COMBAT_PAUSE_BUTTON_SIZE,
-		COMBAT_PAUSE_QUIT_BUTTON_FONT_SIZE
-	)
+	var quit_btn := _make_pixel_button("QUIT TO MENU", COMBAT_PAUSE_BUTTON_SIZE, COMBAT_PAUSE_QUIT_BUTTON_FONT_SIZE)
 	quit_btn.pressed.connect(_on_pause_quit_pressed)
 	vbox.add_child(quit_btn)
 
@@ -686,6 +660,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # -- Drawing helpers -----------------------------------------------------------
 
+
 func _draw_panel_shadow(panel: Control, offset: Vector2) -> void:
 	if not is_instance_valid(panel) or not panel.visible:
 		return
@@ -694,6 +669,7 @@ func _draw_panel_shadow(panel: Control, offset: Vector2) -> void:
 
 
 # -- HUD updates --------------------------------------------------------------
+
 
 func _update_rerolls_display() -> void:
 	if _reroll_btn:
@@ -733,9 +709,7 @@ func _count_held_dice() -> int:
 
 
 func _should_use_last_reroll_suspense() -> bool:
-	return combat_mgr != null \
-		and combat_mgr.rerolls_remaining == 1 \
-		and not _get_unheld_dice_indices().is_empty()
+	return combat_mgr != null and combat_mgr.rerolls_remaining == 1 and not _get_unheld_dice_indices().is_empty()
 
 
 func _get_unheld_dice_indices() -> Array[int]:
@@ -836,8 +810,7 @@ func _calculate_combo_preview(combo: Dictionary) -> Dictionary:
 	if combat_mgr == null or combo.is_empty():
 		return {}
 	var in_combo: Array[bool] = combo.get("in_combo", [])
-	return combat_mgr.scoring_engine.calculate_score(
-		combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
+	return combat_mgr.scoring_engine.calculate_score(combo, combat_mgr.current_roll, in_combo, GameManager.modifiers)
 
 
 func _build_combo_tutorial_body() -> String:
@@ -875,7 +848,9 @@ func _build_combo_tutorial_body() -> String:
 		"%d x %s %s mult = %d pts." % [face_sum, _format_tutorial_factor(mult), combo_name.to_lower(), total],
 	]
 	if x_mult > 1.0:
-		body_lines.append("%d x %s X-mult = %d pts total." % [int(floor(face_sum * mult)), _format_tutorial_factor(x_mult), total])
+		body_lines.append(
+			"%d x %s X-mult = %d pts total." % [int(floor(face_sum * mult)), _format_tutorial_factor(x_mult), total]
+		)
 	else:
 		body_lines.append("That is exactly what you would bank if you scored now.")
 	return "\n".join(body_lines)
@@ -886,6 +861,7 @@ func _format_tutorial_factor(value: float) -> String:
 
 
 # -- Signal handlers -----------------------------------------------------------
+
 
 func _on_die_clicked(index: int) -> void:
 	if not combat_mgr.has_rolled:
@@ -941,7 +917,11 @@ func _animate_roll() -> void:
 			tween.parallel().tween_property(btn, "scale", Vector2(0.85, 0.85), 0.05)
 
 	# Phase 2 — TUMBLE: rapid face cycling with position jitter
-	tween.tween_callback(func(): if _probability_panel_ui: _probability_panel_ui.start_scramble())
+	tween.tween_callback(
+		func():
+			if _probability_panel_ui:
+				_probability_panel_ui.start_scramble()
+	)
 	for f in range(8):
 		tween.tween_callback(_show_random_faces)
 		tween.tween_callback(_jitter_unheld_dice)
@@ -960,8 +940,9 @@ func _queue_normal_roll_settle(tween: Tween) -> void:
 		if not combat_mgr.is_held(i):
 			var btn: Button = _dice_cards[i].main_button
 			tween.parallel().tween_property(btn, "rotation", 0.0, 0.08)
-			tween.parallel().tween_property(btn, "scale", Vector2(1.08, 1.08), 0.08) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+			tween.parallel().tween_property(btn, "scale", Vector2(1.08, 1.08), 0.08).set_ease(Tween.EASE_OUT).set_trans(
+				Tween.TRANS_BACK
+			)
 
 	tween.tween_interval(0.06)
 
@@ -973,8 +954,9 @@ func _queue_normal_roll_settle(tween: Tween) -> void:
 	for i in range(_dice_cards.size()):
 		if not combat_mgr.is_held(i):
 			var btn: Button = _dice_cards[i].main_button
-			tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.10) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.10).set_ease(Tween.EASE_OUT).set_trans(
+				Tween.TRANS_CUBIC
+			)
 
 	tween.tween_callback(_play_pending_combo_reveal)
 	tween.tween_callback(_update_rerolls_display)
@@ -992,23 +974,21 @@ func _queue_last_reroll_suspense_settle(tween: Tween) -> void:
 		var die_index := reveal_indices[stop_index]
 		var delay := delays[stop_index]
 		if delay > 0.0:
-			_queue_suspense_scramble_interval(
-				tween,
-				delay - delays[stop_index - 1],
-				reveal_indices.slice(stop_index)
-			)
+			_queue_suspense_scramble_interval(tween, delay - delays[stop_index - 1], reveal_indices.slice(stop_index))
 		var is_final_die := stop_index == reveal_indices.size() - 1
-		tween.tween_callback(func(index := die_index, final_die := is_final_die):
-			_apply_revealed_die_value(index, _suspense_final_results)
-			_play_die_landing_bounce(index, final_die)
+		tween.tween_callback(
+			func(index := die_index, final_die := is_final_die):
+				_apply_revealed_die_value(index, _suspense_final_results)
+				_play_die_landing_bounce(index, final_die)
 		)
 
 	tween.tween_interval(COMBAT_LAST_REROLL_POST_REVEAL_DELAY)
 	tween.tween_callback(_finish_suspense_result_buffer)
-	tween.tween_callback(func():
-		var final_results := _suspense_final_results.duplicate()
-		_suspense_final_results.clear()
-		_on_dice_rolled(final_results)
+	tween.tween_callback(
+		func():
+			var final_results := _suspense_final_results.duplicate()
+			_suspense_final_results.clear()
+			_on_dice_rolled(final_results)
 	)
 	tween.tween_callback(_play_pending_combo_reveal)
 	tween.tween_callback(_update_rerolls_display)
@@ -1019,9 +999,10 @@ func _queue_suspense_scramble_interval(tween: Tween, duration: float, indices: A
 	var elapsed := 0.0
 	while elapsed < duration:
 		var step_indices := indices.duplicate()
-		tween.tween_callback(func(scramble_indices := step_indices):
-			_show_random_faces_for_indices(scramble_indices)
-			_jitter_dice_indices(scramble_indices)
+		tween.tween_callback(
+			func(scramble_indices := step_indices):
+				_show_random_faces_for_indices(scramble_indices)
+				_jitter_dice_indices(scramble_indices)
 		)
 		var step := minf(COMBAT_LAST_REROLL_SCRAMBLE_STEP, duration - elapsed)
 		tween.tween_interval(step)
@@ -1148,23 +1129,40 @@ func _pulse_combo_hud(color: Color, priority: int) -> void:
 	_combo_hud_tween = create_tween()
 	_combo_hud_tween.set_parallel(true)
 	if _combo_name_label != null:
-		_combo_hud_tween.tween_property(_combo_name_label, "scale", Vector2(combo_scale, combo_scale), 0.09) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		(
+			_combo_hud_tween
+			. tween_property(_combo_name_label, "scale", Vector2(combo_scale, combo_scale), 0.09)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_BACK)
+		)
 		_combo_hud_tween.tween_property(_combo_name_label, "modulate", pulse_color, 0.09)
 	if _score_value_label != null:
-		_combo_hud_tween.tween_property(_score_value_label, "scale", Vector2(score_scale, score_scale), 0.09) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		(
+			_combo_hud_tween
+			. tween_property(_score_value_label, "scale", Vector2(score_scale, score_scale), 0.09)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_BACK)
+		)
 	if priority >= 6 and _score_panel != null:
 		_combo_hud_tween.tween_property(_score_panel, "modulate", color.lightened(0.38), 0.09)
 
 	_combo_hud_tween.chain()
 	if _combo_name_label != null:
-		_combo_hud_tween.tween_property(_combo_name_label, "scale", Vector2.ONE, 0.18) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		(
+			_combo_hud_tween
+			. tween_property(_combo_name_label, "scale", Vector2.ONE, 0.18)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_CUBIC)
+		)
 		_combo_hud_tween.parallel().tween_property(_combo_name_label, "modulate", Color.WHITE, 0.18)
 	if _score_value_label != null:
-		_combo_hud_tween.parallel().tween_property(_score_value_label, "scale", Vector2.ONE, 0.18) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		(
+			_combo_hud_tween
+			. parallel()
+			. tween_property(_score_value_label, "scale", Vector2.ONE, 0.18)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_CUBIC)
+		)
 	if _score_panel != null:
 		_combo_hud_tween.parallel().tween_property(_score_panel, "modulate", Color.WHITE, 0.18)
 
@@ -1194,43 +1192,31 @@ func _animate_score_flight(tween: Tween, total: int) -> void:
 	label.position = start - label.pivot_offset
 	label.scale = Vector2(1.1, 1.1)
 
-	tween.tween_property(
-		label,
-		"position",
-		((start + end) * 0.5) + lift - label.pivot_offset,
-		COMBAT_SCORE_FLIGHT_DURATION * 0.45
-	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(
-		label,
-		"scale",
-		Vector2(1.2, 1.2),
-		COMBAT_SCORE_FLIGHT_DURATION * 0.45
+	(
+		tween
+		. tween_property(
+			label, "position", ((start + end) * 0.5) + lift - label.pivot_offset, COMBAT_SCORE_FLIGHT_DURATION * 0.45
+		)
+		. set_ease(Tween.EASE_OUT)
+		. set_trans(Tween.TRANS_CUBIC)
 	)
-	tween.tween_property(
-		label,
-		"position",
-		end - label.pivot_offset,
-		COMBAT_SCORE_FLIGHT_DURATION * 0.55
-	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(
-		label,
-		"scale",
-		Vector2(0.82, 0.82),
-		COMBAT_SCORE_FLIGHT_DURATION * 0.55
+	tween.parallel().tween_property(label, "scale", Vector2(1.2, 1.2), COMBAT_SCORE_FLIGHT_DURATION * 0.45)
+	(
+		tween
+		. tween_property(label, "position", end - label.pivot_offset, COMBAT_SCORE_FLIGHT_DURATION * 0.55)
+		. set_ease(Tween.EASE_IN)
+		. set_trans(Tween.TRANS_CUBIC)
 	)
-	tween.parallel().tween_property(
-		label,
-		"modulate:a",
-		0.15,
-		COMBAT_SCORE_FLIGHT_DURATION * 0.55
-	)
-	tween.tween_callback(func():
-		_update_score_bar()
-		_pop_score_bar()
-		if label != null and is_instance_valid(label):
-			label.queue_free()
-		if _score_flight_label == label:
-			_score_flight_label = null
+	tween.parallel().tween_property(label, "scale", Vector2(0.82, 0.82), COMBAT_SCORE_FLIGHT_DURATION * 0.55)
+	tween.parallel().tween_property(label, "modulate:a", 0.15, COMBAT_SCORE_FLIGHT_DURATION * 0.55)
+	tween.tween_callback(
+		func():
+			_update_score_bar()
+			_pop_score_bar()
+			if label != null and is_instance_valid(label):
+				label.queue_free()
+			if _score_flight_label == label:
+				_score_flight_label = null
 	)
 
 
@@ -1239,10 +1225,15 @@ func _pop_score_bar() -> void:
 		return
 	_score_bar_container.pivot_offset = _score_bar_container.size * 0.5
 	var pop := create_tween()
-	pop.tween_property(_score_bar_container, "scale", COMBAT_SCORE_BAR_POP_SCALE, 0.08) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	pop.tween_property(_score_bar_container, "scale", Vector2.ONE, 0.14) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	(
+		pop
+		. tween_property(_score_bar_container, "scale", COMBAT_SCORE_BAR_POP_SCALE, 0.08)
+		. set_ease(Tween.EASE_OUT)
+		. set_trans(Tween.TRANS_BACK)
+	)
+	pop.tween_property(_score_bar_container, "scale", Vector2.ONE, 0.14).set_ease(Tween.EASE_OUT).set_trans(
+		Tween.TRANS_CUBIC
+	)
 
 
 func _on_score_pressed() -> void:
@@ -1267,29 +1258,31 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 	AudioManager.play_sfx(&"score_tick")
 	var tween := create_tween()
 
-	tween.tween_callback(func():
-		_combo_name_label.text = combo.get("name", "").to_upper()
-		_score_value_label.text = "+%d" % total
-		_score_value_label.add_theme_color_override("font_color", GREEN)
-		_score_pts_suffix.text = "PTS"
-		_score_pts_suffix.visible = true
-		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
-		_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
-		_score_breakdown_label.text = ""
-		_update_hand_display()
+	tween.tween_callback(
+		func():
+			_combo_name_label.text = combo.get("name", "").to_upper()
+			_score_value_label.text = "+%d" % total
+			_score_value_label.add_theme_color_override("font_color", GREEN)
+			_score_pts_suffix.text = "PTS"
+			_score_pts_suffix.visible = true
+			_score_pts_suffix.add_theme_color_override("font_color", GREEN)
+			_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+			_score_breakdown_label.text = ""
+			_update_hand_display()
 	)
 	tween.tween_interval(0.12)
 	_animate_score_flight(tween, total)
 
 	tween.tween_interval(0.45)
 
-	tween.tween_callback(func():
-		_score_value_label.add_theme_color_override("font_color", DARK)
-		_score_pts_suffix.add_theme_color_override("font_color", DARK)
-		if combat_mgr.hand_state == CombatManager.HandState.HAND_TRANSITION:
-			combat_mgr.begin_next_hand()
-			_reset_for_next_hand()
-		_animating = false
+	tween.tween_callback(
+		func():
+			_score_value_label.add_theme_color_override("font_color", DARK)
+			_score_pts_suffix.add_theme_color_override("font_color", DARK)
+			if combat_mgr.hand_state == CombatManager.HandState.HAND_TRANSITION:
+				combat_mgr.begin_next_hand()
+				_reset_for_next_hand()
+			_animating = false
 	)
 
 
@@ -1358,10 +1351,7 @@ func _on_combo_row_hover_enter(combo_type: String) -> void:
 func _combo_hover_multiplier(combo_type: String, base_mult: float) -> float:
 	var scorer: ScoringEngine = combat_mgr.scoring_engine if combat_mgr != null else ScoringEngine.new()
 	var score_data := scorer.calculate_score(
-		{"type": combo_type, "combo_mult": base_mult},
-		[],
-		[],
-		GameManager.modifiers
+		{"type": combo_type, "combo_mult": base_mult}, [], [], GameManager.modifiers
 	)
 	return float(score_data.get("mult", base_mult)) * float(score_data.get("x_mult", 1.0))
 
@@ -1405,7 +1395,9 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 		else:
 			_result_sub_label.text = "Target: %d" % GameManager.target_score
 		var reward := GameManager.get_round_reward()
-		_result_coins_label.text = "[center]+%d%s[/center]" % [reward, SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4)]
+		_result_coins_label.text = (
+			"[center]+%d%s[/center]" % [reward, SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4)]
+		)
 		_result_coins_label.visible = true
 		_result_next_btn.visible = true
 		_result_retry_btn.visible = false
@@ -1444,19 +1436,30 @@ func _get_pattern_colors(combo_type: String) -> Array:
 	var s := [BLUE.darkened(0.3), BLUE.darkened(0.15), BLUE, BLUE.lightened(0.15), BLUE.lightened(0.3)]
 
 	match combo_type:
-		"high_card":      return [a, g, g, g, g]
-		"pair":           return [a, a, g, g, g]
-		"two_pair":       return [a, a, b, b, g]
-		"three_same":     return [a, a, a, g, g]
-		"small_straight": return [s[0], s[1], s[2], s[3], g]
-		"full_house":     return [a, a, a, b, b]
-		"large_straight": return [s[0], s[1], s[2], s[3], s[4]]
-		"four_same":      return [a, a, a, a, g]
-		"yahtzee":        return [a, a, a, a, a]
-		_:                return [g, g, g, g, g]
+		"high_card":
+			return [a, g, g, g, g]
+		"pair":
+			return [a, a, g, g, g]
+		"two_pair":
+			return [a, a, b, b, g]
+		"three_same":
+			return [a, a, a, g, g]
+		"small_straight":
+			return [s[0], s[1], s[2], s[3], g]
+		"full_house":
+			return [a, a, a, b, b]
+		"large_straight":
+			return [s[0], s[1], s[2], s[3], s[4]]
+		"four_same":
+			return [a, a, a, a, g]
+		"yahtzee":
+			return [a, a, a, a, a]
+		_:
+			return [g, g, g, g, g]
 
 
 # -- Navigation ----------------------------------------------------------------
+
 
 func _on_next_round_pressed() -> void:
 	if TutorialManager.is_active():
@@ -1509,11 +1512,16 @@ func _refresh_tutorial_ui() -> void:
 
 func _get_tutorial_highlight_target() -> Variant:
 	match TutorialManager.step_id:
-		TutorialManager.STEP_INTRO_ROLL, TutorialManager.STEP_COMBAT_GOOD_LUCK: return _reroll_btn
-		TutorialManager.STEP_INTRO_HOLD: return _find_required_hold_targets()
-		TutorialManager.STEP_INTRO_REROLL: return _reroll_btn
-		TutorialManager.STEP_INTRO_FINISH: return [_turn_pill, _end_turn_btn]
-		TutorialManager.STEP_INTRO_WIN: return _result_next_btn
+		TutorialManager.STEP_INTRO_ROLL, TutorialManager.STEP_COMBAT_GOOD_LUCK:
+			return _reroll_btn
+		TutorialManager.STEP_INTRO_HOLD:
+			return _find_required_hold_targets()
+		TutorialManager.STEP_INTRO_REROLL:
+			return _reroll_btn
+		TutorialManager.STEP_INTRO_FINISH:
+			return [_turn_pill, _end_turn_btn]
+		TutorialManager.STEP_INTRO_WIN:
+			return _result_next_btn
 		TutorialManager.STEP_INTRO_WELCOME:
 			var targets: Array[Control] = [_title_bar_vbox, _score_bar_container]
 			return targets
@@ -1521,7 +1529,8 @@ func _get_tutorial_highlight_target() -> Variant:
 			if _probability_panel_ui != null:
 				return _probability_panel_ui
 			return null
-		_: return null
+		_:
+			return null
 
 
 func _get_tutorial_avoid_target() -> Variant:
@@ -1531,14 +1540,17 @@ func _get_tutorial_avoid_target() -> Variant:
 func _refresh_tutorial_dice_accents() -> void:
 	var show_tutorial_accents := false
 	if TutorialManager.is_active():
-		show_tutorial_accents = TutorialManager.step_id not in [
-			TutorialManager.STEP_INTRO_WELCOME,
-			TutorialManager.STEP_INTRO_ROLL,
-			TutorialManager.STEP_INTRO_PAIR,
-			TutorialManager.STEP_INTRO_FINISH,
-			TutorialManager.STEP_INTRO_WIN,
-			TutorialManager.STEP_COMBAT_GOOD_LUCK,
-		]
+		show_tutorial_accents = (
+			TutorialManager.step_id
+			not in [
+				TutorialManager.STEP_INTRO_WELCOME,
+				TutorialManager.STEP_INTRO_ROLL,
+				TutorialManager.STEP_INTRO_PAIR,
+				TutorialManager.STEP_INTRO_FINISH,
+				TutorialManager.STEP_INTRO_WIN,
+				TutorialManager.STEP_COMBAT_GOOD_LUCK,
+			]
+		)
 
 	var in_combo: Array[bool] = []
 	var combo_colors_by_index: Array = []
@@ -1592,8 +1604,7 @@ func _get_combo_accent_colors_by_index(combo: Dictionary, values: Array[int]) ->
 	return colors
 
 
-func _get_matching_value_colors(values: Array[int], in_combo: Array, group_colors: Array,
-		min_count: int) -> Dictionary:
+func _get_matching_value_colors(values: Array[int], in_combo: Array, group_colors: Array, min_count: int) -> Dictionary:
 	var counts := {}
 	for i in range(mini(values.size(), in_combo.size())):
 		if not bool(in_combo[i]):
@@ -1728,10 +1739,7 @@ func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
 func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
 	rtl.text = value
 	rtl.size.x = COMBAT_DESC_BODY_WIDTH
-	rtl.custom_minimum_size.y = maxf(
-		float(COMBAT_DESC_BODY_FONT_SIZE),
-		rtl.get_content_height()
-	)
+	rtl.custom_minimum_size.y = maxf(float(COMBAT_DESC_BODY_FONT_SIZE), rtl.get_content_height())
 
 
 func _get_combo_display_color(combo_type: String) -> Color:

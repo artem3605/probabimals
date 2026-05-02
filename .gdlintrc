@@ -1,0 +1,14 @@
+excluded_directories:
+  - addons
+  - build
+  - .godot
+  - .godot-home
+disable:
+  - class-definitions-order
+  - function-variable-name
+  - max-file-lines
+  - max-line-length
+  - max-public-methods
+  - max-returns
+  - no-elif-return
+  - unused-argument

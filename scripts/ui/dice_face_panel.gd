@@ -15,10 +15,16 @@ const PIP_LAYOUTS := {
 	2: [Vector2(0.27, 0.27), Vector2(0.73, 0.73)],
 	3: [Vector2(0.73, 0.27), Vector2(0.5, 0.5), Vector2(0.27, 0.73)],
 	4: [Vector2(0.27, 0.27), Vector2(0.73, 0.27), Vector2(0.27, 0.73), Vector2(0.73, 0.73)],
-	5: [Vector2(0.27, 0.27), Vector2(0.73, 0.27), Vector2(0.5, 0.5),
-		Vector2(0.27, 0.73), Vector2(0.73, 0.73)],
-	6: [Vector2(0.27, 0.22), Vector2(0.73, 0.22), Vector2(0.27, 0.5),
-		Vector2(0.73, 0.5), Vector2(0.27, 0.78), Vector2(0.73, 0.78)],
+	5: [Vector2(0.27, 0.27), Vector2(0.73, 0.27), Vector2(0.5, 0.5), Vector2(0.27, 0.73), Vector2(0.73, 0.73)],
+	6:
+	[
+		Vector2(0.27, 0.22),
+		Vector2(0.73, 0.22),
+		Vector2(0.27, 0.5),
+		Vector2(0.73, 0.5),
+		Vector2(0.27, 0.78),
+		Vector2(0.73, 0.78)
+	],
 }
 
 

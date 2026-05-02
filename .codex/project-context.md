@@ -60,7 +60,7 @@ Use the strongest safe checks available for the files touched in the active slic
 - General import/syntax check after scene, resource, or GDScript changes:
 
 ```bash
-godot --headless --import
+make static-check
 ```
 
 ### Automated Tests
@@ -68,21 +68,38 @@ godot --headless --import
 - Primary check after gameplay, manager, UI, data, or test changes:
 
 ```bash
-./scripts/test/run_gut.sh
+make test
 ```
 
 - Optional JUnit output when useful for CI-style inspection:
 
 ```bash
-GUT_JUNIT_XML=build/test-results/gut.xml ./scripts/test/run_gut.sh
+GUT_JUNIT_XML=build/test-results/gut.xml make test
 ```
 
-### Web Export
+### Style And Static Analysis
+
+- Run after touching GDScript or Python helper scripts:
+
+```bash
+make lint
+make format-check
+make typecheck
+make security
+```
+
+- Run the full local validation loop when preparing a branch:
+
+```bash
+make validate
+```
+
+### Build And Export
 
 - Use when export configuration, web build behavior, or browser-facing integration is part of the slice:
 
 ```bash
-godot --headless --export-release "Web Dev" /tmp/probabimals-web-dev/probabimals-dev.html
+make build
 ```
 
 ### Manual Or Browser Checks

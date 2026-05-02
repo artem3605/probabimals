@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Generate 8-bit SFX WAV files for Probabimals."""
 
-import math
 import os
-import struct
 import wave
 
 import numpy as np
@@ -69,7 +67,9 @@ def _env_ad(samples: np.ndarray, attack_ms: float = 5, decay_ms: float = 50) -> 
     return samples * env
 
 
-def _env_custom(samples: np.ndarray, attack_ms: float, sustain_level: float, release_ms: float) -> np.ndarray:
+def _env_custom(
+    samples: np.ndarray, attack_ms: float, sustain_level: float, release_ms: float
+) -> np.ndarray:
     n = len(samples)
     att = min(int(SAMPLE_RATE * attack_ms / 1000), n)
     rel = min(int(SAMPLE_RATE * release_ms / 1000), n)
@@ -99,7 +99,7 @@ def _save_wav(filename: str, samples: np.ndarray):
         wf.setsampwidth(2)
         wf.setframerate(SAMPLE_RATE)
         wf.writeframes(data.tobytes())
-    print(f"  {filename}: {len(data)/SAMPLE_RATE:.2f}s ({os.path.getsize(path)} bytes)")
+    print(f"  {filename}: {len(data) / SAMPLE_RATE:.2f}s ({os.path.getsize(path)} bytes)")
 
 
 def gen_ui_click():
@@ -195,18 +195,23 @@ def gen_coin_clink():
     sig1 = triangle_wave(_note_freq("E6"), 0.04)
     gap = np.zeros(int(SAMPLE_RATE * 0.02))
     sig2 = triangle_wave(_note_freq("G6"), 0.06)
-    sig = np.concatenate([
-        _env_ad(sig1, attack_ms=1, decay_ms=30),
-        gap,
-        _env_ad(sig2, attack_ms=1, decay_ms=50),
-    ])
+    sig = np.concatenate(
+        [
+            _env_ad(sig1, attack_ms=1, decay_ms=30),
+            gap,
+            _env_ad(sig2, attack_ms=1, decay_ms=50),
+        ]
+    )
     _save_wav("coin_clink.wav", sig)
 
 
 def gen_round_win():
     melody = [
-        ("C5", 0.12), ("E5", 0.12), ("G5", 0.12),
-        ("C6", 0.15), ("E6", 0.15),
+        ("C5", 0.12),
+        ("E5", 0.12),
+        ("G5", 0.12),
+        ("C6", 0.15),
+        ("E6", 0.15),
         ("G6", 0.35),
     ]
     parts = []
@@ -220,8 +225,11 @@ def gen_round_win():
 
 def gen_game_over():
     melody = [
-        ("E5", 0.18), ("C5", 0.18), ("A4", 0.22),
-        ("F4", 0.25), ("D4", 0.30),
+        ("E5", 0.18),
+        ("C5", 0.18),
+        ("A4", 0.22),
+        ("F4", 0.25),
+        ("D4", 0.30),
         ("C4", 0.50),
     ]
     parts = []

@@ -8,6 +8,7 @@ var _combo_detector = ComboDetectorScript.new()
 var _scoring_engine = ScoringEngineScript.new()
 var _rng := RandomNumberGenerator.new()
 
+
 func compare_modifier(config: Dictionary) -> Dictionary:
 	var modifier_item: Dictionary = config.get("modifier_item", {})
 	var mod := Modifier.from_shop_item(modifier_item)
@@ -53,8 +54,10 @@ func compare_modifier(config: Dictionary) -> Dictionary:
 		"condition_warnings": _condition_warnings(modifier_item),
 	}
 
+
 func run_modifier_report(config: Dictionary) -> Dictionary:
 	return compare_modifier(config)
+
 
 func _run_group(config: Dictionary, modifiers: Array[Modifier], extra_rerolls: int) -> Dictionary:
 	var simulations := int(config.get("simulations", 1000))
@@ -105,6 +108,7 @@ func _run_group(config: Dictionary, modifiers: Array[Modifier], extra_rerolls: i
 		"trigger_counts": trigger_counts,
 	}
 
+
 func _roll_hand(dice: Array[Die], roll_policy: String, rerolls: int) -> Array[DiceFace]:
 	var faces := _roll_faces(dice)
 	if roll_policy != "greedy_best_combo" and roll_policy != "target_combo":
@@ -118,6 +122,7 @@ func _roll_hand(dice: Array[Die], roll_policy: String, rerolls: int) -> Array[Di
 		faces = _reroll_unheld(dice, faces, held)
 	return faces
 
+
 func _roll_faces(dice: Array[Die]) -> Array[DiceFace]:
 	var faces: Array[DiceFace] = []
 	for die in dice:
@@ -126,6 +131,7 @@ func _roll_faces(dice: Array[Die]) -> Array[DiceFace]:
 		var face_index := _rng.randi_range(0, die.faces.size() - 1)
 		faces.append(die.faces[face_index].duplicate_face())
 	return faces
+
 
 func _reroll_unheld(dice: Array[Die], current_faces: Array[DiceFace], held: Array) -> Array[DiceFace]:
 	var faces: Array[DiceFace] = []
@@ -138,6 +144,7 @@ func _reroll_unheld(dice: Array[Die], current_faces: Array[DiceFace], held: Arra
 			faces.append(die.faces[face_index].duplicate_face())
 	return faces
 
+
 func _all_held(held: Array) -> bool:
 	if held.is_empty():
 		return false
@@ -146,6 +153,7 @@ func _all_held(held: Array) -> bool:
 			return false
 	return true
 
+
 func _typed_dice(raw_dice: Array) -> Array[Die]:
 	var dice: Array[Die] = []
 	for die in raw_dice:
@@ -153,14 +161,18 @@ func _typed_dice(raw_dice: Array) -> Array[Die]:
 			dice.append(die.duplicate_die())
 	return dice
 
+
 func _condition_warnings(item: Dictionary) -> Array[String]:
 	var warnings: Array[String] = []
 	var description := str(item.get("description", "")).to_lower()
 	var params: Dictionary = item.get("params", {})
 	var condition := str(params.get("condition", ""))
 	if description.contains("or better") and not condition.is_empty():
-		warnings.append("%s description says 'or better', but current condition matching is exact." % str(item.get("id", "")))
+		warnings.append(
+			"%s description says 'or better', but current condition matching is exact." % str(item.get("id", ""))
+		)
 	return warnings
+
 
 func _trigger_rates(trigger_counts: Dictionary, hands: int) -> Dictionary:
 	var result := {}
@@ -168,12 +180,14 @@ func _trigger_rates(trigger_counts: Dictionary, hands: int) -> Dictionary:
 		result[modifier_id] = float(trigger_counts[modifier_id]) / float(max(hands, 1))
 	return result
 
+
 func _score_deltas(baseline_scores: Array, modifier_scores: Array) -> Array[float]:
 	var deltas: Array[float] = []
 	var count = min(baseline_scores.size(), modifier_scores.size())
 	for i in range(count):
 		deltas.append(float(modifier_scores[i]) - float(baseline_scores[i]))
 	return deltas
+
 
 func _average(values: Array) -> float:
 	if values.is_empty():
@@ -183,6 +197,7 @@ func _average(values: Array) -> float:
 		total += float(value)
 	return total / float(values.size())
 
+
 func _percentile(values: Array, percentile: float) -> float:
 	if values.is_empty():
 		return 0.0
@@ -190,6 +205,7 @@ func _percentile(values: Array, percentile: float) -> float:
 	sorted_values.sort()
 	var index := int(floor(clamp(percentile, 0.0, 1.0) * float(sorted_values.size() - 1)))
 	return float(sorted_values[index])
+
 
 func _cost_efficiency(delta: float, cost: int) -> float:
 	if cost <= 0:

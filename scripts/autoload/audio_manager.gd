@@ -9,15 +9,24 @@ const SFX_DIR := "res://assets/audio/sfx/"
 const MUSIC_DIR := "res://assets/audio/music/"
 
 const KNOWN_SFX: PackedStringArray = [
-	"ui_click", "ui_hover",
-	"dice_roll", "dice_hold", "dice_release",
-	"combo_detect", "score_tick",
-	"purchase", "shop_refresh", "coin_clink",
-	"round_win", "game_over",
+	"ui_click",
+	"ui_hover",
+	"dice_roll",
+	"dice_hold",
+	"dice_release",
+	"combo_detect",
+	"score_tick",
+	"purchase",
+	"shop_refresh",
+	"coin_clink",
+	"round_win",
+	"game_over",
 ]
 
 const KNOWN_MUSIC: PackedStringArray = [
-	"menu", "market", "combat",
+	"menu",
+	"market",
+	"combat",
 ]
 
 var _sfx_cache: Dictionary = {}
@@ -72,10 +81,19 @@ func _load_audio_assets() -> void:
 	print("AudioManager: loaded %d sfx, %d music" % [_sfx_cache.size(), _music_cache.size()])
 	print("AudioManager: music cache keys = ", _music_cache.keys())
 	for i in AudioServer.bus_count:
-		print("AudioManager: bus[%d] name=%s vol=%.1f dB mute=%s solo=%s send=%s" % [
-			i, AudioServer.get_bus_name(i), AudioServer.get_bus_volume_db(i),
-			AudioServer.is_bus_mute(i), AudioServer.is_bus_solo(i),
-			AudioServer.get_bus_send(i)])
+		print(
+			(
+				"AudioManager: bus[%d] name=%s vol=%.1f dB mute=%s solo=%s send=%s"
+				% [
+					i,
+					AudioServer.get_bus_name(i),
+					AudioServer.get_bus_volume_db(i),
+					AudioServer.is_bus_mute(i),
+					AudioServer.is_bus_solo(i),
+					AudioServer.get_bus_send(i)
+				]
+			)
+		)
 
 
 func _try_load(dir_path: String, file_name: String) -> AudioStream:
@@ -165,6 +183,7 @@ func _load_wav_from_source(path: String) -> AudioStreamWAV:
 
 # -- SFX -------------------------------------------------------------------
 
+
 func play_sfx(sfx_name: StringName, volume_db: float = 0.0) -> void:
 	var stream = _sfx_cache.get(sfx_name)
 	if stream == null:
@@ -183,6 +202,7 @@ func _get_free_sfx_player() -> AudioStreamPlayer:
 
 
 # -- Music -----------------------------------------------------------------
+
 
 func play_music(music_name: StringName, fade_sec: float = DEFAULT_FADE_SEC) -> void:
 	if music_name == _current_music_name:
@@ -208,17 +228,22 @@ func play_music(music_name: StringName, fade_sec: float = DEFAULT_FADE_SEC) -> v
 	if not outgoing.playing:
 		incoming.volume_db = 0.0
 		incoming.play()
-		print("AudioManager: play_music('%s') — started (no fade), playing=%s, stream=%s, bus=%s" % [
-			music_name, incoming.playing, incoming.stream, incoming.bus])
+		print(
+			(
+				"AudioManager: play_music('%s') — started (no fade), playing=%s, stream=%s, bus=%s"
+				% [music_name, incoming.playing, incoming.stream, incoming.bus]
+			)
+		)
 	else:
 		incoming.volume_db = -80.0
 		incoming.play()
 		_fade_tween = create_tween().set_parallel(true)
 		_fade_tween.tween_property(outgoing, "volume_db", -80.0, fade_sec)
 		_fade_tween.tween_property(incoming, "volume_db", 0.0, fade_sec)
-		_fade_tween.chain().tween_callback(func():
-			if outgoing != _active_music:
-				outgoing.stop()
+		_fade_tween.chain().tween_callback(
+			func():
+				if outgoing != _active_music:
+					outgoing.stop()
 		)
 		print("AudioManager: play_music('%s') — crossfade from '%s'" % [music_name, _current_music_name])
 
@@ -251,6 +276,7 @@ func _enable_loop(stream: AudioStream) -> void:
 
 
 # -- Volume control --------------------------------------------------------
+
 
 func set_master_volume(linear: float) -> void:
 	_set_bus_volume(&"Master", linear)
@@ -296,6 +322,7 @@ func _get_bus_volume(bus_name: StringName) -> float:
 
 # -- Settings persistence -------------------------------------------------
 
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		save_volume_settings()
@@ -326,6 +353,7 @@ func save_volume_settings() -> void:
 
 
 # -- Ad break integration -------------------------------------------------
+
 
 func pause_for_ad() -> void:
 	var idx := AudioServer.get_bus_index(&"Master")

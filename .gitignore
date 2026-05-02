@@ -17,8 +17,19 @@ mono_crash.*.json
 # Local agent artifacts
 .codex/environments/
 .codex/runs/
+.claude/
 .superpowers/
 docs/superpowers/
+
+# Python tooling
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local environment files
+.env
+.env.*
+!.env.example
 
 # macOS
 .DS_Store

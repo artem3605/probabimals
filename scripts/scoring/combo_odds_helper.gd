@@ -1,8 +1,10 @@
 class_name ComboOddsHelper
 extends RefCounted
 
-func calculate_probabilities(current_roll: Array[DiceFace], held_dice: Array,
-		combo_rules: Array, die_face_options: Array = []) -> Dictionary:
+
+func calculate_probabilities(
+	current_roll: Array[DiceFace], held_dice: Array, combo_rules: Array, die_face_options: Array = []
+) -> Dictionary:
 	if held_dice.is_empty():
 		return {}
 
@@ -25,8 +27,15 @@ func calculate_probabilities(current_roll: Array[DiceFace], held_dice: Array,
 		probabilities[combo_type] = float(probabilities[combo_type]) / float(total_outcomes)
 	return probabilities
 
-func _count_outcomes(index: int, working_roll: Array[DiceFace], held_dice: Array,
-		die_face_options: Array, detector: ComboDetector, outcome_counts: Dictionary) -> int:
+
+func _count_outcomes(
+	index: int,
+	working_roll: Array[DiceFace],
+	held_dice: Array,
+	die_face_options: Array,
+	detector: ComboDetector,
+	outcome_counts: Dictionary
+) -> int:
 	if index >= working_roll.size():
 		var combo := detector.detect_best_combo(working_roll)
 		var combo_type: String = combo.get("type", "")
@@ -40,8 +49,11 @@ func _count_outcomes(index: int, working_roll: Array[DiceFace], held_dice: Array
 	var total_outcomes := 0
 	for face: DiceFace in _get_face_options_for_die(index, die_face_options):
 		working_roll[index] = face.duplicate_face()
-		total_outcomes += _count_outcomes(index + 1, working_roll, held_dice, die_face_options, detector, outcome_counts)
+		total_outcomes += _count_outcomes(
+			index + 1, working_roll, held_dice, die_face_options, detector, outcome_counts
+		)
 	return total_outcomes
+
 
 func _get_face_options_for_die(index: int, die_face_options: Array) -> Array[DiceFace]:
 	if index < die_face_options.size() and die_face_options[index] is Array and not die_face_options[index].is_empty():
@@ -54,6 +66,7 @@ func _get_face_options_for_die(index: int, die_face_options: Array) -> Array[Dic
 	for value in range(1, 7):
 		default_options.append(DiceFace.make_basic(value))
 	return default_options
+
 
 func _make_zeroed_probabilities(combo_rules: Array) -> Dictionary:
 	var probabilities := {}

@@ -29,13 +29,16 @@ func test_overlay_places_explanation_panel_outside_multi_target_highlights() -> 
 	autoqfree(overlay)
 	overlay.size = root.size
 	overlay.setup(PIXEL_FONT)
-	overlay.show_step(
-		"HOW COMBOS SCORE",
-		"The highlighted row is the combo you match. The score panel shows what you would bank if you ended the turn now.",
-		combo_row,
-		true,
-		"NEXT",
-		combo_dialog
+	(
+		overlay
+		. show_step(
+			"HOW COMBOS SCORE",
+			"The highlighted row is the combo you match. The score panel shows what you would bank if you ended the turn now.",
+			combo_row,
+			true,
+			"NEXT",
+			combo_dialog
+		)
 	)
 	await wait_process_frames(2)
 
@@ -43,6 +46,7 @@ func test_overlay_places_explanation_panel_outside_multi_target_highlights() -> 
 	var panel_rect := Rect2(overlay._panel.position, overlay._panel.size)
 
 	assert_false(panel_rect.intersects(highlight_bounds))
+
 
 func test_overlay_can_show_skip_tutorial_button() -> void:
 	var root := Control.new()

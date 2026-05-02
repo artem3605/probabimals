@@ -36,15 +36,15 @@ const DEFAULT_HEX := "#ffffff"
 # (Full House, Small Straight, Three Same) in BLUE; low-tier (Two Pair, Pair,
 # High Card) in ORANGE.
 const COMBO_FALLBACK_HEX := {
-	"high_card":      "#ffb56b",  # ORANGE
-	"pair":           "#ffb56b",
-	"two_pair":       "#ffb56b",
-	"three_same":     "#7fb6ff",  # BLUE
+	"high_card": "#ffb56b",  # ORANGE
+	"pair": "#ffb56b",
+	"two_pair": "#ffb56b",
+	"three_same": "#7fb6ff",  # BLUE
 	"small_straight": "#7fb6ff",
-	"full_house":     "#7fb6ff",
+	"full_house": "#7fb6ff",
 	"large_straight": "#ff7eb6",  # PINK
-	"four_same":      "#ff7eb6",
-	"yahtzee":        "#ff7eb6",
+	"four_same": "#ff7eb6",
+	"yahtzee": "#ff7eb6",
 }
 
 const COIN_ICON_BBCODE := "[img=18]res://assets/art/ui/coin.png[/img]"

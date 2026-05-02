@@ -7,10 +7,12 @@ var _combo_rules: Array
 var _odds_helper
 var _scripted_rolls: Array = []
 
+
 func before_each() -> void:
 	_combo_rules = TestData.load_combo_rules()
 	_odds_helper = ComboOddsHelperScript.new()
 	_scripted_rolls.clear()
+
 
 func test_roll_hold_and_reroll_cycle_keeps_held_die_value() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -35,6 +37,7 @@ func test_roll_hold_and_reroll_cycle_keeps_held_die_value() -> void:
 	assert_signal_emit_count(manager, "dice_rolled", 2)
 	assert_signal_emitted_with_parameters(manager, "dice_rolled", [[1, 6, 6, 6, 6]], 1)
 	assert_signal_emitted_with_parameters(manager, "die_held", [0, true])
+
 
 func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -69,6 +72,7 @@ func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void
 	assert_signal_emitted_with_parameters(manager, "hands_changed", [1])
 	assert_signal_emitted_with_parameters(manager, "rerolls_changed", [4], 1)
 	assert_signal_emitted(manager, "hand_scored")
+
 
 func test_transition_state_blocks_roll_until_next_hand_begins() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -108,6 +112,7 @@ func test_transition_state_blocks_roll_until_next_hand_begins() -> void:
 	assert_eq_deep(manager.current_roll_values(), [1, 2, 3, 4, 5])
 	assert_signal_emit_count(manager, "dice_rolled", 2)
 
+
 func test_combat_ends_immediately_when_target_is_beaten() -> void:
 	var manager: CombatManager = CombatManager.new()
 	autoqfree(manager)
@@ -136,6 +141,7 @@ func test_combat_ends_immediately_when_target_is_beaten() -> void:
 	assert_eq(manager.current_roll.size(), 0)
 	assert_signal_emit_count(manager, "dice_rolled", 1)
 
+
 func test_combat_ends_when_hands_run_out() -> void:
 	var manager: CombatManager = CombatManager.new()
 	autoqfree(manager)
@@ -154,6 +160,7 @@ func test_combat_ends_when_hands_run_out() -> void:
 
 	assert_eq(manager.hand_state, CombatManager.HandState.COMBAT_ENDED)
 	assert_signal_emitted_with_parameters(manager, "combat_ended", [80, false])
+
 
 func test_roll_provider_overrides_roll_sequence_without_breaking_hold_logic() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -177,6 +184,7 @@ func test_roll_provider_overrides_roll_sequence_without_breaking_hold_logic() ->
 	manager.roll_dice()
 
 	assert_eq_deep(manager.current_roll_values(), [6, 6, 6, 6, 5])
+
 
 func test_probability_snapshot_updates_for_hold_unhold_reroll_and_hand_reset() -> void:
 	var manager: CombatManager = CombatManager.new()
@@ -229,6 +237,7 @@ func _roll_provider(roll_number: int, _held_dice: Array) -> Array[int]:
 		result.append(int(value))
 	return result
 
+
 func _expected_probability_snapshot(manager: CombatManager, dice: Array[Die]) -> Dictionary:
 	var die_face_options: Array = []
 	for die in dice:
@@ -237,9 +246,4 @@ func _expected_probability_snapshot(manager: CombatManager, dice: Array[Die]) ->
 			options.append(face.duplicate_face())
 		die_face_options.append(options)
 
-	return _odds_helper.calculate_probabilities(
-		manager.current_roll,
-		manager.held_dice,
-		_combo_rules,
-		die_face_options
-	)
+	return _odds_helper.calculate_probabilities(manager.current_roll, manager.held_dice, _combo_rules, die_face_options)

@@ -1,0 +1,26 @@
+repos:
+  - repo: local
+    hooks:
+      - id: probabimals-lint
+        name: probabimals lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+
+      - id: probabimals-format-check
+        name: probabimals format check
+        entry: make format-check
+        language: system
+        pass_filenames: false
+
+      - id: probabimals-typecheck
+        name: probabimals typecheck
+        entry: make typecheck
+        language: system
+        pass_filenames: false
+
+      - id: probabimals-static-check
+        name: probabimals static check
+        entry: make static-check
+        language: system
+        pass_filenames: false

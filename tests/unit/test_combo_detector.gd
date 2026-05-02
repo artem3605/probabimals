@@ -52,9 +52,11 @@ const COMBO_CASES = [
 
 var _detector: ComboDetector
 
+
 func before_each() -> void:
 	_detector = ComboDetector.new()
 	_detector.set_combo_rules(TestData.load_combo_rules())
+
 
 func test_empty_roll_returns_none_combo() -> void:
 	var combo := _detector.detect_best_combo([])
@@ -62,17 +64,20 @@ func test_empty_roll_returns_none_combo() -> void:
 	assert_eq(combo["type"], "none")
 	assert_eq(combo["name"], "None")
 
+
 func test_detects_all_current_combos(case_data = use_parameters(COMBO_CASES)) -> void:
 	var combo := _detector.detect_best_combo(TestData.faces_from_values(case_data["values"]))
 
 	assert_eq(combo["type"], case_data["expected_type"])
 	assert_eq_deep(combo["in_combo"], case_data["expected_in_combo"])
 
+
 func test_higher_priority_combo_wins_when_roll_matches_multiple_patterns() -> void:
 	var combo := _detector.detect_best_combo(TestData.faces_from_values([1, 2, 3, 4, 5]))
 
 	assert_eq(combo["type"], "large_straight")
 	assert_eq(combo["priority"], 6)
+
 
 func test_wild_face_chooses_best_assignment() -> void:
 	var faces: Array[DiceFace] = [

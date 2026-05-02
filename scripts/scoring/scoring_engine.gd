@@ -3,8 +3,10 @@ extends RefCounted
 
 ## Three-layer scoring: Total = Floor(Face_Sum × Mult × X_Mult)
 
-func calculate_score(combo: Dictionary, rolled_faces: Array[DiceFace],
-		in_combo: Array[bool], modifiers: Array[Modifier]) -> Dictionary:
+
+func calculate_score(
+	combo: Dictionary, rolled_faces: Array[DiceFace], in_combo: Array[bool], modifiers: Array[Modifier]
+) -> Dictionary:
 	var combo_type: String = combo.get("type", "")
 	var combo_mult: float = combo.get("combo_mult", 1.0)
 

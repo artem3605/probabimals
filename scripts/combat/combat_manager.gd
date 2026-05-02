@@ -32,9 +32,16 @@ var _rerolls_reset_value: int = 2
 var _roll_provider: Callable = Callable()
 var _roll_number: int = 0
 
-func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
-		combo_rules: Array = [], reroll_reset_value: int = -1,
-		roll_provider: Callable = Callable()) -> void:
+
+func start_combat(
+	dice: Array[Die],
+	target: int,
+	hands: int,
+	rerolls: int,
+	combo_rules: Array = [],
+	reroll_reset_value: int = -1,
+	roll_provider: Callable = Callable()
+) -> void:
 	active_dice = dice
 	target_score = target
 	hands_remaining = hands
@@ -50,6 +57,7 @@ func start_combat(dice: Array[Die], target: int, hands: int, rerolls: int,
 	_combo_rules = combo_rules.duplicate(true)
 	combo_detector.set_combo_rules(_combo_rules)
 	_refresh_probability_snapshot()
+
 
 func roll_dice() -> void:
 	if not can_roll():
@@ -77,11 +85,13 @@ func roll_dice() -> void:
 	_refresh_probability_snapshot()
 	dice_rolled.emit(current_roll_values())
 
+
 func current_roll_values() -> Array[int]:
 	var vals: Array[int] = []
 	for f in current_roll:
 		vals.append(f.value)
 	return vals
+
 
 func hold_die(index: int) -> void:
 	if index >= 0 and index < held_dice.size() and has_rolled:
@@ -89,11 +99,13 @@ func hold_die(index: int) -> void:
 		_refresh_probability_snapshot()
 		die_held.emit(index, true)
 
+
 func unhold_die(index: int) -> void:
 	if index >= 0 and index < held_dice.size():
 		held_dice[index] = false
 		_refresh_probability_snapshot()
 		die_held.emit(index, false)
+
 
 func toggle_hold(index: int) -> void:
 	if index >= 0 and index < held_dice.size() and has_rolled:
@@ -101,18 +113,22 @@ func toggle_hold(index: int) -> void:
 		_refresh_probability_snapshot()
 		die_held.emit(index, held_dice[index])
 
+
 func is_held(index: int) -> bool:
 	if index >= 0 and index < held_dice.size():
 		return held_dice[index]
 	return false
+
 
 func get_current_combo() -> Dictionary:
 	if current_roll.size() == 0:
 		return {}
 	return combo_detector.detect_best_combo(current_roll)
 
+
 func get_probability_snapshot() -> Dictionary:
 	return probability_snapshot.duplicate(true)
+
 
 func score_hand(modifiers: Array[Modifier]) -> Dictionary:
 	if not can_score():
@@ -151,30 +167,34 @@ func score_hand(modifiers: Array[Modifier]) -> Dictionary:
 
 	return result
 
+
 func begin_next_hand() -> void:
 	if hand_state != HandState.HAND_TRANSITION:
 		return
 	hand_state = HandState.HAND_ACTIVE
 
+
 func end_combat() -> void:
 	combat_ended.emit(running_score, running_score >= target_score)
+
 
 func can_roll() -> bool:
 	return hand_state == HandState.HAND_ACTIVE and rerolls_remaining > 0
 
+
 func can_score() -> bool:
 	return hand_state == HandState.HAND_ACTIVE and has_rolled and current_roll.size() > 0
+
 
 func _reset_held() -> void:
 	held_dice = [false, false, false, false, false]
 
+
 func _refresh_probability_snapshot() -> void:
 	probability_snapshot = combo_odds_helper.calculate_probabilities(
-		current_roll,
-		held_dice,
-		_combo_rules,
-		_build_die_face_options()
+		current_roll, held_dice, _combo_rules, _build_die_face_options()
 	)
+
 
 func _build_die_face_options() -> Array:
 	var die_face_options: Array = []

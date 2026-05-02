@@ -6,7 +6,7 @@ extends PanelContainer
 ## See Figma: Probabimals – Combat Screen Redesign, node 28:909 (ScorePanel).
 
 signal combo_row_hover_entered(combo_type: String)
-signal combo_row_hover_exited()
+signal combo_row_hover_exited
 
 const RAIL_WIDTH := 700
 const RAIL_HEIGHT := 150
@@ -105,6 +105,7 @@ func setup(pixel_font: Font, combo_rules: Array) -> void:
 
 # -- Public API ---------------------------------------------------------------
 
+
 func get_panel_node() -> PanelContainer:
 	return self
 
@@ -168,6 +169,7 @@ func _scramble_tick() -> void:
 
 
 # -- Accessors used by tests and combat screen -------------------------------
+
 
 func get_combo_name_label() -> Label:
 	return _combo_name_label
@@ -249,6 +251,7 @@ func get_display_snapshot() -> Dictionary:
 
 
 # -- Build helpers -----------------------------------------------------------
+
 
 func _build_rail_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
@@ -420,16 +423,14 @@ func _apply_row_styles() -> void:
 		var panel: PanelContainer = entry["panel"]
 		var name_label: Label = entry["name_label"]
 		if entry["type"] == _current_combo_type and not _current_combo_type.is_empty():
-			panel.add_theme_stylebox_override(
-				"panel",
-				_build_row_style(HIGHLIGHT_BG, HIGHLIGHT_BORDER)
-			)
+			panel.add_theme_stylebox_override("panel", _build_row_style(HIGHLIGHT_BG, HIGHLIGHT_BORDER))
 		else:
 			panel.add_theme_stylebox_override("panel", entry["default_style"])
 		name_label.add_theme_color_override("font_color", entry["priority_color"])
 
 
 # -- Formatting helpers ------------------------------------------------------
+
 
 func _format_pct(probability_value: Variant) -> String:
 	if probability_value == null:
@@ -467,27 +468,35 @@ func _get_pattern_colors(combo_type: String) -> Array:
 	var g := GREY
 	var s := [BLUE.darkened(0.3), BLUE.darkened(0.15), BLUE, BLUE.lightened(0.15), BLUE.lightened(0.3)]
 	match combo_type:
-		"high_card":      return [a, g, g, g, g]
-		"pair":           return [a, a, g, g, g]
-		"two_pair":       return [a, a, b, b, g]
-		"three_same":     return [a, a, a, g, g]
-		"small_straight": return [s[0], s[1], s[2], s[3], g]
-		"full_house":     return [a, a, a, b, b]
-		"large_straight": return [s[0], s[1], s[2], s[3], s[4]]
-		"four_same":      return [a, a, a, a, g]
-		"yahtzee":        return [a, a, a, a, a]
+		"high_card":
+			return [a, g, g, g, g]
+		"pair":
+			return [a, a, g, g, g]
+		"two_pair":
+			return [a, a, b, b, g]
+		"three_same":
+			return [a, a, a, g, g]
+		"small_straight":
+			return [s[0], s[1], s[2], s[3], g]
+		"full_house":
+			return [a, a, a, b, b]
+		"large_straight":
+			return [s[0], s[1], s[2], s[3], s[4]]
+		"four_same":
+			return [a, a, a, a, g]
+		"yahtzee":
+			return [a, a, a, a, a]
 	return [g, g, g, g, g]
 
 
 func _sort_by_priority_desc(combo_rules: Array) -> Array:
 	var out := combo_rules.duplicate(true)
-	out.sort_custom(func(lhs, rhs):
-		return int(lhs.get("priority", 0)) > int(rhs.get("priority", 0))
-	)
+	out.sort_custom(func(lhs, rhs): return int(lhs.get("priority", 0)) > int(rhs.get("priority", 0)))
 	return out
 
 
 # -- Style helpers -----------------------------------------------------------
+
 
 func _build_row_style(bg: Color, border: Color) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()

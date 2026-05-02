@@ -1,0 +1,6 @@
+gdtoolkit
+numpy
+pip-audit
+pre-commit
+pyright
+ruff

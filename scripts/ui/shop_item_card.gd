@@ -54,8 +54,7 @@ func _build_price_panel(item: Dictionary, pixel_font: Font) -> void:
 	var price_panel := PanelContainer.new()
 	price_panel.custom_minimum_size = SHOP_PRICE_PANEL_SIZE
 	price_panel.add_theme_stylebox_override(
-		"panel",
-		_make_style(GOLD, BORDER_BLACK, SHOP_PRICE_PANEL_BORDER_WIDTH, SHOP_PRICE_PANEL_MARGIN)
+		"panel", _make_style(GOLD, BORDER_BLACK, SHOP_PRICE_PANEL_BORDER_WIDTH, SHOP_PRICE_PANEL_MARGIN)
 	)
 	price_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 

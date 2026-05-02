@@ -1,0 +1,12 @@
+[project]
+name = "probabimals"
+version = "0.2.0"
+requires-python = ">=3.10"
+description = "Godot dice strategy game tooling metadata."
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

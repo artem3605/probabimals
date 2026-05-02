@@ -55,97 +55,117 @@ const OVERLAY_STYLE := {
 }
 
 const STEP_TEXT := {
-	"intro_welcome": {
+	"intro_welcome":
+	{
 		"title": "WELCOME!",
-		"body": "In this game you will roll dice! Your goal this round: score 60 points. See the target there? Let's go!",
+		"body":
+		"In this game you will roll dice! Your goal this round: score 60 points. See the target there? Let's go!",
 		"show_next": true,
 		"show_skip": true,
 		"skip_text": "SKIP TUTORIAL",
 		"panel_width": 560,
 		"panel_anchor": Vector2(0.5, 0.5),
 	},
-	"intro_roll": {
+	"intro_roll":
+	{
 		"title": "ROLL THE DICE!",
 		"body": "Press the Roll button to roll your dice!",
 		"panel_width": 550,
 		"panel_anchor": Vector2(0.5, 0.84),
 	},
-	"intro_hold": {
+	"intro_hold":
+	{
 		"title": "NICE, A SIX!",
 		"body": "Wow, 6 is a lot! Tap this die to hold it -- held dice won't be rerolled.",
 		"panel_width": 450,
 		"panel_anchor": Vector2(0.5, 0.84),
 	},
-	"intro_reroll": {
+	"intro_reroll":
+	{
 		"title": "ROLL AGAIN!",
 		"body": "Now press Roll to reroll the rest!",
 		"panel_width": 550,
 		"panel_anchor": Vector2(0.5, 0.84),
 	},
-	"intro_pair": {
+	"intro_pair":
+	{
 		"title": "COMBO!",
-		"body": "Two 6s -- that's a Pair! Pairs give bonus points. The panel above lists every scoring pattern and its odds.",
+		"body":
+		"Two 6s -- that's a Pair! Pairs give bonus points. The panel above lists every scoring pattern and its odds.",
 		"show_next": true,
 		"panel_width": 630,
 		"panel_anchor": Vector2(0.5, 0.84),
 	},
-	"intro_finish": {
+	"intro_finish":
+	{
 		"title": "TURNS",
-		"body": "When you're out of rerolls or happy with your result, press Finish Round. One turn might not be enough, but you have several turns and their scores add up!",
+		"body":
+		"When you're out of rerolls or happy with your result, press Finish Round. One turn might not be enough, but you have several turns and their scores add up!",
 		"panel_width": 630,
 		"panel_anchor": Vector2(0.5, 0.84),
 	},
-	"intro_win": {
+	"intro_win":
+	{
 		"title": "COINS!",
 		"body": "After each round you earn coins! Let's spend them on new dice and upgrades.",
 		"panel_width": 630,
 		"panel_anchor": Vector2(0.5, 0.95),
 	},
-	"market_intro": {
+	"market_intro":
+	{
 		"title": "THE FLEA MARKET",
 		"body": "This is where you spend coins on new dice and upgrades.",
 		"show_next": true,
 		"panel_width": 650,
 		"panel_anchor": Vector2(0.5, 0.75),
 	},
-	"market_score": {
+	"market_score":
+	{
 		"title": "YOUR STUFF",
 		"body": "Here's your coin balance and the dice in your bag. Check My Bag to see what you've got!",
 		"show_next": true,
 		"panel_width": 450,
 		"panel_anchor": Vector2(1, 0.37),
 	},
-	"buy_loaded_die": {
+	"buy_loaded_die":
+	{
 		"title": "GRAB THE LOADED DIE",
-		"body": "See the red one? It already rolls high -- lots of 5s and 6s. That means pairs and triples show up way more often. Go ahead, buy it!",
+		"body":
+		"See the red one? It already rolls high -- lots of 5s and 6s. That means pairs and triples show up way more often. Go ahead, buy it!",
 		"panel_width": 450,
 		"panel_anchor": Vector2(0.5, 0.5),
 	},
-	"buy_extra_six": {
+	"buy_extra_six":
+	{
 		"title": "GET EXTRA SIX",
 		"body": "Nice! Now pick up Extra Six. We'll use it to soup up one of your basic dice.",
 		"panel_width": 450,
 		"panel_anchor": Vector2(0.7, 0.5),
 	},
-	"choose_swap_die": {
+	"choose_swap_die":
+	{
 		"title": "PICK A DIE",
 		"body": "Let's choose this die to upgrade!",
 		"panel_width": 450,
 		"panel_anchor": Vector2(0.5, 0.85),
 	},
-	"go_to_dice_select": {
+	"go_to_dice_select":
+	{
 		"title": "LOOKING GOOD!",
 		"body": "You ran out of money! Hit Ready to go further.",
 		"panel_width": 620,
 		"panel_anchor": Vector2(0.5, 0.72),
 	},
-	"select_required_dice": {
+	"select_required_dice":
+	{
 		"title": "CHOOSE YOUR FIVE",
-		"body": "Pick five dice to bring into combat. Make sure to include the red Loaded Die and the one you just upgraded!",
+		"body":
+		"Pick five dice to bring into combat. Make sure to include the red Loaded Die and the one you just upgraded!",
 		"panel_width": 730,
 		"panel_anchor": Vector2(0.5, 0.85),
 	},
-	"combat_good_luck": {
+	"combat_good_luck":
+	{
 		"title": "GOOD LUCK!",
 		"body": "We're back in combat. You already know the ropes -- roll, hold, and score your way to victory!",
 		"panel_width": 550,
@@ -193,8 +213,18 @@ func get_step_text(sid: String = step_id) -> Dictionary:
 
 
 func is_intro_step() -> bool:
-	return step_id in [STEP_INTRO_WELCOME, STEP_INTRO_ROLL, STEP_INTRO_HOLD,
-		STEP_INTRO_REROLL, STEP_INTRO_PAIR, STEP_INTRO_FINISH, STEP_INTRO_WIN]
+	return (
+		step_id
+		in [
+			STEP_INTRO_WELCOME,
+			STEP_INTRO_ROLL,
+			STEP_INTRO_HOLD,
+			STEP_INTRO_REROLL,
+			STEP_INTRO_PAIR,
+			STEP_INTRO_FINISH,
+			STEP_INTRO_WIN
+		]
+	)
 
 
 func start_first_run() -> void:
