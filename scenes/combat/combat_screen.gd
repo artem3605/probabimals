@@ -5,6 +5,8 @@ const CombatProbabilityPanelScript = preload("res://scripts/combat/combat_probab
 const ComboRevealFxScript = preload("res://scripts/ui/combo_reveal_fx.gd")
 const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
+const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
+const SemanticColors = preload("res://scripts/ui/semantic_colors.gd")
 const COMBAT_CONTENT_SEPARATION := 32
 const COMBAT_TOP_BAR_SEPARATION := 16
 const COMBAT_MENU_SHADOW_OFFSET := Vector2(4, 4)
@@ -20,13 +22,24 @@ const COMBAT_TOP_BAR_CLUSTER_MIN_WIDTH := 320
 const COMBAT_SCORE_LABEL_FONT_SIZE := 14
 const COMBAT_SCORE_VALUE_IDLE_FONT_SIZE := 18
 const COMBAT_SCORE_VALUE_PREVIEW_FONT_SIZE := 28
-const COMBAT_SCORE_BREAKDOWN_FONT_SIZE := 14
-const COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE := 11
+const COMBAT_SCORE_BREAKDOWN_FONT_SIZE := 16
+const COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE := 16
 const COMBAT_SCORE_BAR_SEPARATION := 10
 const COMBAT_SCORE_BAR_TRACK_SIZE := Vector2(170, 20)
 const COMBAT_SCORE_BAR_FILL_OFFSET := Vector2(2, 2)
 const COMBAT_SCORE_BAR_FILL_HEIGHT := 16
 const COMBAT_SCORE_BAR_TRACK_INSET := 4
+const COMBAT_SCORE_FLIGHT_FONT_SIZE := 22
+const COMBAT_SCORE_FLIGHT_DURATION := 0.48
+const COMBAT_SCORE_FLIGHT_ARC_HEIGHT := 58.0
+const COMBAT_SCORE_BAR_POP_SCALE := Vector2(1.08, 1.08)
+const COMBAT_LAST_REROLL_STOP_BASE_DELAY := 0.16
+const COMBAT_LAST_REROLL_STOP_EXTRA_DELAY := 0.02
+const COMBAT_LAST_REROLL_MAX_LAST_STOP_DELAY := 0.8
+const COMBAT_LAST_REROLL_POST_REVEAL_DELAY := 0.18
+const COMBAT_LAST_REROLL_FINAL_POP_SCALE := Vector2(1.14, 1.14)
+const COMBAT_LAST_REROLL_NORMAL_POP_SCALE := Vector2(1.08, 1.08)
+const COMBAT_LAST_REROLL_SCRAMBLE_STEP := 0.05
 const COMBAT_TURN_PILL_LABEL_FONT_SIZE := 12
 const COMBAT_TURN_PILL_VALUE_FONT_SIZE := 16
 const COMBAT_TURN_PILL_SEPARATION := 8
@@ -39,6 +52,7 @@ const COMBAT_DESC_PANEL_MARGIN := 16
 const COMBAT_DESC_SEPARATION := 12
 const COMBAT_DESC_TITLE_FONT_SIZE := 14
 const COMBAT_DESC_BODY_FONT_SIZE := 12
+const COMBAT_DESC_BODY_WIDTH := COMBAT_DESC_PANEL_SIZE.x - COMBAT_DESC_PANEL_MARGIN * 2
 const COMBAT_DESC_COMBO_SQUARE_SIZE := 20
 const COMBAT_DESC_COMBO_SQUARE_GAP := 4
 const COMBAT_DESC_COMBO_SQUARE_BORDER := 1
@@ -74,15 +88,16 @@ var _top_bar_right_cluster: HBoxContainer
 var _combo_name_label: Label
 var _score_value_label: Label
 var _score_pts_suffix: Label
-var _score_breakdown_label: Label
+var _score_breakdown_label: RichTextLabel
 var _score_panel: PanelContainer
 var _reroll_btn: Button
 var _end_turn_btn: Button
 var _turn_pill: PanelContainer
 var _dice_container: HBoxContainer
 var _desc_panel: PanelContainer
-var _desc_title: Label
-var _desc_body: Label
+var _desc_title: RichTextLabel
+var _desc_rarity: RichTextLabel
+var _desc_body: RichTextLabel
 var _desc_combo_row: HBoxContainer
 var _desc_combo_squares: Array[PanelContainer] = []
 var _desc_combo_mult_label: Label
@@ -92,6 +107,7 @@ var _probability_panel: PanelContainer
 var _combo_reveal_fx
 var _pending_combo_reveal: Dictionary = {}
 var _combo_hud_tween: Tween
+var _score_flight_label: Label
 
 var _hand_info_label: Label
 
@@ -108,7 +124,7 @@ var _result_panel: PanelContainer
 var _result_score_label: Label
 var _result_message: Label
 var _result_sub_label: Label
-var _result_coins_label: Label
+var _result_coins_label: RichTextLabel
 var _result_next_btn: Button
 var _result_retry_btn: Button
 var _result_survey_btn: Button
@@ -119,6 +135,8 @@ var _result_target_beaten: bool = false
 var _pause_overlay: ColorRect
 
 var _animating: bool = false
+var _suspense_reveal_active: bool = false
+var _suspense_final_results: Array[int] = []
 var _tutorial_overlay: Control
 var _tutorial_rolls_seen: int = 0
 
@@ -401,6 +419,27 @@ func _set_die_face(index: int, value: int) -> void:
 	_dice_cards[index].set_face(value)
 
 
+func _apply_revealed_die_value(index: int, results: Array[int]) -> void:
+	if index < 0 or index >= results.size() or index >= _current_values.size():
+		return
+	_current_values[index] = results[index]
+	_set_die_face(index, results[index])
+
+
+func _play_die_landing_bounce(index: int, final_die: bool = false) -> void:
+	if index < 0 or index >= _dice_cards.size():
+		return
+	var btn: Button = _dice_cards[index].main_button
+	var pop_scale := COMBAT_LAST_REROLL_FINAL_POP_SCALE if final_die else COMBAT_LAST_REROLL_NORMAL_POP_SCALE
+	var tween := create_tween()
+	tween.parallel().tween_property(btn, "rotation", 0.0, 0.08)
+	tween.parallel().tween_property(btn, "scale", pop_scale, 0.08) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(btn, "scale", Vector2(1.04, 0.96), 0.06)
+	tween.tween_property(btn, "scale", Vector2.ONE, 0.10) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
 func _build_description_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	center.custom_minimum_size = Vector2(0, COMBAT_DESC_PANEL_SIZE.y)
@@ -416,14 +455,23 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
-	_desc_title = _make_pixel_label("", COMBAT_DESC_TITLE_FONT_SIZE, GOLD)
-	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	desc_vbox.add_child(_desc_title)
+	var title_row := HBoxContainer.new()
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_vbox.add_child(title_row)
 
-	_desc_body = _make_pixel_label("", COMBAT_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
-	_desc_body.max_lines_visible = 2
+	_desc_title = _make_pixel_rtl(COMBAT_DESC_TITLE_FONT_SIZE, GOLD)
+	_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(_desc_title)
+
+	_desc_rarity = _make_pixel_rtl(COMBAT_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_row.add_child(_desc_rarity)
+
+	_desc_body = _make_pixel_rtl(COMBAT_DESC_BODY_FONT_SIZE, Color.WHITE)
+	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
 	_desc_combo_row = HBoxContainer.new()
@@ -508,8 +556,7 @@ func _build_result_overlay() -> void:
 	_result_sub_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_sub_label)
 
-	_result_coins_label = _make_pixel_label("", COMBAT_RESULT_COINS_FONT_SIZE, GOLD)
-	_result_coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_coins_label = _make_pixel_rtl(COMBAT_RESULT_COINS_FONT_SIZE, GOLD)
 	_result_coins_label.size_flags_horizontal = Control.SIZE_FILL
 	vbox.add_child(_result_coins_label)
 
@@ -654,7 +701,11 @@ func _update_rerolls_display() -> void:
 		_reroll_btn.disabled = not combat_mgr.can_roll()
 	if _end_turn_btn:
 		_end_turn_btn.text = "END TURN"
-		_end_turn_btn.disabled = not combat_mgr.can_score()
+		_end_turn_btn.disabled = not _can_score_current_hand()
+
+
+func _can_score_current_hand() -> bool:
+	return combat_mgr != null and combat_mgr.can_score() and not _suspense_reveal_active
 
 
 func _refresh_probability_panel() -> void:
@@ -681,6 +732,46 @@ func _count_held_dice() -> int:
 	return held_count
 
 
+func _should_use_last_reroll_suspense() -> bool:
+	return combat_mgr != null \
+		and combat_mgr.rerolls_remaining == 1 \
+		and not _get_unheld_dice_indices().is_empty()
+
+
+func _get_unheld_dice_indices() -> Array[int]:
+	var indices: Array[int] = []
+	if combat_mgr == null:
+		return indices
+	for i in range(_dice_cards.size()):
+		if not combat_mgr.is_held(i):
+			indices.append(i)
+	return indices
+
+
+func _build_last_reroll_stop_delays(indices: Array) -> Array[float]:
+	var delays: Array[float] = []
+	for stop_index in range(indices.size()):
+		var delay := float(stop_index) * COMBAT_LAST_REROLL_STOP_BASE_DELAY
+		delay += float(maxi(stop_index - 1, 0)) * COMBAT_LAST_REROLL_STOP_EXTRA_DELAY
+		delays.append(minf(delay, COMBAT_LAST_REROLL_MAX_LAST_STOP_DELAY))
+	return delays
+
+
+func _build_last_reroll_reveal_order(indices: Array[int]) -> Array[int]:
+	var reveal_order := indices.duplicate()
+	reveal_order.shuffle()
+	return reveal_order
+
+
+func _begin_suspense_result_buffer() -> void:
+	_suspense_reveal_active = true
+	_suspense_final_results.clear()
+
+
+func _finish_suspense_result_buffer() -> void:
+	_suspense_reveal_active = false
+
+
 func _update_hand_display() -> void:
 	if _hand_info_label:
 		var current_hand := _total_hands - combat_mgr.hands_remaining + 1
@@ -697,6 +788,18 @@ func _update_score_bar() -> void:
 	var track_w := _score_bar_track.size.x - COMBAT_SCORE_BAR_TRACK_INSET
 	var ratio := clampf(float(running) / float(target), 0.0, 1.0)
 	_score_bar_fill.size = Vector2(track_w * ratio, COMBAT_SCORE_BAR_FILL_HEIGHT)
+
+
+func _control_global_center(control: Control) -> Vector2:
+	return control.global_position + (control.size * 0.5)
+
+
+func _score_bar_target_center() -> Vector2:
+	if _score_bar_track != null and is_instance_valid(_score_bar_track):
+		return _control_global_center(_score_bar_track)
+	if _score_bar_container != null and is_instance_valid(_score_bar_container):
+		return _control_global_center(_score_bar_container)
+	return _control_global_center(self)
 
 
 func _show_combo(combo: Dictionary) -> void:
@@ -718,19 +821,15 @@ func _show_combo(combo: Dictionary) -> void:
 	_score_pts_suffix.text = "PTS"
 	_score_pts_suffix.visible = true
 
+	var sum_bb := "[color=%s]%dsum[/color]" % [SemanticColors.ADDITIVE_HEX, face_sum]
+	var mult_bb := "[color=%s]%smult[/color]" % [SemanticColors.MULTIPLICATIVE_HEX, ScoreFormat.multiplier(mult)]
 	if x_mult > 1.0:
-		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE)
-		_score_breakdown_label.text = "%d SUM %s MULT\n%s X_MULT" % [
-			face_sum,
-			ScoreFormat.prefixed_multiplier(mult),
-			ScoreFormat.prefixed_multiplier(x_mult),
-		]
+		_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_X_MULT_FONT_SIZE)
+		var x_mult_bb := "[color=%s]%s[/color]" % [SemanticColors.MULTIPLICATIVE_HEX, ScoreFormat.multiplier(x_mult)]
+		_score_breakdown_label.text = "[right]%s x %s\nx %s[/right]" % [sum_bb, mult_bb, x_mult_bb]
 	else:
-		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
-		_score_breakdown_label.text = "%d SUM %s MULT" % [
-			face_sum,
-			ScoreFormat.prefixed_multiplier(mult),
-		]
+		_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+		_score_breakdown_label.text = "[right]%s x %s[/right]" % [sum_bb, mult_bb]
 
 
 func _calculate_combo_preview(combo: Dictionary) -> Dictionary:
@@ -842,11 +941,19 @@ func _animate_roll() -> void:
 			tween.parallel().tween_property(btn, "scale", Vector2(0.85, 0.85), 0.05)
 
 	# Phase 2 — TUMBLE: rapid face cycling with position jitter
+	tween.tween_callback(func(): if _probability_panel_ui: _probability_panel_ui.start_scramble())
 	for f in range(8):
 		tween.tween_callback(_show_random_faces)
 		tween.tween_callback(_jitter_unheld_dice)
 		tween.tween_interval(0.05)
 
+	if _should_use_last_reroll_suspense():
+		_queue_last_reroll_suspense_settle(tween)
+	else:
+		_queue_normal_roll_settle(tween)
+
+
+func _queue_normal_roll_settle(tween: Tween) -> void:
 	# Phase 3 — LAND: set final value, bounce scale, snap rotation
 	tween.tween_callback(_do_actual_roll)
 	for i in range(_dice_cards.size()):
@@ -874,20 +981,79 @@ func _animate_roll() -> void:
 	tween.tween_callback(func(): _animating = false)
 
 
+func _queue_last_reroll_suspense_settle(tween: Tween) -> void:
+	var reveal_indices := _build_last_reroll_reveal_order(_get_unheld_dice_indices())
+	var delays := _build_last_reroll_stop_delays(reveal_indices)
+
+	tween.tween_callback(_begin_suspense_result_buffer)
+	tween.tween_callback(_do_actual_roll)
+
+	for stop_index in range(reveal_indices.size()):
+		var die_index := reveal_indices[stop_index]
+		var delay := delays[stop_index]
+		if delay > 0.0:
+			_queue_suspense_scramble_interval(
+				tween,
+				delay - delays[stop_index - 1],
+				reveal_indices.slice(stop_index)
+			)
+		var is_final_die := stop_index == reveal_indices.size() - 1
+		tween.tween_callback(func(index := die_index, final_die := is_final_die):
+			_apply_revealed_die_value(index, _suspense_final_results)
+			_play_die_landing_bounce(index, final_die)
+		)
+
+	tween.tween_interval(COMBAT_LAST_REROLL_POST_REVEAL_DELAY)
+	tween.tween_callback(_finish_suspense_result_buffer)
+	tween.tween_callback(func():
+		var final_results := _suspense_final_results.duplicate()
+		_suspense_final_results.clear()
+		_on_dice_rolled(final_results)
+	)
+	tween.tween_callback(_play_pending_combo_reveal)
+	tween.tween_callback(_update_rerolls_display)
+	tween.tween_callback(func(): _animating = false)
+
+
+func _queue_suspense_scramble_interval(tween: Tween, duration: float, indices: Array) -> void:
+	var elapsed := 0.0
+	while elapsed < duration:
+		var step_indices := indices.duplicate()
+		tween.tween_callback(func(scramble_indices := step_indices):
+			_show_random_faces_for_indices(scramble_indices)
+			_jitter_dice_indices(scramble_indices)
+		)
+		var step := minf(COMBAT_LAST_REROLL_SCRAMBLE_STEP, duration - elapsed)
+		tween.tween_interval(step)
+		elapsed += step
+
+
 func _jitter_unheld_dice() -> void:
-	for i in range(_dice_cards.size()):
-		if not combat_mgr.is_held(i):
-			var btn: Button = _dice_cards[i].main_button
-			btn.rotation = randf_range(-0.12, 0.12)
-			var s := randf_range(0.84, 0.92)
-			btn.scale = Vector2(s, s)
+	_jitter_dice_indices(_get_unheld_dice_indices())
+
+
+func _jitter_dice_indices(indices: Array) -> void:
+	for index in indices:
+		var i := int(index)
+		if i < 0 or i >= _dice_cards.size():
+			continue
+		var btn: Button = _dice_cards[i].main_button
+		btn.rotation = randf_range(-0.12, 0.12)
+		var s := randf_range(0.84, 0.92)
+		btn.scale = Vector2(s, s)
 
 
 func _show_random_faces() -> void:
-	for i in range(_dice_cards.size()):
-		if not combat_mgr.is_held(i) and i < _current_values.size():
-			_current_values[i] = randi_range(1, 6)
-			_set_die_face(i, _current_values[i])
+	_show_random_faces_for_indices(_get_unheld_dice_indices())
+
+
+func _show_random_faces_for_indices(indices: Array) -> void:
+	for index in indices:
+		var i := int(index)
+		if i < 0 or i >= _current_values.size():
+			continue
+		_current_values[i] = randi_range(1, 6)
+		_set_die_face(i, _current_values[i])
 
 
 func _do_actual_roll() -> void:
@@ -895,6 +1061,13 @@ func _do_actual_roll() -> void:
 
 
 func _on_dice_rolled(results: Array[int]) -> void:
+	if _suspense_reveal_active:
+		_suspense_final_results = results.duplicate()
+		return
+	_suspense_final_results.clear()
+
+	if _probability_panel_ui:
+		_probability_panel_ui.stop_scramble()
 	for i in range(results.size()):
 		if i < _current_values.size():
 			_current_values[i] = results[i]
@@ -911,7 +1084,7 @@ func _on_dice_rolled(results: Array[int]) -> void:
 		_score_value_label.text = "NO COMBO"
 		_score_pts_suffix.text = ""
 		_score_pts_suffix.visible = false
-		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+		_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 		_score_breakdown_label.text = ""
 
 	_update_rerolls_display()
@@ -996,8 +1169,84 @@ func _pulse_combo_hud(color: Color, priority: int) -> void:
 		_combo_hud_tween.parallel().tween_property(_score_panel, "modulate", Color.WHITE, 0.18)
 
 
+func _make_score_flight_label(total: int) -> Label:
+	if _score_flight_label != null and is_instance_valid(_score_flight_label):
+		_score_flight_label.queue_free()
+
+	var label := _make_pixel_label("+%d" % total, COMBAT_SCORE_FLIGHT_FONT_SIZE, GREEN)
+	label.name = "ScoreFlightLabel"
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.z_index = 80
+	label.modulate = Color.WHITE
+	add_child(label)
+	label.reset_size()
+	label.size = label.get_minimum_size()
+	label.pivot_offset = label.size * 0.5
+	_score_flight_label = label
+	return label
+
+
+func _animate_score_flight(tween: Tween, total: int) -> void:
+	var label := _make_score_flight_label(total)
+	var start := _control_global_center(_score_value_label) - global_position
+	var end := _score_bar_target_center() - global_position
+	var lift := Vector2(0, -COMBAT_SCORE_FLIGHT_ARC_HEIGHT)
+	label.position = start - label.pivot_offset
+	label.scale = Vector2(1.1, 1.1)
+
+	tween.tween_property(
+		label,
+		"position",
+		((start + end) * 0.5) + lift - label.pivot_offset,
+		COMBAT_SCORE_FLIGHT_DURATION * 0.45
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(
+		label,
+		"scale",
+		Vector2(1.2, 1.2),
+		COMBAT_SCORE_FLIGHT_DURATION * 0.45
+	)
+	tween.tween_property(
+		label,
+		"position",
+		end - label.pivot_offset,
+		COMBAT_SCORE_FLIGHT_DURATION * 0.55
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(
+		label,
+		"scale",
+		Vector2(0.82, 0.82),
+		COMBAT_SCORE_FLIGHT_DURATION * 0.55
+	)
+	tween.parallel().tween_property(
+		label,
+		"modulate:a",
+		0.15,
+		COMBAT_SCORE_FLIGHT_DURATION * 0.55
+	)
+	tween.tween_callback(func():
+		_update_score_bar()
+		_pop_score_bar()
+		if label != null and is_instance_valid(label):
+			label.queue_free()
+		if _score_flight_label == label:
+			_score_flight_label = null
+	)
+
+
+func _pop_score_bar() -> void:
+	if _score_bar_container == null or not is_instance_valid(_score_bar_container):
+		return
+	_score_bar_container.pivot_offset = _score_bar_container.size * 0.5
+	var pop := create_tween()
+	pop.tween_property(_score_bar_container, "scale", COMBAT_SCORE_BAR_POP_SCALE, 0.08) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	pop.tween_property(_score_bar_container, "scale", Vector2.ONE, 0.14) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
 func _on_score_pressed() -> void:
-	if not combat_mgr.can_score():
+	if not _can_score_current_hand():
 		return
 	if TutorialManager.is_active() and not TutorialManager.is_combat_score_allowed():
 		return
@@ -1025,14 +1274,14 @@ func _animate_score(combo: Dictionary, total: int) -> void:
 		_score_pts_suffix.text = "PTS"
 		_score_pts_suffix.visible = true
 		_score_pts_suffix.add_theme_color_override("font_color", GREEN)
-		_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+		_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 		_score_breakdown_label.text = ""
-		_update_score_bar()
 		_update_hand_display()
 	)
-	tween.tween_interval(0.5)
+	tween.tween_interval(0.12)
+	_animate_score_flight(tween, total)
 
-	tween.tween_interval(1.0)
+	tween.tween_interval(0.45)
 
 	tween.tween_callback(func():
 		_score_value_label.add_theme_color_override("font_color", DARK)
@@ -1054,7 +1303,7 @@ func _reset_for_next_hand() -> void:
 	_score_value_label.text = "ROLL!"
 	_score_pts_suffix.text = ""
 	_score_pts_suffix.visible = false
-	_score_breakdown_label.add_theme_font_size_override("font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
+	_score_breakdown_label.add_theme_font_size_override("normal_font_size", COMBAT_SCORE_BREAKDOWN_FONT_SIZE)
 	_score_breakdown_label.text = ""
 
 	for i in range(_current_values.size()):
@@ -1072,9 +1321,10 @@ func _on_rerolls_changed(_remaining: int) -> void:
 
 
 func _on_card_hover_enter(card: Control) -> void:
-	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.add_theme_color_override("default_color", GOLD)
 	_desc_title.text = card.hover_name
-	_desc_body.text = card.hover_description
+	_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
+	_set_description_body_text(_desc_body, SemanticMarkup.format_description(card.hover_description))
 	_desc_body.visible = true
 	_desc_combo_row.visible = false
 	_desc_panel.visible = true
@@ -1090,8 +1340,9 @@ func _on_combo_row_hover_enter(combo_type: String) -> void:
 	var info: Dictionary = _probability_panel_ui.get_combo_row_info(combo_type)
 	if info.is_empty():
 		return
-	_desc_title.add_theme_color_override("font_color", GOLD)
+	_desc_title.add_theme_color_override("default_color", GOLD)
 	_desc_title.text = str(info.get("name", ""))
+	_desc_rarity.text = ""
 	_desc_body.visible = false
 	var pattern_colors: Array = info.get("pattern_colors", [])
 	for i in range(_desc_combo_squares.size()):
@@ -1154,7 +1405,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 		else:
 			_result_sub_label.text = "Target: %d" % GameManager.target_score
 		var reward := GameManager.get_round_reward()
-		_result_coins_label.text = "+%d coins" % reward
+		_result_coins_label.text = "[center]+%d%s[/center]" % [reward, SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4)]
 		_result_coins_label.visible = true
 		_result_next_btn.visible = true
 		_result_retry_btn.visible = false
@@ -1290,13 +1541,12 @@ func _refresh_tutorial_dice_accents() -> void:
 		]
 
 	var in_combo: Array[bool] = []
-	var combo_colors: Array = []
+	var combo_colors_by_index: Array = []
 	if combat_mgr != null and combat_mgr.has_rolled:
 		var combo := combat_mgr.get_current_combo()
 		in_combo = combo.get("in_combo", [])
-		combo_colors = _get_pattern_colors(combo.get("type", ""))
+		combo_colors_by_index = _get_combo_accent_colors_by_index(combo, combat_mgr.current_roll_values())
 
-	var combo_color_index := 0
 	for i in range(_dice_cards.size()):
 		var card = _dice_cards[i]
 		if card is CombatDice:
@@ -1304,9 +1554,8 @@ func _refresh_tutorial_dice_accents() -> void:
 			var combo_accent_color := GOLD
 			if i < in_combo.size() and in_combo[i]:
 				combo_accent = true
-				if combo_color_index < combo_colors.size():
-					combo_accent_color = combo_colors[combo_color_index]
-				combo_color_index += 1
+				if i < combo_colors_by_index.size():
+					combo_accent_color = combo_colors_by_index[i]
 
 			var tutorial_accent := show_tutorial_accents and TutorialManager.required_combat_hold_indices.has(i)
 			if tutorial_accent:
@@ -1315,6 +1564,55 @@ func _refresh_tutorial_dice_accents() -> void:
 				(card as CombatDice).set_accent(true, combo_accent_color)
 			else:
 				(card as CombatDice).set_accent(false)
+
+
+func _get_combo_accent_colors_by_index(combo: Dictionary, values: Array[int]) -> Array:
+	var in_combo: Array = combo.get("in_combo", [])
+	var colors: Array = []
+	colors.resize(values.size())
+	for i in range(colors.size()):
+		colors[i] = GOLD
+
+	var combo_type := str(combo.get("type", ""))
+	if combo_type == "two_pair":
+		var pair_colors := _get_matching_value_colors(values, in_combo, [BLUE, PINK], 2)
+		for i in range(colors.size()):
+			if pair_colors.has(i):
+				colors[i] = pair_colors[i]
+		return colors
+
+	var pattern_colors := _get_pattern_colors(combo_type)
+	var combo_color_index := 0
+	for i in range(mini(in_combo.size(), colors.size())):
+		if not bool(in_combo[i]):
+			continue
+		if combo_color_index < pattern_colors.size():
+			colors[i] = pattern_colors[combo_color_index]
+		combo_color_index += 1
+	return colors
+
+
+func _get_matching_value_colors(values: Array[int], in_combo: Array, group_colors: Array,
+		min_count: int) -> Dictionary:
+	var counts := {}
+	for i in range(mini(values.size(), in_combo.size())):
+		if not bool(in_combo[i]):
+			continue
+		var value := values[i]
+		counts[value] = counts.get(value, 0) + 1
+
+	var color_by_value := {}
+	var group_index := 0
+	for value in counts:
+		if int(counts[value]) >= min_count and group_index < group_colors.size():
+			color_by_value[value] = group_colors[group_index]
+			group_index += 1
+
+	var colors_by_index := {}
+	for i in range(mini(values.size(), in_combo.size())):
+		if bool(in_combo[i]) and color_by_value.has(values[i]):
+			colors_by_index[i] = color_by_value[values[i]]
+	return colors_by_index
 
 
 func _provide_tutorial_roll(roll_number: int, _held_dice: Array) -> Array[int]:
@@ -1405,6 +1703,35 @@ func _find_required_hold_targets() -> Array[Control]:
 	if targets.is_empty():
 		targets.append(_dice_container)
 	return targets
+
+
+func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.add_theme_font_override("normal_font", _pixel_font)
+	rtl.add_theme_font_size_override("normal_font_size", font_size)
+	rtl.add_theme_color_override("default_color", color)
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rtl
+
+
+func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rtl.custom_minimum_size.x = COMBAT_DESC_BODY_WIDTH
+	rtl.size.x = COMBAT_DESC_BODY_WIDTH
+
+
+func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
+	rtl.text = value
+	rtl.size.x = COMBAT_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.y = maxf(
+		float(COMBAT_DESC_BODY_FONT_SIZE),
+		rtl.get_content_height()
+	)
 
 
 func _get_combo_display_color(combo_type: String) -> Color:

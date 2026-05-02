@@ -60,7 +60,7 @@ func test_seeded_combat_flow_runs_headless() -> void:
 	watch_signals(manager)
 	manager.start_combat(dice, 100, 1, 1, TestData.load_combo_rules(), 1)
 	manager.roll_dice()
-	var result: Dictionary = manager.score_hand([])
+	var result: Dictionary = manager.score_hand([] as Array[Modifier])
 
 	assert_eq(result["combo"]["type"], "large_straight")
 	assert_eq(result["score_data"]["total"], 160)

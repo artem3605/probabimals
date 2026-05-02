@@ -53,7 +53,7 @@ func test_score_hand_resets_roll_state_and_rerolls_to_configured_value() -> void
 	manager.start_combat(dice, 999, 2, 2, _combo_rules, 4)
 	manager.roll_dice()
 	manager.toggle_hold(0)
-	var result: Dictionary = manager.score_hand([])
+	var result: Dictionary = manager.score_hand([] as Array[Modifier])
 
 	assert_eq(result["combo"]["type"], "yahtzee")
 	assert_eq(result["score_data"]["total"], 450)
@@ -84,7 +84,7 @@ func test_transition_state_blocks_roll_until_next_hand_begins() -> void:
 	watch_signals(manager)
 	manager.start_combat(dice, 999, 2, 1, _combo_rules, 4)
 	manager.roll_dice()
-	manager.score_hand([])
+	manager.score_hand([] as Array[Modifier])
 
 	assert_eq(manager.hand_state, CombatManager.HandState.HAND_TRANSITION)
 	assert_eq(manager.rerolls_remaining, 4)
@@ -122,7 +122,7 @@ func test_combat_ends_immediately_when_target_is_beaten() -> void:
 	watch_signals(manager)
 	manager.start_combat(dice, 100, 2, 1, _combo_rules, 1)
 	manager.roll_dice()
-	manager.score_hand([])
+	manager.score_hand([] as Array[Modifier])
 
 	assert_eq(manager.hand_state, CombatManager.HandState.COMBAT_ENDED)
 	assert_false(manager.can_roll())
@@ -150,7 +150,7 @@ func test_combat_ends_when_hands_run_out() -> void:
 	watch_signals(manager)
 	manager.start_combat(dice, 999, 1, 1, _combo_rules, 1)
 	manager.roll_dice()
-	manager.score_hand([])
+	manager.score_hand([] as Array[Modifier])
 
 	assert_eq(manager.hand_state, CombatManager.HandState.COMBAT_ENDED)
 	assert_signal_emitted_with_parameters(manager, "combat_ended", [80, false])
@@ -218,7 +218,7 @@ func test_probability_snapshot_updates_for_hold_unhold_reroll_and_hand_reset() -
 	assert_eq_deep(rerolled_snapshot, _expected_probability_snapshot(manager, dice))
 	assert_eq_deep(rerolled_snapshot, held_snapshot)
 
-	manager.score_hand([])
+	manager.score_hand([] as Array[Modifier])
 
 	assert_eq_deep(manager.get_probability_snapshot(), _expected_probability_snapshot(manager, dice))
 

@@ -14,6 +14,12 @@ mono_crash.*.json
 # JetBrains IDE
 .idea/
 
+# Local agent artifacts
+.codex/environments/
+.codex/runs/
+.superpowers/
+docs/superpowers/
+
 # macOS
 .DS_Store
 

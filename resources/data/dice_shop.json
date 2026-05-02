@@ -130,8 +130,8 @@
   },
   {
     "id": "double_3",
-    "name": "Double Three",
-    "description": "Replace a face with a double 3",
+    "name": "Three",
+    "description": "Replace a face with a 3",
     "category": "face",
     "rarity": "common",
     "shop_weight": 3,
@@ -172,7 +172,7 @@
   {
     "id": "reroll_plus",
     "name": "Reroll Plus",
-    "description": "+1 reroll per hand",
+    "description": "+1 reroll per turn",
     "category": "modifier",
     "rarity": "uncommon",
     "shop_weight": 5,

@@ -36,8 +36,9 @@ func setup(die: Die, pixel_font: Font) -> void:
 
 	hover_name = die.die_name
 	var vals := die.get_face_values()
-	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
-	hover_description = "%s\nFaces: (%s)" % [die.description, faces_str]
+	var faces_bb := SemanticMarkup.format_faces_list(vals)
+	hover_description = "Faces: (%s)" % faces_bb
+	hover_rarity = _normalize_rarity(die.rarity).to_upper()
 
 	var name_label := Label.new()
 	name_label.text = _display_name

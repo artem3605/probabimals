@@ -2,6 +2,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
+const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 const MAX_SELECTION := 5
 const DICE_SELECT_CONTENT_SEPARATION := 32
 const DICE_SELECT_TOP_BAR_SEPARATION := 16
@@ -17,6 +18,7 @@ const DICE_SELECT_DESC_PANEL_MARGIN := 16
 const DICE_SELECT_DESC_SEPARATION := 12
 const DICE_SELECT_DESC_TITLE_FONT_SIZE := 14
 const DICE_SELECT_DESC_BODY_FONT_SIZE := 12
+const DICE_SELECT_DESC_BODY_WIDTH := DICE_SELECT_DESC_PANEL_SIZE.x - DICE_SELECT_DESC_PANEL_MARGIN * 2
 
 var _groups: Array[Dictionary] = []
 var _subtitle_label: Label
@@ -24,8 +26,9 @@ var _confirm_btn: Button
 var _menu_btn: Button
 var _dice_container: GridContainer
 var _desc_panel: PanelContainer
-var _desc_title: Label
-var _desc_body: Label
+var _desc_title: RichTextLabel
+var _desc_rarity: RichTextLabel
+var _desc_body: RichTextLabel
 var _tutorial_overlay: Control
 
 
@@ -223,13 +226,23 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
-	_desc_title = _make_pixel_label("", DICE_SELECT_DESC_TITLE_FONT_SIZE, GOLD)
-	_desc_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	desc_vbox.add_child(_desc_title)
+	var title_row := HBoxContainer.new()
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_vbox.add_child(title_row)
 
-	_desc_body = _make_pixel_label("", DICE_SELECT_DESC_BODY_FONT_SIZE, Color.WHITE)
-	_desc_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_desc_body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_desc_title = _make_pixel_rtl(DICE_SELECT_DESC_TITLE_FONT_SIZE, GOLD)
+	_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(_desc_title)
+
+	_desc_rarity = _make_pixel_rtl(DICE_SELECT_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title_row.add_child(_desc_rarity)
+
+	_desc_body = _make_pixel_rtl(DICE_SELECT_DESC_BODY_FONT_SIZE, Color.WHITE)
+	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
 
@@ -237,12 +250,10 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 
 
 func _on_card_hover_enter(card: Control) -> void:
-	_desc_title.add_theme_color_override("font_color", GOLD)
-	if card.hover_cost >= 0:
-		_desc_title.text = "%s  -  %d coins" % [card.hover_name, card.hover_cost]
-	else:
-		_desc_title.text = card.hover_name
-	_desc_body.text = card.hover_description
+	_desc_title.add_theme_color_override("default_color", GOLD)
+	_desc_title.text = card.hover_name
+	_desc_rarity.text = SemanticMarkup.format_rarity(card.hover_rarity)
+	_set_description_body_text(_desc_body, SemanticMarkup.format_description(card.hover_description))
 	_desc_panel.visible = true
 
 
@@ -354,3 +365,32 @@ func _find_required_group_targets() -> Array[Control]:
 
 func _on_tutorial_step_changed(_step: String) -> void:
 	_refresh_tutorial_ui()
+
+
+func _make_pixel_rtl(font_size: int, color: Color) -> RichTextLabel:
+	var rtl := RichTextLabel.new()
+	rtl.bbcode_enabled = true
+	rtl.fit_content = true
+	rtl.scroll_active = false
+	rtl.add_theme_font_override("normal_font", _pixel_font)
+	rtl.add_theme_font_size_override("normal_font_size", font_size)
+	rtl.add_theme_color_override("default_color", color)
+	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rtl
+
+
+func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
+	rtl.fit_content = false
+	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rtl.custom_minimum_size.x = DICE_SELECT_DESC_BODY_WIDTH
+	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
+
+
+func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
+	rtl.text = value
+	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.y = maxf(
+		float(DICE_SELECT_DESC_BODY_FONT_SIZE),
+		rtl.get_content_height()
+	)

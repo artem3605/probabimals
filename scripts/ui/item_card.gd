@@ -11,10 +11,6 @@ const BORDER_BLACK := Color("000000")
 const RARITY_COMMON := "common"
 const RARITY_UNCOMMON := "uncommon"
 const RARITY_RARE := "rare"
-const RARITY_COMMON_COLOR := Color("000000")
-const RARITY_UNCOMMON_COLOR := Color("8ec3ff")
-const RARITY_RARE_COLOR := Color("ffd700")
-const RARITY_RARE_ALT_COLOR := Color("ff69b4")
 
 const DIE_COLORS := {
 	"colorless": Color.WHITE,
@@ -53,11 +49,14 @@ const COUNTER_BUTTON_FONT_SIZE := 12
 const COUNTER_LABEL_SIZE := Vector2(40, 28)
 const COUNTER_LABEL_FONT_SIZE := 10
 const COIN_ICON_SIZE := 18
+const SemanticColors = preload("res://scripts/ui/semantic_colors.gd")
+const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 
 var main_button: Button
 var bottom_control: Control
 var hover_name: String = ""
 var hover_description: String = ""
+var hover_rarity: String = ""
 var hover_cost: int = -1
 var _card_color: Color = Color.WHITE
 var _font: Font
@@ -66,19 +65,16 @@ var _accent_active: bool = false
 var _accent_color: Color = GOLD
 var _is_selected: bool = false
 var _is_framed: bool = false
-var _rarity: String = RARITY_COMMON
-var _rarity_animation_active: bool = false
-var _rarity_phase: float = 0.0
 
 
 func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 
 	var vals := die.get_face_values()
-	var faces_str := ",".join(vals.map(func(f: int) -> String: return str(f)))
+	var faces_bb := SemanticMarkup.format_faces_list(vals)
 	hover_name = die.die_name
-	hover_description = _with_rarity_line("%s\nFaces: (%s)" % [die.description, faces_str], die.rarity)
-	_set_rarity(die.rarity)
+	hover_description = "Faces: (%s)" % faces_bb
+	hover_rarity = _normalize_rarity(die.rarity).to_upper()
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	_setup_card(card_color, "", pixel_font)
 
@@ -89,22 +85,18 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	face_panel.set_face_color(card_color)
 	face_panel.set_value(5)
 
-	var name_label := Label.new()
-	name_label.text = DIE_NAMES.get(die.color, "BASIC")
-	name_label.add_theme_font_override("font", pixel_font)
-	name_label.add_theme_font_size_override("font_size", ITEM_CARD_NAME_FONT_SIZE)
-	name_label.add_theme_color_override("font_color", DARK)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var name_label := RichTextLabel.new()
+	name_label.bbcode_enabled = true
+	name_label.fit_content = true
+	name_label.scroll_active = false
+	name_label.add_theme_font_override("normal_font", pixel_font)
+	name_label.add_theme_font_size_override("normal_font_size", ITEM_CARD_NAME_FONT_SIZE)
+	name_label.add_theme_color_override("default_color", DARK)
 	name_label.custom_minimum_size = ITEM_CARD_NAME_MIN_SIZE
+	# RichTextLabel does not have horizontal_alignment; center via BBCode.
+	name_label.text = "[center]%s[/center]" % DIE_NAMES.get(die.color, "BASIC")
 	bottom_control = name_label
 	_vbox.add_child(bottom_control)
-
-
-func _process(delta: float) -> void:
-	if not _rarity_animation_active:
-		return
-	_rarity_phase = fmod(_rarity_phase + delta, TAU)
-	_refresh_button_frame()
 
 
 func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
@@ -137,7 +129,11 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
 
 
 func set_bottom_text(text: String, color: Color = DARK) -> void:
-	if bottom_control is Label:
+	if bottom_control is RichTextLabel:
+		var rtl := bottom_control as RichTextLabel
+		rtl.add_theme_color_override("default_color", color)
+		rtl.text = "[center]%s[/center]" % SemanticMarkup.format_description(text)
+	elif bottom_control is Label:
 		(bottom_control as Label).text = text
 		(bottom_control as Label).add_theme_color_override("font_color", color)
 
@@ -156,9 +152,6 @@ func set_accent(accented: bool, accent_color: Color = GOLD) -> void:
 func is_accented() -> bool:
 	return _accent_active
 
-
-func is_rarity_animation_active() -> bool:
-	return _rarity_animation_active
 
 func setup_frame() -> void:
 	_is_framed = true
@@ -280,52 +273,12 @@ func _get_text_color(bg: Color) -> Color:
 	return Color.WHITE
 
 
-func _set_rarity(rarity: String) -> void:
-	_rarity = _normalize_rarity(rarity)
-	_rarity_animation_active = true
-	set_process(true)
-	_refresh_button_frame()
-
-
-func _with_rarity_line(description: String, rarity: String) -> String:
-	var rarity_line := "RARITY: %s" % _normalize_rarity(rarity).to_upper()
-	var trimmed := description.strip_edges()
-	if trimmed.is_empty():
-		return rarity_line
-	return "%s\n%s" % [trimmed, rarity_line]
-
-
 func _normalize_rarity(rarity: String) -> String:
 	var normalized := rarity.to_lower().strip_edges()
 	match normalized:
 		RARITY_UNCOMMON, RARITY_RARE:
 			return normalized
 	return RARITY_COMMON
-
-
-func _rarity_pulse() -> float:
-	return (sin(_rarity_phase * 3.0) + 1.0) * 0.5
-
-
-func _rarity_border_width() -> int:
-	match _rarity:
-		RARITY_UNCOMMON:
-			return 3
-		RARITY_RARE:
-			return 4
-	return 1
-
-
-func _rarity_border_color() -> Color:
-	var pulse := _rarity_pulse()
-	match _rarity:
-		RARITY_COMMON:
-			return RARITY_COMMON_COLOR
-		RARITY_UNCOMMON:
-			return RARITY_UNCOMMON_COLOR.lerp(Color.WHITE, pulse * 0.25)
-		RARITY_RARE:
-			return RARITY_RARE_COLOR.lerp(RARITY_RARE_ALT_COLOR, pulse)
-	return RARITY_COMMON_COLOR
 
 
 func _refresh_button_frame() -> void:
@@ -337,13 +290,9 @@ func _refresh_button_frame() -> void:
 		if _accent_active:
 			frame_border_width = 4
 			frame_border = _accent_color
-		elif _rarity_animation_active:
-			frame_border_width = _rarity_border_width()
-			frame_border = _rarity_border_color()
 		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, ITEM_CARD_FRAME_MARGIN))
 
-	var rarity_border := _rarity_border_color() if _rarity_animation_active else BORDER_BLACK
-	var border := GOLD if _is_selected else (_accent_color if _accent_active else rarity_border)
+	var border := GOLD if _is_selected else (_accent_color if _accent_active else BORDER_BLACK)
 	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
 	if _is_framed:
 		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))

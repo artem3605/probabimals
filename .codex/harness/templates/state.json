@@ -1,0 +1,17 @@
+{
+  "run_id": "<YYYY-MM-DD-slug>",
+  "objective": "<short objective>",
+  "phase": "planning",
+  "current_backlog_item_id": null,
+  "sprint_index": 1,
+  "attempt": 0,
+  "status": "running",
+  "latest_artifacts": {
+    "request": ".codex/runs/<run_id>/request.md",
+    "spec": ".codex/runs/<run_id>/spec.md",
+    "backlog": ".codex/runs/<run_id>/backlog.json",
+    "contract": ".codex/runs/<run_id>/sprints/01/contract.md",
+    "build_report": ".codex/runs/<run_id>/sprints/01/build-report.md",
+    "qa_report": ".codex/runs/<run_id>/sprints/01/qa-report.md"
+  }
+}
