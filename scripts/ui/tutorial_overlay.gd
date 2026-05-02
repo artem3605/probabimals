@@ -38,8 +38,9 @@ func setup(pixel_font: Font) -> void:
 	_panel.custom_minimum_size = Vector2(panel_width, 0)
 	_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	_panel.add_theme_stylebox_override("panel",
-		_make_style(_s("panel_bg"), _s("panel_border"), _s("panel_border_width"), content_margin))
+	_panel.add_theme_stylebox_override(
+		"panel", _make_style(_s("panel_bg"), _s("panel_border"), _s("panel_border_width"), content_margin)
+	)
 	add_child(_panel)
 
 	var content_hbox := HBoxContainer.new()
@@ -83,9 +84,16 @@ func setup(pixel_font: Font) -> void:
 	hide_overlay()
 
 
-func show_step(title: String, body: String, highlight_targets: Variant = null,
-		show_next: bool = false, next_text: String = "NEXT", avoid_targets: Variant = null,
-		show_skip: bool = false, skip_text: String = "SKIP TUTORIAL") -> void:
+func show_step(
+	title: String,
+	body: String,
+	highlight_targets: Variant = null,
+	show_next: bool = false,
+	next_text: String = "NEXT",
+	avoid_targets: Variant = null,
+	show_skip: bool = false,
+	skip_text: String = "SKIP TUTORIAL"
+) -> void:
 	visible = true
 	_highlight_targets = _normalize_targets(highlight_targets)
 	_avoid_targets = _normalize_targets(avoid_targets)
@@ -100,8 +108,9 @@ func show_step(title: String, body: String, highlight_targets: Variant = null,
 	queue_redraw()
 
 
-func show_step_from_config(config: Dictionary, highlight_targets: Variant = null,
-		avoid_targets: Variant = null) -> void:
+func show_step_from_config(
+	config: Dictionary, highlight_targets: Variant = null, avoid_targets: Variant = null
+) -> void:
 	_step_panel_width = float(config.get("panel_width", -1.0))
 	_step_panel_anchor = config.get("panel_anchor", null)
 	show_step(
@@ -142,10 +151,9 @@ func _draw() -> void:
 	for ht in _highlight_targets:
 		if not is_instance_valid(ht) or not ht.visible:
 			continue
-		cutouts.append(Rect2(
-			ht.global_position - global_position - Vector2(pad, pad),
-			ht.size + Vector2(pad * 2.0, pad * 2.0)
-		))
+		cutouts.append(
+			Rect2(ht.global_position - global_position - Vector2(pad, pad), ht.size + Vector2(pad * 2.0, pad * 2.0))
+		)
 
 	_draw_shade_with_cutouts(Rect2(Vector2.ZERO, size), cutouts)
 
@@ -223,7 +231,9 @@ func _update_panel_layout() -> void:
 	if _button_box.visible:
 		var button_width: float = maxf(_s("next_btn_size").x, _s("skip_btn_size").x)
 		btn_space = button_width + 16.0
-	var label_width := maxf(200.0, minf(panel_width - content_margin * 2.0 - btn_space, available_width - content_margin * 2.0 - btn_space))
+	var label_width := maxf(
+		200.0, minf(panel_width - content_margin * 2.0 - btn_space, available_width - content_margin * 2.0 - btn_space)
+	)
 	_body_label.custom_minimum_size = Vector2(label_width, 0)
 	_body_label.size.x = label_width
 	_panel.custom_minimum_size = Vector2(minf(panel_width, available_width), 0)
@@ -254,7 +264,9 @@ func _update_panel_layout() -> void:
 			Vector2(ax, margin_t),
 			Vector2(ax, max_y),
 		]
-		panel_pos = _choose_best_panel_position(candidate_positions, panel_size, avoid_bounds, max_x, max_y, margin_l, margin_t)
+		panel_pos = _choose_best_panel_position(
+			candidate_positions, panel_size, avoid_bounds, max_x, max_y, margin_l, margin_t
+		)
 
 	_panel.position = panel_pos.round()
 
@@ -263,16 +275,26 @@ static func _resolve_anchor(anchor: Variant) -> Vector2:
 	if anchor is Vector2:
 		return anchor
 	match str(anchor):
-		"top_left":      return Vector2(0.0, 0.0)
-		"top_center":    return Vector2(0.5, 0.0)
-		"top_right":     return Vector2(1.0, 0.0)
-		"center_left":   return Vector2(0.0, 0.5)
-		"center":        return Vector2(0.5, 0.5)
-		"center_right":  return Vector2(1.0, 0.5)
-		"bottom_left":   return Vector2(0.0, 1.0)
-		"bottom_center": return Vector2(0.5, 1.0)
-		"bottom_right":  return Vector2(1.0, 1.0)
-		_:               return Vector2(0.0, 1.0)
+		"top_left":
+			return Vector2(0.0, 0.0)
+		"top_center":
+			return Vector2(0.5, 0.0)
+		"top_right":
+			return Vector2(1.0, 0.0)
+		"center_left":
+			return Vector2(0.0, 0.5)
+		"center":
+			return Vector2(0.5, 0.5)
+		"center_right":
+			return Vector2(1.0, 0.5)
+		"bottom_left":
+			return Vector2(0.0, 1.0)
+		"bottom_center":
+			return Vector2(0.5, 1.0)
+		"bottom_right":
+			return Vector2(1.0, 1.0)
+		_:
+			return Vector2(0.0, 1.0)
 
 
 func _get_highlight_bounds(targets: Array[Control]) -> Rect2:
@@ -300,16 +322,20 @@ func _get_avoid_bounds() -> Rect2:
 	return _get_highlight_bounds(_avoid_targets)
 
 
-func _choose_best_panel_position(candidates: Array, panel_size: Vector2, highlight_bounds: Rect2,
-		max_x: float, max_y: float, min_x: float, min_y: float) -> Vector2:
+func _choose_best_panel_position(
+	candidates: Array,
+	panel_size: Vector2,
+	highlight_bounds: Rect2,
+	max_x: float,
+	max_y: float,
+	min_x: float,
+	min_y: float
+) -> Vector2:
 	var best_position := Vector2(min_x, max_y)
 	var best_overlap := INF
 
 	for candidate in candidates:
-		var candidate_pos := Vector2(
-			clampf(candidate.x, min_x, max_x),
-			clampf(candidate.y, min_y, max_y)
-		)
+		var candidate_pos := Vector2(clampf(candidate.x, min_x, max_x), clampf(candidate.y, min_y, max_y))
 		var panel_rect := Rect2(candidate_pos, panel_size)
 		var overlap_rect := panel_rect.intersection(highlight_bounds)
 		var overlap_area := overlap_rect.size.x * overlap_rect.size.y

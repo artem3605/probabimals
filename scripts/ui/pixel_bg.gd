@@ -88,9 +88,13 @@ func _make_pixel_button(text: String, min_size: Vector2, font_size: int = 16) ->
 
 func _apply_dark_button_style(btn: Button, border_width: int = 4, margin: int = 8) -> void:
 	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, border_width, margin))
-	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), border_width, margin))
+	btn.add_theme_stylebox_override(
+		"hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), border_width, margin)
+	)
 	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, border_width, margin))
-	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), border_width, margin))
+	btn.add_theme_stylebox_override(
+		"disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), border_width, margin)
+	)
 
 	var focus := _make_style(Color(0, 0, 0, 0), GOLD, border_width, margin)
 	focus.draw_center = false
@@ -104,8 +108,9 @@ func _apply_dark_button_style(btn: Button, border_width: int = 4, margin: int = 
 
 
 ## Create a StyleBoxFlat with pixel-art defaults (0 corner radius).
-func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK,
-		border_width: int = 4, margin: int = 20) -> StyleBoxFlat:
+func _make_style(
+	bg_color: Color, border_color: Color = BORDER_BLACK, border_width: int = 4, margin: int = 20
+) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg_color
 	sb.border_color = border_color
@@ -116,17 +121,24 @@ func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK,
 
 
 ## Create a colored button with dark text (for pink/green/blue action buttons).
-func _make_colored_button(text: String, min_size: Vector2, bg_color: Color,
-		hover_color: Color, font_size: int = 16) -> Button:
+func _make_colored_button(
+	text: String, min_size: Vector2, bg_color: Color, hover_color: Color, font_size: int = 16
+) -> Button:
 	var btn := Button.new()
 	btn.text = text
 	btn.custom_minimum_size = min_size
 	btn.add_theme_font_override("font", _pixel_font)
 	btn.add_theme_font_size_override("font_size", font_size)
 
-	btn.add_theme_stylebox_override("normal", _make_style(bg_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
-	btn.add_theme_stylebox_override("hover", _make_style(hover_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
-	btn.add_theme_stylebox_override("disabled", _make_style(DISABLED_BG, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override(
+		"normal", _make_style(bg_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN)
+	)
+	btn.add_theme_stylebox_override(
+		"hover", _make_style(hover_color, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN)
+	)
+	btn.add_theme_stylebox_override(
+		"disabled", _make_style(DISABLED_BG, BORDER_BLACK, COLORED_BUTTON_BORDER_WIDTH, COLORED_BUTTON_MARGIN)
+	)
 
 	btn.add_theme_color_override("font_color", DARK)
 	btn.add_theme_color_override("font_hover_color", DARK)
@@ -137,8 +149,7 @@ func _make_colored_button(text: String, min_size: Vector2, bg_color: Color,
 
 
 ## Create a styled PanelContainer.
-func _make_panel(bg_color: Color, border_color: Color, min_size: Vector2,
-		margin: int = 8) -> PanelContainer:
+func _make_panel(bg_color: Color, border_color: Color, min_size: Vector2, margin: int = 8) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = min_size
 	panel.add_theme_stylebox_override("panel", _make_style(bg_color, border_color, PANEL_BORDER_WIDTH, margin))
@@ -178,7 +189,7 @@ func _make_screen_layout(content_separation: int = 32, clip_content: bool = fals
 	bar.add_theme_constant_override("separation", SCREEN_ACTION_BAR_SEPARATION)
 	center.add_child(bar)
 
-	return { "content": content, "action_bar": bar }
+	return {"content": content, "action_bar": bar}
 
 
 ## Create the standard full-screen margin container used by all screens.
@@ -207,7 +218,8 @@ func _make_title_bar(title_text: String, font_size: int = 24) -> VBoxContainer:
 	vbox.add_child(underline)
 
 	var sub := _make_pixel_label(
-		"Round %d. Target %d." % [GameManager.current_round, GameManager.target_score], TITLE_SUB_FONT_SIZE, DARK)
+		"Round %d. Target %d." % [GameManager.current_round, GameManager.target_score], TITLE_SUB_FONT_SIZE, DARK
+	)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(sub)
 
@@ -265,7 +277,4 @@ func _draw_button_shadows(buttons: Array, shadow_offset := BUTTON_SHADOW_OFFSET)
 		var mode: int = b.get_draw_mode()
 		if mode == BaseButton.DRAW_PRESSED or mode == BaseButton.DRAW_HOVER_PRESSED:
 			off = BUTTON_PRESSED_SHADOW_OFFSET
-		draw_rect(
-			Rect2(btn.global_position - global_position + off, btn.size),
-			SHADOW_COLOR
-		)
+		draw_rect(Rect2(btn.global_position - global_position + off, btn.size), SHADOW_COLOR)

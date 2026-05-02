@@ -105,11 +105,7 @@ func _build_ui() -> void:
 	_build_description_panel(content)
 
 	_reroll_btn = _make_colored_button(
-		"",
-		FLEA_MARKET_REROLL_BUTTON_SIZE,
-		PINK,
-		PINK.lightened(0.15),
-		FLEA_MARKET_REROLL_FONT_SIZE
+		"", FLEA_MARKET_REROLL_BUTTON_SIZE, PINK, PINK.lightened(0.15), FLEA_MARKET_REROLL_FONT_SIZE
 	)
 	var rtl := RichTextLabel.new()
 	rtl.bbcode_enabled = true
@@ -130,11 +126,7 @@ func _build_ui() -> void:
 	_all_buttons.append(_reroll_btn)
 
 	_ready_btn = _make_colored_button(
-		"READY!",
-		FLEA_MARKET_READY_BUTTON_SIZE,
-		GREEN,
-		GREEN.lightened(0.15),
-		FLEA_MARKET_READY_FONT_SIZE
+		"READY!", FLEA_MARKET_READY_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), FLEA_MARKET_READY_FONT_SIZE
 	)
 	_ready_btn.pressed.connect(_on_ready_pressed)
 	action_bar.add_child(_ready_btn)
@@ -184,11 +176,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	coin_hbox.add_child(_coin_label)
 
 	_my_dice_btn = _make_colored_button(
-		"MY BAG",
-		FLEA_MARKET_MY_BAG_BUTTON_SIZE,
-		BLUE,
-		BLUE.lightened(0.15),
-		FLEA_MARKET_MY_BAG_FONT_SIZE
+		"MY BAG", FLEA_MARKET_MY_BAG_BUTTON_SIZE, BLUE, BLUE.lightened(0.15), FLEA_MARKET_MY_BAG_FONT_SIZE
 	)
 	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
 	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
@@ -241,6 +229,7 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 
 # -- Shop generation -----------------------------------------------------------
 
+
 func _generate_offerings() -> void:
 	_shop_offerings.clear()
 	_sold.clear()
@@ -286,10 +275,7 @@ func _draw_shop_card_shadows() -> void:
 		if not child is ItemCard or not child.visible:
 			continue
 		var gp: Vector2 = child.global_position - global_position
-		draw_rect(
-			Rect2(gp + FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET, child.size),
-			SHADOW_COLOR
-		)
+		draw_rect(Rect2(gp + FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET, child.size), SHADOW_COLOR)
 
 
 func _create_coin_icon() -> TextureRect:
@@ -303,6 +289,7 @@ func _create_coin_icon() -> TextureRect:
 
 
 # -- Coin display --------------------------------------------------------------
+
 
 func _update_coins() -> void:
 	if _coin_label:
@@ -342,10 +329,13 @@ func _update_buy_buttons() -> void:
 func _should_accent_tutorial_shop_item(item_id: String) -> bool:
 	if not TutorialManager.is_shop_item_allowed(item_id):
 		return false
-	return TutorialManager.step_id not in [
-		TutorialManager.STEP_BUY_LOADED_DIE,
-		TutorialManager.STEP_BUY_EXTRA_SIX,
-	]
+	return (
+		TutorialManager.step_id
+		not in [
+			TutorialManager.STEP_BUY_LOADED_DIE,
+			TutorialManager.STEP_BUY_EXTRA_SIX,
+		]
+	)
 
 
 # -- Callbacks -----------------------------------------------------------------
@@ -433,10 +423,16 @@ func _on_shop_item_buy(index: int) -> void:
 	var success := GameManager.buy_item(item)
 	if success:
 		if TutorialManager.is_active() and item_id == "loaded_die":
-			TutorialManager.report_action("buy_item", {
-				"item_id": item_id,
-				"die_index": GameManager.dice_bag.size() - 1,
-			})
+			(
+				TutorialManager
+				. report_action(
+					"buy_item",
+					{
+						"item_id": item_id,
+						"die_index": GameManager.dice_bag.size() - 1,
+					}
+				)
+			)
 		AudioManager.play_sfx(&"purchase")
 		_sold[index] = true
 		_desc_title.text = "Purchased!"
@@ -449,6 +445,7 @@ func _on_shop_item_buy(index: int) -> void:
 
 
 # -- Face swap overlay ---------------------------------------------------------
+
 
 func _build_face_swap_overlay() -> void:
 	_face_swap_overlay = ColorRect.new()
@@ -541,8 +538,9 @@ func _show_die_picker(item: Dictionary, shop_index: int) -> void:
 	_clear_swap_cards()
 	_swap_desc_panel.visible = false
 	var all_dice := GameManager.dice_bag.get_all()
-	var tutorial_picking_swap_die := TutorialManager.is_active() \
-		and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_DIE
+	var tutorial_picking_swap_die := (
+		TutorialManager.is_active() and TutorialManager.step_id == TutorialManager.STEP_CHOOSE_SWAP_DIE
+	)
 	for i in all_dice.size():
 		var die: Die = all_dice[i]
 		var card := ItemCard.new()
@@ -624,10 +622,16 @@ func _on_swap_die_selected(die_index: int) -> void:
 	if TutorialManager.is_active() and (die == null or not TutorialManager.is_swap_die_allowed(die, die_index)):
 		return
 	if TutorialManager.is_active():
-		TutorialManager.report_action("choose_swap_die", {
-			"die_index": die_index,
-			"die_color": die.color if die != null else "",
-		})
+		(
+			TutorialManager
+			. report_action(
+				"choose_swap_die",
+				{
+					"die_index": die_index,
+					"die_color": die.color if die != null else "",
+				}
+			)
+		)
 	_show_face_picker(die_index)
 
 
@@ -653,10 +657,16 @@ func _on_swap_face_selected(face_index: int) -> void:
 	var selected_die_index := _selected_die_index
 	var success := GameManager.buy_face_swap(selected_die_index, face_index, new_face, cost)
 	if success and TutorialManager.is_active():
-		TutorialManager.report_action("swap_face", {
-			"die_index": selected_die_index,
-			"old_value": old_face.value,
-		})
+		(
+			TutorialManager
+			. report_action(
+				"swap_face",
+				{
+					"die_index": selected_die_index,
+					"old_value": old_face.value,
+				}
+			)
+		)
 	_close_face_swap()
 	if success:
 		if TutorialManager.is_active():
@@ -742,8 +752,11 @@ func _refresh_tutorial_ui() -> void:
 		_tutorial_overlay.hide_overlay()
 		return
 
-	if _face_swap_overlay != null and _face_swap_overlay.visible \
-			and TutorialManager.step_id != TutorialManager.STEP_CHOOSE_SWAP_DIE:
+	if (
+		_face_swap_overlay != null
+		and _face_swap_overlay.visible
+		and TutorialManager.step_id != TutorialManager.STEP_CHOOSE_SWAP_DIE
+	):
 		_tutorial_overlay.hide_overlay()
 		return
 
@@ -757,13 +770,20 @@ func _refresh_tutorial_ui() -> void:
 
 func _get_tutorial_highlight_target() -> Variant:
 	match TutorialManager.step_id:
-		TutorialManager.STEP_MARKET_INTRO: return _shop_container
-		TutorialManager.STEP_MARKET_SCORE: return _stats_vbox
-		TutorialManager.STEP_BUY_LOADED_DIE: return _find_shop_action_target("loaded_die")
-		TutorialManager.STEP_BUY_EXTRA_SIX: return _find_shop_action_target("extra_6")
-		TutorialManager.STEP_CHOOSE_SWAP_DIE: return _find_first_swap_card(true)
-		TutorialManager.STEP_GO_TO_DICE_SELECT: return _ready_btn
-		_: return null
+		TutorialManager.STEP_MARKET_INTRO:
+			return _shop_container
+		TutorialManager.STEP_MARKET_SCORE:
+			return _stats_vbox
+		TutorialManager.STEP_BUY_LOADED_DIE:
+			return _find_shop_action_target("loaded_die")
+		TutorialManager.STEP_BUY_EXTRA_SIX:
+			return _find_shop_action_target("extra_6")
+		TutorialManager.STEP_CHOOSE_SWAP_DIE:
+			return _find_first_swap_card(true)
+		TutorialManager.STEP_GO_TO_DICE_SELECT:
+			return _ready_btn
+		_:
+			return null
 
 
 func _find_shop_action_target(item_id: String) -> Control:
@@ -781,10 +801,13 @@ func _find_first_swap_card(allowed: bool) -> Control:
 
 
 func _on_tutorial_next_pressed() -> void:
-	if TutorialManager.step_id in [
-		TutorialManager.STEP_MARKET_INTRO,
-		TutorialManager.STEP_MARKET_SCORE,
-	]:
+	if (
+		TutorialManager.step_id
+		in [
+			TutorialManager.STEP_MARKET_INTRO,
+			TutorialManager.STEP_MARKET_SCORE,
+		]
+	):
 		TutorialManager.report_action("advance_intro")
 
 
@@ -811,10 +834,7 @@ func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
 func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
 	rtl.text = value
 	rtl.size.x = FLEA_MARKET_DESC_BODY_WIDTH
-	rtl.custom_minimum_size.y = maxf(
-		float(FLEA_MARKET_DESC_BODY_FONT_SIZE),
-		rtl.get_content_height()
-	)
+	rtl.custom_minimum_size.y = maxf(float(FLEA_MARKET_DESC_BODY_FONT_SIZE), rtl.get_content_height())
 
 
 func _on_tutorial_skip_pressed() -> void:

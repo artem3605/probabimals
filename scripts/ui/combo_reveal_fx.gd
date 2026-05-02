@@ -101,13 +101,18 @@ func _spawn_particles() -> void:
 			particle_color = PINK
 		elif i % 4 == 0:
 			particle_color = GOLD
-		_particles.append({
-			"origin": origin + Vector2(rng.randf_range(-18.0, 18.0), rng.randf_range(-10.0, 10.0)),
-			"velocity": Vector2(cos(angle), sin(angle)) * speed,
-			"size": rng.randf_range(4.0, 8.0 + float(_reveal_tier) * 0.5),
-			"delay": rng.randf_range(0.0, 0.11),
-			"color": particle_color,
-		})
+		(
+			_particles
+			. append(
+				{
+					"origin": origin + Vector2(rng.randf_range(-18.0, 18.0), rng.randf_range(-10.0, 10.0)),
+					"velocity": Vector2(cos(angle), sin(angle)) * speed,
+					"size": rng.randf_range(4.0, 8.0 + float(_reveal_tier) * 0.5),
+					"delay": rng.randf_range(0.0, 0.11),
+					"color": particle_color,
+				}
+			)
+		)
 
 
 func _draw() -> void:

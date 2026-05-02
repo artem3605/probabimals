@@ -25,8 +25,9 @@ func setup(die: Die, pixel_font: Font) -> void:
 
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
 	_setup_card(card_color, "", pixel_font, COMBAT_CARD_SIZE)
-	main_button.add_theme_stylebox_override("hover",
-		_make_style(card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override(
+		"hover", _make_style(card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
 
 	_face_panel = DiceFacePanel.new()
 	_face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -91,10 +92,7 @@ func _position_held_badge() -> void:
 		return
 	var btn_width := main_button.size.x if main_button.size.x > 0.0 else COMBAT_CARD_SIZE.x
 	var badge_size := _held_badge.size
-	_held_badge.position = Vector2(
-		(btn_width - badge_size.x) * 0.5,
-		HELD_BADGE_BOTTOM_OFFSET - badge_size.y
-	)
+	_held_badge.position = Vector2((btn_width - badge_size.x) * 0.5, HELD_BADGE_BOTTOM_OFFSET - badge_size.y)
 
 
 func set_face(value: int) -> void:
@@ -114,15 +112,20 @@ func set_held(held: bool) -> void:
 	_held_tween.set_parallel(true)
 	if main_button != null:
 		var target_y := -HELD_LIFT_AMOUNT if held else 0.0
-		_held_tween.tween_property(main_button, "position:y", target_y, HELD_TWEEN_DURATION) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		(
+			_held_tween
+			. tween_property(main_button, "position:y", target_y, HELD_TWEEN_DURATION)
+			. set_ease(Tween.EASE_OUT)
+			. set_trans(Tween.TRANS_CUBIC)
+		)
 	if _held_badge != null:
 		var target_alpha := 1.0 if held else 0.0
 		_held_tween.tween_property(_held_badge, "modulate:a", target_alpha, HELD_TWEEN_DURATION)
 		if not held:
-			_held_tween.chain().tween_callback(func():
-				if _held_badge != null and _held_badge.modulate.a <= 0.01:
-					_held_badge.visible = false
+			_held_tween.chain().tween_callback(
+				func():
+					if _held_badge != null and _held_badge.modulate.a <= 0.01:
+						_held_badge.visible = false
 			)
 
 
@@ -140,16 +143,22 @@ func play_combo_reveal_hit(color: Color, tier: int, delay: float) -> void:
 	_combo_reveal_tween = create_tween()
 	if delay > 0.0:
 		_combo_reveal_tween.tween_interval(delay)
-	_combo_reveal_tween.tween_property(main_button, "scale", Vector2(pop, pop), 0.08) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	(
+		_combo_reveal_tween
+		. tween_property(main_button, "scale", Vector2(pop, pop), 0.08)
+		. set_ease(Tween.EASE_OUT)
+		. set_trans(Tween.TRANS_BACK)
+	)
 	_combo_reveal_tween.parallel().tween_property(main_button, "modulate", hit_color, 0.08)
-	_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.14) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.14).set_ease(Tween.EASE_OUT).set_trans(
+		Tween.TRANS_CUBIC
+	)
 	_combo_reveal_tween.parallel().tween_property(main_button, "modulate", Color.WHITE, 0.14)
 	if tier >= 6:
 		_combo_reveal_tween.tween_property(main_button, "scale", Vector2(1.05, 1.05), 0.06)
-		_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.12) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_combo_reveal_tween.tween_property(main_button, "scale", Vector2.ONE, 0.12).set_ease(Tween.EASE_OUT).set_trans(
+			Tween.TRANS_CUBIC
+		)
 
 
 func reset_die() -> void:
@@ -175,7 +184,9 @@ func _refresh_button_frame() -> void:
 	if main_button == null:
 		return
 	var border := _accent_color if _accent_active else BORDER_BLACK
-	main_button.add_theme_stylebox_override("normal",
-		_make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
-	main_button.add_theme_stylebox_override("hover",
-		_make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override(
+		"normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
+	main_button.add_theme_stylebox_override(
+		"hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)

@@ -4,6 +4,7 @@ const BalanceSimulatorScript = preload("res://scripts/balance/balance_simulator.
 const SHOP_DATA_PATH := "res://resources/data/dice_shop.json"
 const COMBO_DATA_PATH := "res://resources/data/combos.json"
 
+
 func _init() -> void:
 	var item_id := _read_arg("--modifier", "pair_boost")
 	var simulations := int(_read_arg("--simulations", "1000"))
@@ -17,19 +18,25 @@ func _init() -> void:
 		return
 
 	var simulator = BalanceSimulatorScript.new()
-	var report: Dictionary = simulator.compare_modifier({
-		"dice": _basic_start_dice(),
-		"combo_rules": _load_json_array(COMBO_DATA_PATH),
-		"modifier_item": modifier_item,
-		"simulations": simulations,
-		"seed": seed_value,
-		"target_score": target_score,
-		"roll_policy": "score_immediately",
-		"preset": "basic_start",
-	})
+	var report: Dictionary = (
+		simulator
+		. compare_modifier(
+			{
+				"dice": _basic_start_dice(),
+				"combo_rules": _load_json_array(COMBO_DATA_PATH),
+				"modifier_item": modifier_item,
+				"simulations": simulations,
+				"seed": seed_value,
+				"target_score": target_score,
+				"roll_policy": "score_immediately",
+				"preset": "basic_start",
+			}
+		)
+	)
 
 	print(JSON.stringify(report, "\t"))
 	quit(0)
+
 
 func _read_arg(name: String, default_value: String) -> String:
 	var args := OS.get_cmdline_user_args()
@@ -37,6 +44,7 @@ func _read_arg(name: String, default_value: String) -> String:
 		if args[i] == name and i + 1 < args.size():
 			return args[i + 1]
 	return default_value
+
 
 func _load_json_array(path: String) -> Array:
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -48,11 +56,13 @@ func _load_json_array(path: String) -> Array:
 		return parsed
 	return []
 
+
 func _find_item_by_id(items: Array, item_id: String) -> Dictionary:
 	for item in items:
 		if item is Dictionary and item.get("id", "") == item_id:
 			return item
 	return {}
+
 
 func _basic_start_dice() -> Array[Die]:
 	var dice: Array[Die] = []

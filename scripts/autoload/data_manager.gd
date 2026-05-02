@@ -4,10 +4,12 @@ var _faces: Dictionary = {}
 var _shop_catalogue: Array = []
 var _combo_rules: Array = []
 
+
 func _ready() -> void:
 	_load_faces()
 	_load_shop_catalogue()
 	_load_combo_rules()
+
 
 func _load_json(path: String) -> Variant:
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -23,6 +25,7 @@ func _load_json(path: String) -> Variant:
 		return null
 	return json.data
 
+
 func _load_faces() -> void:
 	var data = _load_json("res://resources/data/faces.json")
 	if data is Array:
@@ -30,25 +33,32 @@ func _load_faces() -> void:
 			var face := _dict_to_face(entry)
 			_faces[face.id] = face
 
+
 func _load_shop_catalogue() -> void:
 	var data = _load_json("res://resources/data/dice_shop.json")
 	if data is Array:
 		_shop_catalogue = data
+
 
 func _load_combo_rules() -> void:
 	var data = _load_json("res://resources/data/combos.json")
 	if data is Array:
 		_combo_rules = data
 
+
 func _dict_to_face(d: Dictionary) -> DiceFace:
-	return DiceFace.new(
-		str(d.get("id", "")),
-		int(d.get("value", 0)),
-		DiceFace.type_from_string(str(d.get("face_type", "basic"))),
-		float(d.get("effect_value", 0.0)),
-		str(d.get("rarity", "common")),
-		int(d.get("cost", 0)),
+	return (
+		DiceFace
+		. new(
+			str(d.get("id", "")),
+			int(d.get("value", 0)),
+			DiceFace.type_from_string(str(d.get("face_type", "basic"))),
+			float(d.get("effect_value", 0.0)),
+			str(d.get("rarity", "common")),
+			int(d.get("cost", 0)),
+		)
 	)
+
 
 func get_dice_face(id: String) -> DiceFace:
 	var face = _faces.get(id)
@@ -56,14 +66,18 @@ func get_dice_face(id: String) -> DiceFace:
 		return face.duplicate_face()
 	return null
 
+
 func get_all_faces() -> Dictionary:
 	return _faces
+
 
 func get_shop_catalogue() -> Array:
 	return _shop_catalogue
 
+
 func get_combo_rules() -> Array:
 	return _combo_rules
+
 
 func create_basic_faces() -> Array[DiceFace]:
 	var result: Array[DiceFace] = []

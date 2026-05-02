@@ -28,10 +28,12 @@ var save_path: String = SAVE_PATH
 var _last_tutorial_completed: bool = false
 var _last_tutorial_active: bool = false
 
+
 func _ready() -> void:
 	_sync_tutorial_tracking()
 	if not TutorialManager.state_changed.is_connected(_on_tutorial_state_changed):
 		TutorialManager.state_changed.connect(_on_tutorial_state_changed)
+
 
 func start_game(skip_tutorial_intro: bool = false) -> void:
 	delete_save()
@@ -97,6 +99,7 @@ func _reset_run_state() -> void:
 		dice_bag.add_die(Die.new())
 	selected_dice.clear()
 
+
 func buy_item(item: Dictionary) -> bool:
 	var cost: int = item.get("cost", 0)
 	if coins < cost:
@@ -133,6 +136,7 @@ func buy_item(item: Dictionary) -> bool:
 				modifiers.append(modifier)
 	return true
 
+
 func buy_face_swap(die_index: int, face_index: int, new_face: DiceFace, cost: int) -> bool:
 	if coins < cost:
 		return false
@@ -143,22 +147,28 @@ func buy_face_swap(die_index: int, face_index: int, new_face: DiceFace, cost: in
 		die.swap_face(face_index, new_face)
 	return true
 
+
 func swap_face(die_index: int, face_index: int, new_face: DiceFace) -> void:
 	var die := dice_bag.get_die(die_index)
 	if die != null:
 		die.swap_face(face_index, new_face)
 
+
 func go_to_combat() -> void:
 	_change_phase(Phase.COMBAT)
+
 
 func go_to_flea_market() -> void:
 	_change_phase(Phase.FLEA_MARKET)
 
+
 func go_to_main_menu() -> void:
 	_change_phase(Phase.MAIN_MENU)
 
+
 func go_to_dice_select() -> void:
 	_change_phase(Phase.DICE_SELECT)
+
 
 func end_combat(final_score: int, target_beaten: bool) -> void:
 	total_score = final_score
@@ -169,6 +179,7 @@ func end_combat(final_score: int, target_beaten: bool) -> void:
 	else:
 		go_to_main_menu()
 
+
 func advance_round() -> void:
 	var reward := 10 + 5 * current_round
 	coins += reward
@@ -177,6 +188,7 @@ func advance_round() -> void:
 	target_score = int(floor(BASE_TARGET * pow(1.5, current_round - 1)))
 	selected_dice.clear()
 	_change_phase(Phase.FLEA_MARKET)
+
 
 func get_round_reward() -> int:
 	return 10 + 5 * current_round
@@ -231,6 +243,7 @@ func _change_phase(new_phase: Phase) -> void:
 
 
 # -- Save / Load ---------------------------------------------------------------
+
 
 func has_save(path_override: String = "") -> bool:
 	return FileAccess.file_exists(_resolve_save_path(path_override))
@@ -475,13 +488,16 @@ func _deserialize_die(raw_die: Dictionary) -> Die:
 
 
 func _deserialize_face(raw_face: Dictionary) -> DiceFace:
-	return DiceFace.new(
-		str(raw_face.get("id", "")),
-		int(raw_face.get("value", 0)),
-		DiceFace.type_from_string(str(raw_face.get("face_type", "basic"))),
-		float(raw_face.get("effect_value", 0.0)),
-		str(raw_face.get("rarity", "common")),
-		int(raw_face.get("cost", 0)),
+	return (
+		DiceFace
+		. new(
+			str(raw_face.get("id", "")),
+			int(raw_face.get("value", 0)),
+			DiceFace.type_from_string(str(raw_face.get("face_type", "basic"))),
+			float(raw_face.get("effect_value", 0.0)),
+			str(raw_face.get("rarity", "common")),
+			int(raw_face.get("cost", 0)),
+		)
 	)
 
 

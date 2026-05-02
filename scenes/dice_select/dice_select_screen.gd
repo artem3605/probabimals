@@ -66,11 +66,7 @@ func _build_ui() -> void:
 	_build_tutorial_overlay()
 
 	_confirm_btn = _make_colored_button(
-		"CONFIRM",
-		DICE_SELECT_CONFIRM_BUTTON_SIZE,
-		GREEN,
-		GREEN.lightened(0.15),
-		DICE_SELECT_CONFIRM_BUTTON_FONT_SIZE
+		"CONFIRM", DICE_SELECT_CONFIRM_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), DICE_SELECT_CONFIRM_BUTTON_FONT_SIZE
 	)
 	_confirm_btn.add_theme_stylebox_override("disabled", _make_style(Color("121212"), Color("262626")))
 	_confirm_btn.add_theme_color_override("font_disabled_color", Color(0.4, 0.35, 0.1))
@@ -168,6 +164,7 @@ func _die_group_key(die: Die) -> String:
 
 # -- State management ----------------------------------------------------------
 
+
 func _total_selected() -> int:
 	var total := 0
 	for g in _groups:
@@ -177,9 +174,10 @@ func _total_selected() -> int:
 
 func _update_state() -> void:
 	if TutorialManager.is_active():
-		_subtitle_label.text = "Choose %d dice. Include the Loaded Die and your upgraded die. (%d/%d)" % [
-			MAX_SELECTION, _total_selected(), MAX_SELECTION
-		]
+		_subtitle_label.text = (
+			"Choose %d dice. Include the Loaded Die and your upgraded die. (%d/%d)"
+			% [MAX_SELECTION, _total_selected(), MAX_SELECTION]
+		)
 	else:
 		_subtitle_label.text = "Choose %d dice (%d/%d)" % [MAX_SELECTION, _total_selected(), MAX_SELECTION]
 	_update_counter_visuals()
@@ -390,7 +388,4 @@ func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
 func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
 	rtl.text = value
 	rtl.size.x = DICE_SELECT_DESC_BODY_WIDTH
-	rtl.custom_minimum_size.y = maxf(
-		float(DICE_SELECT_DESC_BODY_FONT_SIZE),
-		rtl.get_content_height()
-	)
+	rtl.custom_minimum_size.y = maxf(float(DICE_SELECT_DESC_BODY_FONT_SIZE), rtl.get_content_height())

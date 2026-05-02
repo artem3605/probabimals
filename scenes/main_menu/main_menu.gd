@@ -89,9 +89,7 @@ func _draw() -> void:
 	_draw_pixel_die()
 	_draw_pixel_creature()
 	_draw_pixel_coin()
-	_draw_button_shadows(
-		[_new_game_btn, _continue_btn, _settings_btn, _playtest_survey_btn, _exit_btn]
-	)
+	_draw_button_shadows([_new_game_btn, _continue_btn, _settings_btn, _playtest_survey_btn, _exit_btn])
 
 
 func _on_btn_hover_enter(btn: Button) -> void:
@@ -106,17 +104,22 @@ func _on_btn_hover_exit(btn: Button) -> void:
 
 # -- Decorative pixel-art elements --------------------------------------------
 
+
 func _draw_pixel_die() -> void:
 	var c := Vector2(167, 298) + _bob(20)
 	var s := 60.0
 	var half := s * 0.5
 
 	draw_rect(Rect2(c.x - half, c.y - half, s, s), Color.WHITE)
-	var border_pts := PackedVector2Array([
-		c + Vector2(-half, -half), c + Vector2(half, -half),
-		c + Vector2(half, half), c + Vector2(-half, half),
-		c + Vector2(-half, -half),
-	])
+	var border_pts := PackedVector2Array(
+		[
+			c + Vector2(-half, -half),
+			c + Vector2(half, -half),
+			c + Vector2(half, half),
+			c + Vector2(-half, half),
+			c + Vector2(-half, -half),
+		]
+	)
 	draw_polyline(border_pts, BORDER_BLACK, 4.0)
 
 	var pip_r := 5.0
@@ -163,12 +166,14 @@ func _draw_pixel_coin() -> void:
 
 # -- Helpers -------------------------------------------------------------------
 
+
 func _bob(idx: int) -> Vector2:
 	var p := float(idx) * 1.47
 	return Vector2(sin(_time * 0.7 + p) * 3.0, cos(_time * 0.5 + p * 0.8) * 4.0)
 
 
 # -- Button callbacks ----------------------------------------------------------
+
 
 func _on_new_game_pressed() -> void:
 	GameManager.start_game()
@@ -247,9 +252,7 @@ func _build_settings_overlay() -> void:
 	vbox.add_child(tutorial_btn_center)
 
 	var tutorial_btn := _make_pixel_button(
-		"TUTORIAL",
-		MAIN_MENU_TUTORIAL_BUTTON_SIZE,
-		MAIN_MENU_TUTORIAL_BUTTON_FONT_SIZE
+		"TUTORIAL", MAIN_MENU_TUTORIAL_BUTTON_SIZE, MAIN_MENU_TUTORIAL_BUTTON_FONT_SIZE
 	)
 	tutorial_btn.pressed.connect(_on_settings_tutorial_pressed)
 	tutorial_btn_center.add_child(tutorial_btn)
@@ -257,11 +260,7 @@ func _build_settings_overlay() -> void:
 	var btn_center := CenterContainer.new()
 	vbox.add_child(btn_center)
 	var close_btn := _make_colored_button(
-		"CLOSE",
-		MAIN_MENU_CLOSE_BUTTON_SIZE,
-		GREEN,
-		GREEN.lightened(0.15),
-		MAIN_MENU_CLOSE_BUTTON_FONT_SIZE
+		"CLOSE", MAIN_MENU_CLOSE_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), MAIN_MENU_CLOSE_BUTTON_FONT_SIZE
 	)
 	close_btn.pressed.connect(_on_settings_close)
 	btn_center.add_child(close_btn)
@@ -308,12 +307,7 @@ func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float)
 
 
 func _create_grabber_texture(color: Color) -> ImageTexture:
-	var img := Image.create(
-		MAIN_MENU_SLIDER_GRABBER_SIZE.x,
-		MAIN_MENU_SLIDER_GRABBER_SIZE.y,
-		false,
-		Image.FORMAT_RGBA8
-	)
+	var img := Image.create(MAIN_MENU_SLIDER_GRABBER_SIZE.x, MAIN_MENU_SLIDER_GRABBER_SIZE.y, false, Image.FORMAT_RGBA8)
 	img.fill(color)
 	return ImageTexture.create_from_image(img)
 

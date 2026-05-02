@@ -99,8 +99,9 @@ func setup_as_dice_item(die: Die, pixel_font: Font) -> void:
 	_vbox.add_child(bottom_control)
 
 
-func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
-		card_size: Vector2 = ITEM_CARD_DEFAULT_SIZE) -> void:
+func _setup_card(
+	card_color: Color, label_text: String, pixel_font: Font, card_size: Vector2 = ITEM_CARD_DEFAULT_SIZE
+) -> void:
 	add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	_vbox = VBoxContainer.new()
@@ -115,8 +116,12 @@ func _setup_card(card_color: Color, label_text: String, pixel_font: Font,
 	main_button = Button.new()
 	main_button.custom_minimum_size = card_size
 	main_button.pivot_offset = card_size / 2.0
-	main_button.add_theme_stylebox_override("normal", _make_style(card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
-	main_button.add_theme_stylebox_override("hover", _make_style(card_color, GOLD, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override(
+		"normal", _make_style(card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
+	main_button.add_theme_stylebox_override(
+		"hover", _make_style(card_color, GOLD, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
 	main_button.add_theme_font_override("font", pixel_font)
 	main_button.add_theme_font_size_override("font_size", ITEM_CARD_MAIN_FONT_SIZE)
 	main_button.add_theme_color_override("font_color", text_color)
@@ -157,7 +162,9 @@ func setup_frame() -> void:
 	_is_framed = true
 	add_theme_stylebox_override("panel", _make_style(FRAME_BG, FRAME_BG, 0, ITEM_CARD_FRAME_MARGIN))
 	main_button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	main_button.add_theme_stylebox_override("hover", _make_style(_card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override(
+		"hover", _make_style(_card_color, BORDER_BLACK, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
 	for conn in main_button.mouse_entered.get_connections():
 		main_button.mouse_entered.disconnect(conn["callable"])
 	for conn in main_button.mouse_exited.get_connections():
@@ -221,10 +228,20 @@ func create_counter_row(pixel_font: Font) -> Dictionary:
 
 
 func _apply_action_button_style(btn: Button) -> void:
-	btn.add_theme_stylebox_override("normal", _make_style(DARK, BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
-	btn.add_theme_stylebox_override("hover", _make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
-	btn.add_theme_stylebox_override("pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
-	btn.add_theme_stylebox_override("disabled", _make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN))
+	btn.add_theme_stylebox_override(
+		"normal", _make_style(DARK, BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN)
+	)
+	btn.add_theme_stylebox_override(
+		"hover",
+		_make_style(Color(0.25, 0.25, 0.25), Color(0.4, 0.4, 0.4), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN)
+	)
+	btn.add_theme_stylebox_override(
+		"pressed", _make_style(Color(0.04, 0.04, 0.04), BORDER_BLACK, ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN)
+	)
+	btn.add_theme_stylebox_override(
+		"disabled",
+		_make_style(Color(0.07, 0.07, 0.07), Color(0.15, 0.15, 0.15), ACTION_BUTTON_BORDER_WIDTH, ACTION_BUTTON_MARGIN)
+	)
 	btn.add_theme_color_override("font_color", GOLD)
 	btn.add_theme_color_override("font_hover_color", GOLD)
 	btn.add_theme_color_override("font_pressed_color", Color(0.8, 0.667, 0))
@@ -256,8 +273,9 @@ static func _create_coin_icon(display_size: int = COIN_ICON_SIZE) -> TextureRect
 	return rect
 
 
-func _make_style(bg_color: Color, border_color: Color = BORDER_BLACK,
-		border_width: int = 4, margin_size: int = 8) -> StyleBoxFlat:
+func _make_style(
+	bg_color: Color, border_color: Color = BORDER_BLACK, border_width: int = 4, margin_size: int = 8
+) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg_color
 	sb.border_color = border_color
@@ -290,12 +308,20 @@ func _refresh_button_frame() -> void:
 		if _accent_active:
 			frame_border_width = 4
 			frame_border = _accent_color
-		add_theme_stylebox_override("panel", _make_style(FRAME_BG, frame_border, frame_border_width, ITEM_CARD_FRAME_MARGIN))
+		add_theme_stylebox_override(
+			"panel", _make_style(FRAME_BG, frame_border, frame_border_width, ITEM_CARD_FRAME_MARGIN)
+		)
 
 	var border := GOLD if _is_selected else (_accent_color if _accent_active else BORDER_BLACK)
-	main_button.add_theme_stylebox_override("normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+	main_button.add_theme_stylebox_override(
+		"normal", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+	)
 	if _is_framed:
-		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+		main_button.add_theme_stylebox_override(
+			"hover", _make_style(_card_color, border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+		)
 	else:
 		var hover_border := _accent_color if _accent_active else GOLD
-		main_button.add_theme_stylebox_override("hover", _make_style(_card_color, hover_border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN))
+		main_button.add_theme_stylebox_override(
+			"hover", _make_style(_card_color, hover_border, ITEM_CARD_MAIN_BORDER_WIDTH, ITEM_CARD_MAIN_MARGIN)
+		)
