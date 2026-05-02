@@ -89,14 +89,14 @@ The repository ships with GUT vendored in `addons/gut` and a single canonical ru
 
 ```bash
 cd /path/to/probabimals
-./scripts/test/run_gut.sh
+make test
 ```
 
 Optional JUnit XML export for CI or local inspection:
 
 ```bash
 cd /path/to/probabimals
-GUT_JUNIT_XML=build/test-results/gut.xml ./scripts/test/run_gut.sh
+GUT_JUNIT_XML=build/test-results/gut.xml make test
 ```
 
 Test layout:
@@ -104,6 +104,43 @@ Test layout:
 - `tests/unit` for pure logic
 - `tests/integration` for manager/state flows
 - `tests/smoke` for headless boot and structural coverage
+
+## Run validation checks
+
+Install the Python development tools once:
+
+```bash
+cd /path/to/probabimals
+make install-dev
+```
+
+Then run the full validation loop:
+
+```bash
+make validate
+```
+
+Focused checks:
+
+```bash
+make static-check   # Godot import/syntax sanity + Python bytecode compilation
+make lint           # gdlint + ruff
+make format-check   # gdformat --check + ruff format --check
+make typecheck      # pyright
+make security       # pip-audit against pinned dev requirements
+```
+
+If the Godot executable is not named `godot`, pass it explicitly:
+
+```bash
+GODOT=/path/to/Godot make static-check
+```
+
+Optional pre-commit hooks are configured in `.pre-commit-config.yaml`:
+
+```bash
+pre-commit install
+```
 
 ## Notes
 
