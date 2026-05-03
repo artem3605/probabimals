@@ -1,14 +1,12 @@
 class_name RunState
 extends RefCounted
 
-const MapNode := preload("res://scripts/map/map_node.gd")
-
-var nodes: Dictionary = {}  # int -> MapNode
-var current_node_id: int = -1  # -1 means no node entered yet
+var nodes: Dictionary = {}
+var current_node_id: int = -1
 var seed: int = 0
 
 
-func get_current_node() -> Variant:
+func get_current_node() -> MapNode:
 	if current_node_id == -1:
 		return null
 	return nodes.get(current_node_id, null)
