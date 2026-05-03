@@ -346,3 +346,70 @@ After `end_run()`, MainMenu's `_ready()` checks `GameManager.last_run_result`. I
 - Multi-chapter (multiple maps per run, escalating between them).
 - Movement animations and richer map visuals.
 - Run statistics and meta-progression.
+
+---
+
+## Addendum (2026-05-03): Reconciliation With Existing Codebase
+
+After reviewing the actual `scripts/autoload/game_manager.gd`, the design is reconciled with existing code as follows. The high-level architecture (Approach A: new `Phase.MAP`, `current_run` field, map screen + generator + state) is unchanged. The differences below take precedence over the original sections where they overlap.
+
+### Reuse `current_round` as the Progression Counter
+
+The original design proposed a new `combats_completed` field. This is replaced by reusing the existing `GameManager.current_round`. Rationale: `current_round` is already initialized in `_reset_run_state`, advanced by `advance_round()` (which also grants the coin reward and recomputes `target_score`), and serialized in save/load. Introducing a parallel counter would duplicate state and create two sources of truth for blind difficulty.
+
+Concretely:
+
+- `RunState` does **not** carry a combats counter. Progression is read from `GameManager.current_round`.
+- After a victorious COMBAT or BOSS map node, `complete_current_node()` calls the existing `advance_round()` logic for reward + `target_score` bump. The transition target (Map vs. FleaMarket vs. end_run) is decided by `complete_current_node()`, not by `advance_round()` itself — see "Splitting `advance_round`" below.
+- Boss blind multiplier is applied on top of `target_score` only when entering the BOSS node, by `enter_map_node()`.
+
+### Splitting `advance_round`
+
+Current `advance_round()` does two things: (a) grant reward and bump `target_score`, (b) transition to `Phase.FLEA_MARKET`. For a run, the destination phase depends on context (next map node, end of run, or — outside any run — keep legacy behavior). The fix:
+
+- Extract the reward + target bump into a private helper, e.g. `_apply_round_advance()`.
+- `advance_round()` keeps its current public signature and behavior for non-run callers (legacy single-round flow / loaded saves with no run): calls `_apply_round_advance()` then `_change_phase(Phase.FLEA_MARKET)`.
+- `complete_current_node()` (new) calls `_apply_round_advance()` directly, then decides next phase from run state.
+
+### Onboarding = Existing First Combat
+
+The original spec described an "onboarding shop / onboarding combat" with `current_node_id == -1`. In the actual codebase this is exactly the existing first round (`MainMenu → FleaMarket → Combat`), optionally preceded by the tutorial intro combat. No new "onboarding" methods are introduced. Instead:
+
+- `start_game()` (existing) is the entry point; it now also creates `current_run = MapGenerator.generate(...)` so a run is active from the start. The generated map is not visible until the first real combat completes.
+- The first FleaMarket → Combat cycle stays as it is. `CombatScreen` on victory calls `complete_current_node()`. Because `current_run.current_node_id == -1`, that call routes to `Phase.MAP` (instead of the legacy FleaMarket loop).
+- The earlier `complete_onboarding_shop()` method is **not** added — the existing FleaMarket "Combat" button keeps calling `go_to_combat()` for the first cycle.
+
+### Save / Load: Run Is Not Persisted
+
+The map and run state are explicitly excluded from save/load.
+
+- `build_save_data` / `apply_save_data` are **not** changed to include `current_run`, `last_run_result`, or any map data.
+- On load, `current_run` is `null` and `last_run_result` is `null`. The game resumes in the legacy single-round flow at the saved phase (typically `FLEA_MARKET`).
+- This preserves backwards compatibility with v2 saves and matches the "run save/load is future work" non-goal.
+- Closing the game mid-run loses the run. This is acceptable for the first iteration.
+
+### Abandoning a Run
+
+If the player returns to the main menu mid-run via an explicit "back to menu" / pause-quit action (not a combat defeat), this is an **abandon**, not a defeat:
+
+- `current_run` is set to `null`.
+- `last_run_result` is **not** populated.
+- `ResultsOverlay` does **not** show on the next MainMenu visit.
+
+`ResultsOverlay` only appears after `end_run(victory: bool)` is called from a real combat outcome (boss victory or mid-run defeat).
+
+### `last_run_result` Is In-Memory Only
+
+`last_run_result` is a transient field. It is not serialized into the save file. If the player quits the game after seeing the results overlay but before pressing Continue, the overlay does not reappear on next launch.
+
+### Updated Method List on `GameManager`
+
+The final method additions on `GameManager` for this slice are:
+
+- `enter_map_node(node_id: int) -> void`
+- `complete_current_node() -> void`
+- `end_run(victory: bool) -> void`
+- `abandon_run() -> void` (new — called from "back to menu" affordances when in a run)
+- `_apply_round_advance() -> void` (private helper extracted from `advance_round`)
+
+`start_game()` is modified (not replaced) to initialize `current_run`. `advance_round()` is refactored to call `_apply_round_advance()` then transition to `FLEA_MARKET`, preserving its public behavior for non-run callers.
