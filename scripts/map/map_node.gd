@@ -1,5 +1,5 @@
-extends RefCounted
 class_name MapNode
+extends RefCounted
 
 enum NodeType { COMBAT, SHOP, BOSS }
 

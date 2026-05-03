@@ -20,3 +20,11 @@ func test_node_type_values_distinct() -> void:
 func test_default_next_ids_is_empty() -> void:
 	var node := MapNode.new(1, MapNode.NodeType.SHOP, 1)
 	assert_eq(node.next_ids.size(), 0)
+
+
+func test_init_duplicates_next_ids_input() -> void:
+	var original: Array[int] = [5, 6]
+	var node := MapNode.new(1, MapNode.NodeType.COMBAT, 1, original)
+	original[0] = 99
+	original.append(7)
+	assert_eq(node.next_ids, [5, 6] as Array[int])
