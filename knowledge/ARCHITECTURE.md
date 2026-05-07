@@ -88,6 +88,7 @@ scripts/
     shop_generator.gd
   ui/
     pixel_bg.gd
+    main_menu_run_result_plan.gd # pure MainMenu run result overlay display rules
     item_card.gd
     shop_item_card.gd
     dice_face_panel.gd
@@ -234,6 +235,8 @@ Save behavior:
 ### MainMenu
 
 Control root with pixel background, title, Start/Continue/Settings/Survey/Exit buttons, settings overlay, and run result overlay.
+
+`MainMenuRunResultPlan` owns pure run result overlay display rules: victory/defeat title, summary labels, and continue button copy. `MainMenu` applies the plan to Godot controls and keeps overlay construction local to the scene.
 
 ### Map
 

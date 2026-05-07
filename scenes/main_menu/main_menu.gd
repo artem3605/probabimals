@@ -1,5 +1,7 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
+const MainMenuRunResultPlanScript = preload("res://scripts/ui/main_menu_run_result_plan.gd")
+
 const MAIN_MENU_VERSION_FONT_SIZE := 10
 const MAIN_MENU_SETTINGS_PANEL_SIZE := Vector2(480, 0)
 const MAIN_MENU_SETTINGS_PANEL_MARGIN := 32
@@ -45,6 +47,7 @@ var _run_result_overlay: ColorRect
 var _master_slider: HSlider
 var _music_slider: HSlider
 var _sfx_slider: HSlider
+var _run_result_plan := MainMenuRunResultPlanScript.new()
 
 
 func _ready() -> void:
@@ -307,26 +310,29 @@ func _show_run_result_overlay(result: Dictionary) -> void:
 	vbox.add_theme_constant_override("separation", MAIN_MENU_RUN_RESULT_SEPARATION)
 	panel.add_child(vbox)
 
-	var victory := bool(result.get("victory", false))
-	var title_text := "VICTORY" if victory else "DEFEAT"
-	var title_color := GOLD if victory else PINK
-	var title := _make_pixel_label(title_text, MAIN_MENU_RUN_RESULT_TITLE_FONT_SIZE, title_color)
+	var plan := _run_result_plan.build(result)
+	var title := _make_pixel_label(
+		str(plan.get("title_text", "")),
+		MAIN_MENU_RUN_RESULT_TITLE_FONT_SIZE,
+		_run_result_title_color(str(plan.get("title_tone", "")))
+	)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
 	var round_label := _make_pixel_label(
-		"ROUND %d" % int(result.get("round", 0)), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
+		str(plan.get("round_text", "")), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
 	)
 	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(round_label)
 
-	var score := int(result.get("score", result.get("total_score", 0)))
-	var score_label := _make_pixel_label("SCORE %d" % score, MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE)
+	var score_label := _make_pixel_label(
+		str(plan.get("score_text", "")), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
+	)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(score_label)
 
 	var coins_label := _make_pixel_label(
-		"COINS %d" % int(result.get("coins", 0)), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
+		str(plan.get("coins_text", "")), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
 	)
 	coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(coins_label)
@@ -335,7 +341,7 @@ func _show_run_result_overlay(result: Dictionary) -> void:
 	vbox.add_child(btn_center)
 
 	var continue_btn := _make_colored_button(
-		"CONTINUE",
+		str(plan.get("button_text", "CONTINUE")),
 		MAIN_MENU_RUN_RESULT_BUTTON_SIZE,
 		GREEN,
 		GREEN.lightened(0.15),
@@ -344,6 +350,12 @@ func _show_run_result_overlay(result: Dictionary) -> void:
 	continue_btn.name = "RunResultContinueButton"
 	continue_btn.pressed.connect(_on_run_result_continue_pressed)
 	btn_center.add_child(continue_btn)
+
+
+func _run_result_title_color(title_tone: String) -> Color:
+	if title_tone == MainMenuRunResultPlanScript.TONE_DEFEAT:
+		return PINK
+	return GOLD
 
 
 func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float) -> HSlider:
