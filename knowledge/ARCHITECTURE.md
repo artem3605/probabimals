@@ -91,7 +91,8 @@ scripts/
     last_reroll_suspense_planner.gd # final-reroll suspense timing and reveal-order rules
     combat_probability_panel.gd
   shop/
-    shop_generator.gd
+    shop_generator.gd             # randomized shop offerings
+    shop_purchase_resolver.gd     # shop item and face-swap purchase outcomes
   tutorial/
     tutorial_action_flow.gd       # pure tutorial action transition rules
   ui/
@@ -257,7 +258,9 @@ Save behavior:
 
 `ShopGenerator` builds randomized offerings from `dice_shop.json`.
 
-`FleaMarketScreen` handles purchases, face swaps, rerolls, tutorial market steps, and persistence of map shop-node state through `RunState.shop_states`.
+`ShopPurchaseResolver` applies item and face-swap purchases to the run wallet, dice bag, modifiers, and reroll count. It returns purchase outcomes so `GameManager` can keep owning state signals such as `coins_changed`.
+
+`FleaMarketScreen` handles shop presentation, face-swap selection UI, rerolls, tutorial market steps, and persistence of map shop-node state through `RunState.shop_states`. Purchase mutation routes through `GameManager`, which delegates item and face-swap rules to `ShopPurchaseResolver`.
 
 ## Scene Trees
 
