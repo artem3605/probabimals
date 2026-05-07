@@ -89,6 +89,7 @@ scripts/
     combat_manager.gd
     combat_dice.gd
     last_reroll_suspense_planner.gd # final-reroll suspense timing and reveal-order rules
+    combat_result_overlay_plan.gd # pure combat result overlay copy/button visibility rules
     combat_probability_panel.gd
   shop/
     shop_generator.gd             # randomized shop offerings
@@ -253,6 +254,8 @@ Save behavior:
 `CombatScreen` owns presentation, overlays, animation, tutorial gating, and result-overlay navigation. It delegates durable state changes to `GameManager`.
 
 `LastRerollSuspensePlanner` owns the pure final-reroll suspense rules: when suspense applies, which dice remain unrevealed, the randomized reveal order, and stop-delay timing. `CombatScreen` applies that plan to tweens and dice visuals.
+
+`CombatResultOverlayPlan` owns pure combat result overlay display rules: victory/defeat copy, reward visibility, and result button visibility. `CombatScreen` applies the plan to Godot controls and keeps animation/audio concerns local to the scene.
 
 ### Shop
 

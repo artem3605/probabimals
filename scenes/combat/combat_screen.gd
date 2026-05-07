@@ -1,6 +1,7 @@
 extends "res://scripts/ui/pixel_bg.gd"
 
 const CombatDice = preload("res://scripts/combat/combat_dice.gd")
+const CombatResultOverlayPlanScript = preload("res://scripts/combat/combat_result_overlay_plan.gd")
 const CombatProbabilityPanelScript = preload("res://scripts/combat/combat_probability_panel.gd")
 const LastRerollSuspensePlannerScript = preload("res://scripts/combat/last_reroll_suspense_planner.gd")
 const ComboRevealFxScript = preload("res://scripts/ui/combo_reveal_fx.gd")
@@ -130,6 +131,7 @@ var _result_survey_btn: Button
 var _result_menu_btn: Button
 var _result_final_score: int = 0
 var _result_target_beaten: bool = false
+var _result_overlay_plan := CombatResultOverlayPlanScript.new()
 
 var _pause_overlay: ColorRect
 
@@ -1395,65 +1397,47 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	AudioManager.play_sfx(&"round_win" if target_beaten else &"game_over")
 	_result_survey_btn.disabled = not GameManager.has_playtest_survey_url()
 
-	_result_score_label.text = str(final_score) + " PTS"
-
-	if target_beaten:
-		if _is_current_map_boss_node():
-			_result_message.text = "BOSS DEFEATED!"
-		elif GameManager.current_round == 0:
-			_result_message.text = "ROUND CLEARED!"
-		else:
-			_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
-		_result_message.add_theme_color_override("font_color", GOLD)
-		if TutorialManager.step_id == TutorialManager.STEP_INTRO_WIN:
-			_result_sub_label.text = "Great start! Now let's head to the Flea Market and upgrade your dice."
-		elif TutorialManager.is_active():
-			_result_sub_label.text = "Great job! You improved your dice, held a strong pair, and turned it into a big combo. You've got the basics down!"
-		elif _is_run_start_map_transition():
-			_result_sub_label.text = "Choose your first route on the map."
-		elif _is_current_map_boss_node():
-			_result_sub_label.text = "Final target: %d" % GameManager.target_score
-		else:
-			_result_sub_label.text = "Target: %d" % GameManager.target_score
-		var reward := GameManager.get_round_reward()
-		_result_coins_label.text = (
-			"[center]+%d%s[/center]" % [reward, SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4)]
-		)
-		_result_coins_label.visible = not _is_run_start_map_transition()
-		if _is_run_start_map_transition():
-			_result_next_btn.text = "VIEW MAP"
-		else:
-			_result_next_btn.text = "FINISH RUN" if _is_current_map_boss_node() else "NEXT ROUND"
-		_result_next_btn.visible = true
-		_result_retry_btn.visible = false
-		_result_survey_btn.visible = false
-		_result_menu_btn.visible = false
-	else:
-		if TutorialManager.is_active():
-			_result_message.text = "NOT QUITE!"
-			_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
-			_result_sub_label.text = "No worries -- give it another shot! The tutorial is here to help you practice."
-			_result_coins_label.visible = false
-			_result_next_btn.visible = false
-			_result_next_btn.text = "NEXT ROUND"
-			_result_retry_btn.visible = true
-			_result_survey_btn.visible = false
-			_result_menu_btn.visible = true
-		else:
-			_result_message.text = "GAME OVER"
-			_result_message.add_theme_color_override("font_color", DIE_COLORS["red"])
-			_result_sub_label.text = "Reached Round %d" % GameManager.current_round
-			_result_coins_label.visible = false
-			_result_next_btn.visible = false
-			_result_next_btn.text = "NEXT ROUND"
-			_result_retry_btn.visible = false
-			_result_survey_btn.visible = true
-			_result_menu_btn.visible = true
+	var plan := _result_overlay_plan.build(final_score, target_beaten, _build_result_overlay_plan_context())
+	_apply_result_overlay_plan(plan)
 
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(_result_overlay, "modulate:a", 1.0, 0.5)
+
+
+func _build_result_overlay_plan_context() -> Dictionary:
+	return {
+		"is_boss": _is_current_map_boss_node(),
+		"is_run_start_map_transition": _is_run_start_map_transition(),
+		"tutorial_active": TutorialManager.is_active(),
+		"tutorial_step_id": TutorialManager.step_id,
+		"intro_win_step_id": TutorialManager.STEP_INTRO_WIN,
+		"current_round": GameManager.current_round,
+		"target_score": GameManager.target_score,
+		"reward": GameManager.get_round_reward(),
+		"coin_icon": SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4),
+	}
+
+
+func _apply_result_overlay_plan(plan: Dictionary) -> void:
+	_result_score_label.text = str(plan.get("score_text", ""))
+	_result_message.text = str(plan.get("message", ""))
+	_result_message.add_theme_color_override("font_color", _result_overlay_tone_color(str(plan.get("tone", ""))))
+	_result_sub_label.text = str(plan.get("subtitle", ""))
+	_result_coins_label.text = str(plan.get("coins_text", ""))
+	_result_coins_label.visible = bool(plan.get("coins_visible", false))
+	_result_next_btn.text = str(plan.get("next_text", "NEXT ROUND"))
+	_result_next_btn.visible = bool(plan.get("next_visible", false))
+	_result_retry_btn.visible = bool(plan.get("retry_visible", false))
+	_result_survey_btn.visible = bool(plan.get("survey_visible", false))
+	_result_menu_btn.visible = bool(plan.get("menu_visible", false))
+
+
+func _result_overlay_tone_color(tone: String) -> Color:
+	if tone == CombatResultOverlayPlanScript.TONE_LOSS:
+		return DIE_COLORS["red"]
+	return GOLD
 
 
 func _is_current_map_boss_node() -> bool:
