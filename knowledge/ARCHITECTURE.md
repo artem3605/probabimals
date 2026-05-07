@@ -63,10 +63,12 @@ scenes/
 
 scripts/
   autoload/
-    game_manager.gd              # phase routing, run state, save/load, wallet, combat results
+    game_manager.gd              # phase routing, run state, save file IO, wallet, combat results
     data_manager.gd              # JSON loading and validated data access
     tutorial_manager.gd          # tutorial mode, checkpoints, scripted tutorial requirements
     audio_manager.gd             # SFX/music and volume persistence
+  save/
+    save_data_codec.gd           # save schema, migration, serialization, and restore state application
   map/
     map_generator.gd             # data-driven route generation
     map_node.gd                  # node id/type/depth/edges
@@ -186,7 +188,9 @@ The default map is 10 depths. Depth 1 contains initial choices, the final depth 
 
 ## Save And Load
 
-`GameManager.build_save_data()` writes format-versioned JSON with player state, tutorial state, and `current_run` when present.
+`GameManager` owns save file IO and load-time phase changes. `SaveDataCodec` owns the save data interface: format versioning, migration, phase normalization, player/run/tutorial serialization, and restoring normalized data back onto `GameManager`/`TutorialManager`.
+
+`GameManager.build_save_data()` delegates to `SaveDataCodec` to produce format-versioned JSON with player state, tutorial state, and `current_run` when present.
 
 Save behavior:
 
@@ -196,7 +200,7 @@ Save behavior:
 - Run victory/defeat and abandon delete the active save so MainMenu cannot continue stale pre-end state.
 - Active-run Combat result overlays resolve state immediately: victory writes the next `MAP`/run-end state before the overlay button is pressed; defeat deletes the save and records defeat result data before the overlay button is pressed.
 
-`GameManager.apply_save_data()` migrates old saves to the current format, restores player/run/tutorial state, and returns the phase to load.
+`GameManager.apply_save_data()` delegates to `SaveDataCodec` to migrate old saves to the current format, restore player/run/tutorial state, and return the phase to load.
 
 ## Core Gameplay Systems
 
