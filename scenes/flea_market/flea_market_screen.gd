@@ -6,6 +6,7 @@ const ShopGeneratorScript = preload("res://scripts/shop/shop_generator.gd")
 const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
+const MapNodeRef = preload("res://scripts/map/map_node.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := ShopGeneratorScript.DEFAULT_SHOP_SLOTS
 const FLEA_MARKET_CONTENT_SEPARATION := 48
@@ -68,11 +69,13 @@ var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
 var _tutorial_overlay: Control
 var _shop_generator = ShopGeneratorScript.new()
+var _reroll_count: int = 0
 
 
 func _ready() -> void:
 	super._ready()
-	_shop_generator.randomize_seed()
+	if not _is_active_run_shop_node():
+		_shop_generator.randomize_seed()
 	_build_ui()
 	_generate_offerings()
 	_update_coins()
@@ -240,6 +243,25 @@ func _generate_offerings() -> void:
 		_refresh_shop_display()
 		return
 
+	if _is_active_run_shop_node():
+		var node_id := _active_shop_node_id()
+		var saved_state := GameManager.current_run.get_shop_state(node_id)
+		if not saved_state.is_empty():
+			_apply_shop_state(saved_state)
+			_refresh_shop_display()
+			return
+		_reroll_count = 0
+		_shop_generator.set_seed(_shop_seed_for(node_id, _reroll_count))
+		_generate_random_offerings()
+		_persist_shop_state()
+		return
+
+	_generate_random_offerings()
+
+
+func _generate_random_offerings() -> void:
+	_shop_offerings.clear()
+	_sold.clear()
 	var catalogue := DataManager.get_shop_catalogue()
 	if catalogue.is_empty():
 		return
@@ -249,6 +271,37 @@ func _generate_offerings() -> void:
 		_sold.append(false)
 
 	_refresh_shop_display()
+
+
+func _apply_shop_state(state: Dictionary) -> void:
+	_shop_offerings.clear()
+	_sold.clear()
+	_reroll_count = int(state.get("reroll_count", 0))
+	var raw_offerings: Array = state.get("offerings", [])
+	for item in raw_offerings:
+		if item is Dictionary:
+			_shop_offerings.append(item.duplicate(true))
+	var raw_sold: Array = state.get("sold", [])
+	for i in range(_shop_offerings.size()):
+		_sold.append(bool(raw_sold[i]) if i < raw_sold.size() else false)
+
+
+func _persist_shop_state() -> void:
+	if not _is_active_run_shop_node():
+		return
+	(
+		GameManager
+		. current_run
+		. set_shop_state(
+			_active_shop_node_id(),
+			{
+				"offerings": _shop_offerings.duplicate(true),
+				"sold": _sold.duplicate(),
+				"reroll_count": _reroll_count,
+			}
+		)
+	)
+	GameManager.save_game()
 
 
 func _refresh_shop_display() -> void:
@@ -348,7 +401,13 @@ func _on_reroll_pressed() -> void:
 		return
 	GameManager.coins -= REROLL_COST
 	GameManager.coins_changed.emit(GameManager.coins)
-	_generate_offerings()
+	if _is_active_run_shop_node():
+		_reroll_count += 1
+		_shop_generator.set_seed(_shop_seed_for(_active_shop_node_id(), _reroll_count))
+		_generate_random_offerings()
+		_persist_shop_state()
+	else:
+		_generate_offerings()
 	_update_coins()
 
 
@@ -357,7 +416,43 @@ func _on_ready_pressed() -> void:
 		return
 	if TutorialManager.is_active():
 		TutorialManager.report_action("go_to_dice_select")
-	GameManager.go_to_dice_select()
+		GameManager.go_to_dice_select()
+		return
+	GameManager.flea_market_continue()
+
+
+func _go_to_main_menu() -> void:
+	if GameManager.current_run != null:
+		GameManager.abandon_run()
+	GameManager.go_to_main_menu()
+
+
+func _update_ready_button_label() -> void:
+	if _ready_btn == null:
+		return
+	_ready_btn.text = "CONTINUE" if _is_active_run_shop_node() else "READY!"
+
+
+func _is_active_run_shop_node() -> bool:
+	if GameManager.current_run == null:
+		return false
+	var node: MapNodeRef = GameManager.current_run.get_current_node()
+	return node != null and node.type == MapNodeRef.NodeType.SHOP
+
+
+func _active_shop_node_id() -> int:
+	if GameManager.current_run == null:
+		return -1
+	var node: MapNodeRef = GameManager.current_run.get_current_node()
+	if node == null or node.type != MapNodeRef.NodeType.SHOP:
+		return -1
+	return node.id
+
+
+func _shop_seed_for(node_id: int, reroll_count: int) -> int:
+	if GameManager.current_run == null:
+		return 0
+	return abs(hash("%d:%d:%d" % [GameManager.current_run.seed, node_id, reroll_count]))
 
 
 func _on_my_dice_hover_enter() -> void:
@@ -435,6 +530,7 @@ func _on_shop_item_buy(index: int) -> void:
 			)
 		AudioManager.play_sfx(&"purchase")
 		_sold[index] = true
+		_persist_shop_state()
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("default_color", GREEN)
 		_desc_rarity.text = ""
@@ -673,6 +769,7 @@ func _on_swap_face_selected(face_index: int) -> void:
 			TutorialManager.improved_die_index = selected_die_index
 		AudioManager.play_sfx(&"purchase")
 		_sold[shop_idx] = true
+		_persist_shop_state()
 		_desc_title.text = "Purchased!"
 		_desc_title.add_theme_color_override("default_color", GREEN)
 		_desc_rarity.text = ""
@@ -746,6 +843,7 @@ func _refresh_tutorial_ui() -> void:
 	if _tutorial_overlay == null:
 		return
 
+	_update_ready_button_label()
 	_ready_btn.disabled = TutorialManager.is_active() and not TutorialManager.can_go_to_dice_select()
 
 	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_FLEA_MARKET:

@@ -248,7 +248,7 @@ The complete demo experience showcasing all core systems across multiple rounds.
 
 #### Progression
 
-- 5–7 rounds with escalating blinds.
+- 10 map levels with escalating blinds.
 - Flea market evolution — rarer faces and powerful modifiers in later rounds.
 - Win/loss conditions — survive all rounds to win; losing has consequences (lost dice, reduced budget).
 
@@ -273,7 +273,7 @@ Self-contained demo: multiple rounds of shopping → dice customization → comb
 | Flea Market | Fixed catalogue, flat coin budget | Randomized stock, scaling prices, rarity tiers |
 | Items | ~10–12 items: dice, faces, modifiers | Large pool, synergies, conditional modifiers |
 | Combat | Roll + reroll, Yahtzee combos, single target score | Escalating blinds, rich modifier interactions |
-| Progression | Single round | 5–7 rounds, persistent inventory, difficulty scaling |
+| Progression | Single round | 10-level map run, persistent inventory, difficulty scaling |
 | Polish | Placeholder art, no sound | Animations, SFX, music, tutorial |
 
 ---
@@ -378,7 +378,7 @@ graph LR
     Modifiers --> TotalPower
 ```
 
-**Design intent:** channels 1 and 2 alone should be enough to clear rounds 1–4. Rounds 5–7 require channel 3 (modifier synergies), forcing the player to think beyond face values and into build architecture.
+**Design intent:** channels 1 and 2 alone should be enough to clear early rounds. Later rounds require channel 3 (modifier synergies), forcing the player to think beyond face values and into build architecture.
 
 ### Power vs. Blinds
 
@@ -403,7 +403,7 @@ The shop's item pool shifts across rounds to support the power curve:
 | 1–2 | Common faces, basic dice | 50–60 coins | Build foundation — high-value faces, extra dice |
 | 3–4 | Uncommon faces, first modifiers | 70–90 coins | Specialize — commit to a combo archetype |
 | 5–6 | Rare faces, powerful modifiers | 100–130 coins | Synergize — stack multipliers, fine-tune |
-| 7 | No shop (final round) | — | Prove the build — no more preparation |
+| Final level | No shop | — | Prove the build — no more preparation |
 
 Prices scale with rarity: common faces cost 4–10 coins, uncommon 12–18, rare 20–30. Budget grows faster than common prices but slower than rare prices, forcing the player to choose between many small upgrades or one powerful item.
 

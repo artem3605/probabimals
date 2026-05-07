@@ -1,6 +1,11 @@
 extends GutTest
 
 const TestData = preload("res://tests/support/test_data.gd")
+const MAIN_MENU_SCENE := preload("res://scenes/main_menu/main_menu.tscn")
+
+
+func after_each() -> void:
+	GameManager.last_run_result = {}
 
 
 func test_autoloads_boot_with_game_data_loaded() -> void:
@@ -16,12 +21,52 @@ func test_autoloads_boot_with_game_data_loaded() -> void:
 
 
 func test_main_menu_scene_instantiates_with_playtest_button() -> void:
-	var scene: PackedScene = load("res://scenes/main_menu/main_menu.tscn")
-	assert_not_null(scene)
+	assert_not_null(MAIN_MENU_SCENE)
 
-	var menu: Control = add_child_autoqfree(scene.instantiate())
+	var menu: Control = add_child_autoqfree(MAIN_MENU_SCENE.instantiate())
 
 	assert_not_null(menu.get_node("ButtonContainer/PlaytestSurveyButton"))
+
+
+func test_main_menu_shows_last_run_result_overlay_and_continue_clears() -> void:
+	GameManager.last_run_result = {"victory": true, "round": 3, "total_score": 420, "coins": 17}
+	assert_not_null(MAIN_MENU_SCENE)
+
+	var menu: Control = add_child_autoqfree(MAIN_MENU_SCENE.instantiate())
+	await wait_process_frames(1)
+
+	var overlay: Control = menu.find_child("RunResultOverlay", true, false) as Control
+	assert_not_null(overlay)
+	assert_true(_has_label_text(overlay, "VICTORY"))
+	assert_true(_has_label_text(overlay, "ROUND 3"))
+	assert_true(_has_label_text(overlay, "SCORE 420"))
+	assert_true(_has_label_text(overlay, "COINS 17"))
+
+	var continue_btn: Button = menu.find_child("RunResultContinueButton", true, false) as Button
+	assert_not_null(continue_btn)
+	if continue_btn == null:
+		return
+
+	continue_btn.pressed.emit()
+	await wait_process_frames(1)
+
+	assert_eq_deep(GameManager.last_run_result, {})
+	assert_true(not is_instance_valid(overlay) or not overlay.visible)
+
+
+func test_main_menu_shows_defeat_run_result_overlay() -> void:
+	GameManager.last_run_result = {"victory": false, "round": 3, "total_score": 12, "coins": 4}
+	assert_not_null(MAIN_MENU_SCENE)
+
+	var menu: Control = add_child_autoqfree(MAIN_MENU_SCENE.instantiate())
+	await wait_process_frames(1)
+
+	var overlay: Control = menu.find_child("RunResultOverlay", true, false) as Control
+	assert_not_null(overlay)
+	assert_true(_has_label_text(overlay, "DEFEAT"))
+	assert_true(_has_label_text(overlay, "ROUND 3"))
+	assert_true(_has_label_text(overlay, "SCORE 12"))
+	assert_true(_has_label_text(overlay, "COINS 4"))
 
 
 func test_combat_screen_script_loads() -> void:
@@ -69,3 +114,14 @@ func test_seeded_combat_flow_runs_headless() -> void:
 	assert_eq(result["combo"]["type"], "large_straight")
 	assert_eq(result["score_data"]["total"], 160)
 	assert_signal_emitted_with_parameters(manager, "combat_ended", [160, true])
+
+
+func _has_label_text(root: Node, expected: String) -> bool:
+	if root == null:
+		return false
+	if root is Label and (root as Label).text == expected:
+		return true
+	for child in root.get_children():
+		if _has_label_text(child, expected):
+			return true
+	return false

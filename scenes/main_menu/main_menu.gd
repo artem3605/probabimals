@@ -16,6 +16,12 @@ const MAIN_MENU_VOLUME_LABEL_FONT_SIZE := 14
 const MAIN_MENU_VOLUME_LABEL_WIDTH := 120
 const MAIN_MENU_VOLUME_SLIDER_SIZE := Vector2(240, 32)
 const MAIN_MENU_SLIDER_GRABBER_SIZE := Vector2i(16, 24)
+const MAIN_MENU_RUN_RESULT_PANEL_SIZE := Vector2(480, 0)
+const MAIN_MENU_RUN_RESULT_SEPARATION := 24
+const MAIN_MENU_RUN_RESULT_TITLE_FONT_SIZE := 24
+const MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE := 14
+const MAIN_MENU_RUN_RESULT_BUTTON_SIZE := Vector2(220, 56)
+const MAIN_MENU_RUN_RESULT_BUTTON_FONT_SIZE := 16
 
 var _time := 0.0
 
@@ -35,6 +41,7 @@ var _sun_state := 0
 var _sun_textures: Array[Texture2D]
 
 var _settings_overlay: ColorRect
+var _run_result_overlay: ColorRect
 var _master_slider: HSlider
 var _music_slider: HSlider
 var _sfx_slider: HSlider
@@ -74,6 +81,11 @@ func _ready() -> void:
 		_connect_button_sfx(btn)
 
 	_build_settings_overlay()
+	if not GameManager.last_run_result.is_empty():
+		if GameManager.last_run_result.has("victory"):
+			_show_run_result_overlay(GameManager.last_run_result)
+		else:
+			GameManager.last_run_result = {}
 
 
 func _process(delta: float) -> void:
@@ -204,6 +216,13 @@ func _on_settings_tutorial_pressed() -> void:
 	GameManager.start_tutorial_replay()
 
 
+func _on_run_result_continue_pressed() -> void:
+	GameManager.last_run_result = {}
+	if _run_result_overlay != null:
+		_run_result_overlay.queue_free()
+		_run_result_overlay = null
+
+
 func _on_exit_pressed() -> void:
 	get_tree().quit()
 
@@ -264,6 +283,67 @@ func _build_settings_overlay() -> void:
 	)
 	close_btn.pressed.connect(_on_settings_close)
 	btn_center.add_child(close_btn)
+
+
+func _show_run_result_overlay(result: Dictionary) -> void:
+	if _run_result_overlay != null:
+		_run_result_overlay.queue_free()
+
+	_run_result_overlay = ColorRect.new()
+	_run_result_overlay.name = "RunResultOverlay"
+	_run_result_overlay.color = Color(0, 0, 0, 0.85)
+	_run_result_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_run_result_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_run_result_overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_run_result_overlay.add_child(center)
+
+	var panel := _make_panel(DARK, GOLD, MAIN_MENU_RUN_RESULT_PANEL_SIZE, MAIN_MENU_SETTINGS_PANEL_MARGIN)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", MAIN_MENU_RUN_RESULT_SEPARATION)
+	panel.add_child(vbox)
+
+	var victory := bool(result.get("victory", false))
+	var title_text := "VICTORY" if victory else "DEFEAT"
+	var title_color := GOLD if victory else PINK
+	var title := _make_pixel_label(title_text, MAIN_MENU_RUN_RESULT_TITLE_FONT_SIZE, title_color)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var round_label := _make_pixel_label(
+		"ROUND %d" % int(result.get("round", 0)), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
+	)
+	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(round_label)
+
+	var score := int(result.get("score", result.get("total_score", 0)))
+	var score_label := _make_pixel_label("SCORE %d" % score, MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE)
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(score_label)
+
+	var coins_label := _make_pixel_label(
+		"COINS %d" % int(result.get("coins", 0)), MAIN_MENU_RUN_RESULT_LABEL_FONT_SIZE, Color.WHITE
+	)
+	coins_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(coins_label)
+
+	var btn_center := CenterContainer.new()
+	vbox.add_child(btn_center)
+
+	var continue_btn := _make_colored_button(
+		"CONTINUE",
+		MAIN_MENU_RUN_RESULT_BUTTON_SIZE,
+		GREEN,
+		GREEN.lightened(0.15),
+		MAIN_MENU_RUN_RESULT_BUTTON_FONT_SIZE
+	)
+	continue_btn.name = "RunResultContinueButton"
+	continue_btn.pressed.connect(_on_run_result_continue_pressed)
+	btn_center.add_child(continue_btn)
 
 
 func _make_volume_row(parent: VBoxContainer, label_text: String, initial: float) -> HSlider:

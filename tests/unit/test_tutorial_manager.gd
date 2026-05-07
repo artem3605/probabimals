@@ -24,7 +24,7 @@ func test_combat_tutorial_prompts_are_anchored_below_dice() -> void:
 	for step_id in combat_prompt_steps:
 		var config: Dictionary = TutorialManager.STEP_TEXT[step_id]
 		var anchor: Vector2 = config.get("panel_anchor", Vector2.ZERO)
-		assert_ge(anchor.y, 0.82, "%s should render below the dice row" % step_id)
+		assert_true(anchor.y >= 0.82, "%s should render below the dice row" % step_id)
 
 
 func test_fixed_tutorial_shop_uses_current_shop_size() -> void:

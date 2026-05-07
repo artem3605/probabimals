@@ -299,6 +299,12 @@ func _on_confirm_pressed() -> void:
 	GameManager.go_to_combat()
 
 
+func _go_to_main_menu() -> void:
+	if GameManager.current_run != null:
+		GameManager.abandon_run()
+	GameManager.go_to_main_menu()
+
+
 func _group_is_required(group: Dictionary) -> bool:
 	if not TutorialManager.is_active():
 		return false

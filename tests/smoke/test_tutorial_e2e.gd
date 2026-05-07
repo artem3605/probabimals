@@ -4,6 +4,8 @@ const FLEA_MARKET_SCENE := preload("res://scenes/flea_market/flea_market_screen.
 const DICE_SELECT_SCENE := preload("res://scenes/dice_select/dice_select_screen.tscn")
 const COMBAT_SCENE := preload("res://scenes/combat/combat_screen.tscn")
 const ItemCard = preload("res://scripts/ui/item_card.gd")
+const MapNode = preload("res://scripts/map/map_node.gd")
+const RunState = preload("res://scripts/map/run_state.gd")
 
 
 func before_each() -> void:
@@ -11,6 +13,8 @@ func before_each() -> void:
 	for _i in range(5):
 		GameManager.dice_bag.add_die(Die.new())
 	GameManager.selected_dice.clear()
+	GameManager.current_run = null
+	GameManager.current_phase = GameManager.Phase.MAIN_MENU
 	GameManager.current_round = 1
 	GameManager.target_score = 150
 	GameManager.hands_per_round = 4
@@ -22,6 +26,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	GameManager.current_run = null
 	TutorialManager.completed = false
 	TutorialManager.clear_active_tutorial()
 
@@ -29,6 +34,8 @@ func after_each() -> void:
 func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	TutorialManager.start_first_run()
 	GameManager._setup_intro_combat()
+	GameManager.current_run = _build_start_run_state()
+	GameManager.current_phase = GameManager.Phase.COMBAT
 
 	var intro_combat: Node = COMBAT_SCENE.instantiate()
 	autoqfree(intro_combat)
@@ -203,6 +210,18 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 		)
 	)
 	assert_false(combat._menu_btn.disabled)
+	combat._on_combat_ended(GameManager.target_score, true)
+	await wait_process_frames(1)
+	assert_eq(combat._result_next_btn.text, "VIEW MAP")
+	assert_false(combat._result_coins_label.visible)
+	combat._on_next_round_pressed()
+	assert_true(
+		await wait_until(
+			func(): return GameManager.current_phase == GameManager.Phase.MAP, 1.0, 0.05, "tutorial routes to map"
+		)
+	)
+	assert_not_null(GameManager.current_run)
+	assert_eq(GameManager.current_run.current_node_id, -1)
 
 
 func _find_shop_index(items: Array, item_id: String) -> int:
@@ -239,3 +258,13 @@ func _build_selected_dice(selected_indices: Array[int]) -> Array[Die]:
 	for bag_index in selected_indices:
 		selected.append(all_dice[bag_index])
 	return selected
+
+
+func _build_start_run_state() -> RunState:
+	var state := RunState.new()
+	state.nodes = {
+		1: MapNode.new(1, MapNode.NodeType.COMBAT, 1, [2] as Array[int]),
+		2: MapNode.new(2, MapNode.NodeType.BOSS, 2, [] as Array[int]),
+	}
+	state.current_node_id = -1
+	return state

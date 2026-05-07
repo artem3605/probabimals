@@ -3,12 +3,23 @@ extends Node
 var _faces: Dictionary = {}
 var _shop_catalogue: Array = []
 var _combo_rules: Array = []
+var _map_config: Dictionary = {}
+
+const MAP_CONFIG_DEFAULTS := {
+	"depth": 10,
+	"min_nodes_per_level": 1,
+	"max_nodes_per_level": 3,
+	"shop_probability": 0.3,
+	"max_consecutive_shops": 2,
+	"boss_blind_multiplier": 1.5,
+}
 
 
 func _ready() -> void:
 	_load_faces()
 	_load_shop_catalogue()
 	_load_combo_rules()
+	_load_map_config()
 
 
 func _load_json(path: String) -> Variant:
@@ -46,6 +57,46 @@ func _load_combo_rules() -> void:
 		_combo_rules = data
 
 
+func _load_map_config() -> void:
+	var data = _load_json("res://resources/data/map_config.json")
+	if data is Dictionary:
+		_map_config = _validated_map_config(data)
+	else:
+		push_error("map_config.json missing or malformed; using defaults")
+		_map_config = MAP_CONFIG_DEFAULTS.duplicate()
+
+
+func _validated_map_config(raw: Dictionary) -> Dictionary:
+	var cfg := MAP_CONFIG_DEFAULTS.duplicate()
+	for key in MAP_CONFIG_DEFAULTS.keys():
+		if raw.has(key):
+			cfg[key] = raw[key]
+
+	if int(cfg["depth"]) < 2:
+		push_error("map_config.depth must be >= 2; using default")
+		cfg["depth"] = MAP_CONFIG_DEFAULTS["depth"]
+	if int(cfg["min_nodes_per_level"]) < 1:
+		push_error("map_config.min_nodes_per_level must be >= 1; using default")
+		cfg["min_nodes_per_level"] = MAP_CONFIG_DEFAULTS["min_nodes_per_level"]
+	if int(cfg["max_nodes_per_level"]) < int(cfg["min_nodes_per_level"]):
+		push_error("map_config.max_nodes_per_level must be >= min_nodes_per_level; using defaults")
+		cfg["min_nodes_per_level"] = MAP_CONFIG_DEFAULTS["min_nodes_per_level"]
+		cfg["max_nodes_per_level"] = MAP_CONFIG_DEFAULTS["max_nodes_per_level"]
+
+	var shop_prob := float(cfg["shop_probability"])
+	if shop_prob < 0.0 or shop_prob > 1.0:
+		push_error("map_config.shop_probability must be in [0,1]; using default")
+		cfg["shop_probability"] = MAP_CONFIG_DEFAULTS["shop_probability"]
+	if int(cfg["max_consecutive_shops"]) < 0:
+		push_error("map_config.max_consecutive_shops must be >= 0; using default")
+		cfg["max_consecutive_shops"] = MAP_CONFIG_DEFAULTS["max_consecutive_shops"]
+	if float(cfg["boss_blind_multiplier"]) < 1.0:
+		push_error("map_config.boss_blind_multiplier must be >= 1.0; using default")
+		cfg["boss_blind_multiplier"] = MAP_CONFIG_DEFAULTS["boss_blind_multiplier"]
+
+	return cfg
+
+
 func _dict_to_face(d: Dictionary) -> DiceFace:
 	return (
 		DiceFace
@@ -77,6 +128,10 @@ func get_shop_catalogue() -> Array:
 
 func get_combo_rules() -> Array:
 	return _combo_rules
+
+
+func get_map_config() -> Dictionary:
+	return _map_config.duplicate()
 
 
 func create_basic_faces() -> Array[DiceFace]:

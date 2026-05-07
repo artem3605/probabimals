@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/map/map_node_button.gd" id="1"]
+
+[node name="MapNodeButton" type="Button"]
+custom_minimum_size = Vector2(56, 56)
+text = "?"
+script = ExtResource("1")
