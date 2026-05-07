@@ -2,6 +2,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const CombatDice = preload("res://scripts/combat/combat_dice.gd")
 const CombatProbabilityPanelScript = preload("res://scripts/combat/combat_probability_panel.gd")
+const LastRerollSuspensePlannerScript = preload("res://scripts/combat/last_reroll_suspense_planner.gd")
 const ComboRevealFxScript = preload("res://scripts/ui/combo_reveal_fx.gd")
 const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
@@ -34,9 +35,6 @@ const COMBAT_SCORE_FLIGHT_FONT_SIZE := 22
 const COMBAT_SCORE_FLIGHT_DURATION := 0.48
 const COMBAT_SCORE_FLIGHT_ARC_HEIGHT := 58.0
 const COMBAT_SCORE_BAR_POP_SCALE := Vector2(1.08, 1.08)
-const COMBAT_LAST_REROLL_STOP_BASE_DELAY := 0.16
-const COMBAT_LAST_REROLL_STOP_EXTRA_DELAY := 0.02
-const COMBAT_LAST_REROLL_MAX_LAST_STOP_DELAY := 0.8
 const COMBAT_LAST_REROLL_POST_REVEAL_DELAY := 0.18
 const COMBAT_LAST_REROLL_FINAL_POP_SCALE := Vector2(1.14, 1.14)
 const COMBAT_LAST_REROLL_NORMAL_POP_SCALE := Vector2(1.08, 1.08)
@@ -138,6 +136,7 @@ var _pause_overlay: ColorRect
 var _animating: bool = false
 var _suspense_reveal_active: bool = false
 var _suspense_final_results: Array[int] = []
+var _suspense_planner := LastRerollSuspensePlannerScript.new()
 var _tutorial_overlay: Control
 var _tutorial_rolls_seen: int = 0
 
@@ -719,32 +718,28 @@ func _count_held_dice() -> int:
 
 
 func _should_use_last_reroll_suspense() -> bool:
-	return combat_mgr != null and combat_mgr.rerolls_remaining == 1 and not _get_unheld_dice_indices().is_empty()
+	return combat_mgr != null and _suspense_planner.should_use(combat_mgr.rerolls_remaining, _held_dice_flags())
 
 
 func _get_unheld_dice_indices() -> Array[int]:
-	var indices: Array[int] = []
+	return _suspense_planner.unheld_indices(_held_dice_flags())
+
+
+func _held_dice_flags() -> Array[bool]:
+	var held_dice: Array[bool] = []
 	if combat_mgr == null:
-		return indices
+		return held_dice
 	for i in range(_dice_cards.size()):
-		if not combat_mgr.is_held(i):
-			indices.append(i)
-	return indices
+		held_dice.append(combat_mgr.is_held(i))
+	return held_dice
 
 
 func _build_last_reroll_stop_delays(indices: Array) -> Array[float]:
-	var delays: Array[float] = []
-	for stop_index in range(indices.size()):
-		var delay := float(stop_index) * COMBAT_LAST_REROLL_STOP_BASE_DELAY
-		delay += float(maxi(stop_index - 1, 0)) * COMBAT_LAST_REROLL_STOP_EXTRA_DELAY
-		delays.append(minf(delay, COMBAT_LAST_REROLL_MAX_LAST_STOP_DELAY))
-	return delays
+	return _suspense_planner.build_stop_delays(indices)
 
 
 func _build_last_reroll_reveal_order(indices: Array[int]) -> Array[int]:
-	var reveal_order := indices.duplicate()
-	reveal_order.shuffle()
-	return reveal_order
+	return _suspense_planner.build_reveal_order(indices)
 
 
 func _begin_suspense_result_buffer() -> void:
