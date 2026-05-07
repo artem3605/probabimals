@@ -3,6 +3,7 @@ extends Node
 const RunState := preload("res://scripts/map/run_state.gd")
 const MapGeneratorRef := preload("res://scripts/map/map_generator.gd")
 const MapNodeRef := preload("res://scripts/map/map_node.gd")
+const ShopPurchaseResolverRef := preload("res://scripts/shop/shop_purchase_resolver.gd")
 
 enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
 
@@ -34,6 +35,7 @@ var save_path: String = SAVE_PATH
 var _last_tutorial_completed: bool = false
 var _last_tutorial_active: bool = false
 var _pending_combat_result_phase: int = -1
+var _shop_purchase_resolver := ShopPurchaseResolverRef.new()
 
 
 func _ready() -> void:
@@ -115,57 +117,21 @@ func _reset_run_state() -> void:
 
 
 func buy_item(item: Dictionary) -> bool:
-	var cost: int = item.get("cost", 0)
-	if coins < cost:
-		return false
-	var category: String = item.get("category", "")
-	var modifier: Modifier = null
-	if category == "modifier":
-		modifier = Modifier.from_shop_item(item)
-		if modifier == null:
-			return false
-	coins -= cost
-	coins_changed.emit(coins)
-
-	match category:
-		"die":
-			var params = item.get("params", {})
-			var die_color: String = params.get("color", "colorless")
-			var die_name_str: String = item.get("name", "Basic Die")
-			var die_desc: String = item.get("description", "A standard six-sided die")
-			var die_rarity: String = item.get("rarity", "common")
-			if params.has("faces"):
-				var int_faces: Array[int] = []
-				for f in params["faces"]:
-					int_faces.append(int(f))
-				dice_bag.add_die(Die.from_values(int_faces, die_color, die_name_str, die_desc, die_rarity))
-			else:
-				dice_bag.add_die(Die.new([], die_color, die_name_str, die_desc, die_rarity))
-		"face":
-			pass
-		"modifier":
-			if modifier.effect == Modifier.Effect.ADD_REROLLS:
-				rerolls_per_hand += int(modifier.value)
-			else:
-				modifiers.append(modifier)
-	return true
+	var result := _shop_purchase_resolver.purchase_item(self, item)
+	if result.get("coins_changed", false):
+		coins_changed.emit(coins)
+	return result.get("success", false)
 
 
 func buy_face_swap(die_index: int, face_index: int, new_face: DiceFace, cost: int) -> bool:
-	if coins < cost:
-		return false
-	coins -= cost
-	coins_changed.emit(coins)
-	var die := dice_bag.get_die(die_index)
-	if die != null:
-		die.swap_face(face_index, new_face)
-	return true
+	var result := _shop_purchase_resolver.purchase_face_swap(self, die_index, face_index, new_face, cost)
+	if result.get("coins_changed", false):
+		coins_changed.emit(coins)
+	return result.get("success", false)
 
 
 func swap_face(die_index: int, face_index: int, new_face: DiceFace) -> void:
-	var die := dice_bag.get_die(die_index)
-	if die != null:
-		die.swap_face(face_index, new_face)
+	_shop_purchase_resolver.swap_face(self, die_index, face_index, new_face)
 
 
 func go_to_combat() -> void:
