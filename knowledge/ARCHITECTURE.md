@@ -63,10 +63,12 @@ scenes/
 
 scripts/
   autoload/
-    game_manager.gd              # phase routing, run state, save/load, wallet, combat results
+    game_manager.gd              # phase routing, run state, save/load, wallet, scene changes
     data_manager.gd              # JSON loading and validated data access
     tutorial_manager.gd          # tutorial mode, checkpoints, scripted tutorial requirements
     audio_manager.gd             # SFX/music and volume persistence
+  run/
+    run_outcome_resolver.gd      # combat, node completion, and run-end state transitions
   map/
     map_generator.gd             # data-driven route generation
     map_node.gd                  # node id/type/depth/edges
@@ -115,12 +117,12 @@ Primary methods:
 - `start_tutorial_replay()` runs tutorial without keeping the active map run.
 - `skip_active_tutorial()` completes tutorial and creates/routes to a normal map run.
 - `enter_map_node(node_id)` validates availability, marks the current map node, applies boss target scaling when needed, then routes to dice select or flea market.
-- `complete_current_node()` applies combat/shop/boss completion effects and routes to map or run end.
-- `end_combat(final_score, target_beaten)` applies combat result state and immediately changes phase.
-- `resolve_combat_result_for_overlay(final_score, target_beaten)` applies active-run combat result state and writes/deletes the save while the Combat result overlay remains visible.
+- `complete_current_node()` delegates combat/shop/boss completion state to `RunOutcomeResolver`, then routes to map or run end.
+- `end_combat(final_score, target_beaten)` delegates combat result state to `RunOutcomeResolver` and immediately changes phase.
+- `resolve_combat_result_for_overlay(final_score, target_beaten)` delegates active-run combat result state to `RunOutcomeResolver` and writes/deletes the save while the Combat result overlay remains visible.
 - `finish_resolved_combat_result()` changes scene after the player presses the already-resolved result overlay button.
 - `flea_market_continue()` completes shop nodes or falls back to dice select outside runs.
-- `end_run(victory)` sets `last_run_result`, clears `current_run`, deletes the save, and routes to MainMenu.
+- `end_run(victory)` delegates final run result state to `RunOutcomeResolver`, deletes the save, and routes to MainMenu.
 - `abandon_run()` clears the active run without result feedback and deletes the save.
 
 Signals:
@@ -183,6 +185,20 @@ It exposes current-node lookup, enter/complete helpers, availability calculation
 `MapGenerator.generate(seed, config)` builds a run graph from `resources/data/map_config.json`.
 
 The default map is 10 depths. Depth 1 contains initial choices, the final depth contains a boss, and middle depths mix combat/shop nodes while preserving valid forward edges.
+
+### RunOutcomeResolver (`scripts/run/run_outcome_resolver.gd`)
+
+`RunOutcomeResolver` owns deterministic run outcome state transitions that were previously embedded in `GameManager`.
+
+It resolves:
+
+- immediate combat completion from `end_combat`
+- active-run combat result overlays, including idempotent duplicate overlay resolution
+- pending overlay phase routing after the player dismisses the combat result overlay
+- current map node completion, round reward/advance state, and boss victory state
+- terminal victory/defeat result data and active-run cleanup state
+
+The resolver returns save-action metadata to `GameManager`; `GameManager` remains responsible for file IO, scene changes, autoload signals, and platform callbacks.
 
 ## Save And Load
 
