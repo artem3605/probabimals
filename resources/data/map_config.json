@@ -1,0 +1,8 @@
+{
+  "depth": 10,
+  "min_nodes_per_level": 1,
+  "max_nodes_per_level": 3,
+  "shop_probability": 0.3,
+  "max_consecutive_shops": 2,
+  "boss_blind_multiplier": 1.5
+}

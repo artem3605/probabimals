@@ -7,6 +7,7 @@ const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 const SemanticColors = preload("res://scripts/ui/semantic_colors.gd")
+const MapNodeRef := preload("res://scripts/map/map_node.gd")
 const COMBAT_CONTENT_SEPARATION := 32
 const COMBAT_TOP_BAR_SEPARATION := 16
 const COMBAT_MENU_SHADOW_OFFSET := Vector2(4, 4)
@@ -645,6 +646,15 @@ func _on_resume_pressed() -> void:
 func _on_pause_quit_pressed() -> void:
 	_pause_overlay.visible = false
 	get_tree().paused = false
+	if GameManager.current_run != null:
+		var tween := create_tween()
+		tween.tween_property(self, "modulate:a", 0.0, 0.3)
+		tween.tween_callback(
+			func():
+				GameManager.abandon_run()
+				GameManager.go_to_main_menu()
+		)
+		return
 	_result_final_score = combat_mgr.running_score
 	_result_target_beaten = false
 	_go_to_main_menu()
@@ -1372,6 +1382,16 @@ func _on_combat_ended(final_score: int, target_beaten: bool) -> void:
 	_result_target_beaten = target_beaten
 	_show_result_overlay(final_score, target_beaten)
 	_refresh_tutorial_ui()
+	if _should_resolve_combat_result_on_overlay(target_beaten):
+		GameManager.resolve_combat_result_for_overlay(final_score, target_beaten)
+
+
+func _should_resolve_combat_result_on_overlay(target_beaten: bool) -> bool:
+	if GameManager.current_run == null:
+		return false
+	if TutorialManager.is_active():
+		return false
+	return target_beaten or GameManager.current_run != null
 
 
 func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
@@ -1383,7 +1403,9 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	_result_score_label.text = str(final_score) + " PTS"
 
 	if target_beaten:
-		if GameManager.current_round == 0:
+		if _is_current_map_boss_node():
+			_result_message.text = "BOSS DEFEATED!"
+		elif GameManager.current_round == 0:
 			_result_message.text = "ROUND CLEARED!"
 		else:
 			_result_message.text = "ROUND %d CLEARED!" % GameManager.current_round
@@ -1392,13 +1414,21 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 			_result_sub_label.text = "Great start! Now let's head to the Flea Market and upgrade your dice."
 		elif TutorialManager.is_active():
 			_result_sub_label.text = "Great job! You improved your dice, held a strong pair, and turned it into a big combo. You've got the basics down!"
+		elif _is_run_start_map_transition():
+			_result_sub_label.text = "Choose your first route on the map."
+		elif _is_current_map_boss_node():
+			_result_sub_label.text = "Final target: %d" % GameManager.target_score
 		else:
 			_result_sub_label.text = "Target: %d" % GameManager.target_score
 		var reward := GameManager.get_round_reward()
 		_result_coins_label.text = (
 			"[center]+%d%s[/center]" % [reward, SemanticMarkup.coin_icon(COMBAT_RESULT_COINS_FONT_SIZE + 4)]
 		)
-		_result_coins_label.visible = true
+		_result_coins_label.visible = not _is_run_start_map_transition()
+		if _is_run_start_map_transition():
+			_result_next_btn.text = "VIEW MAP"
+		else:
+			_result_next_btn.text = "FINISH RUN" if _is_current_map_boss_node() else "NEXT ROUND"
 		_result_next_btn.visible = true
 		_result_retry_btn.visible = false
 		_result_survey_btn.visible = false
@@ -1410,6 +1440,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 			_result_sub_label.text = "No worries -- give it another shot! The tutorial is here to help you practice."
 			_result_coins_label.visible = false
 			_result_next_btn.visible = false
+			_result_next_btn.text = "NEXT ROUND"
 			_result_retry_btn.visible = true
 			_result_survey_btn.visible = false
 			_result_menu_btn.visible = true
@@ -1419,6 +1450,7 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 			_result_sub_label.text = "Reached Round %d" % GameManager.current_round
 			_result_coins_label.visible = false
 			_result_next_btn.visible = false
+			_result_next_btn.text = "NEXT ROUND"
 			_result_retry_btn.visible = false
 			_result_survey_btn.visible = true
 			_result_menu_btn.visible = true
@@ -1427,6 +1459,21 @@ func _show_result_overlay(final_score: int, target_beaten: bool) -> void:
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_CUBIC)
 	tween.tween_property(_result_overlay, "modulate:a", 1.0, 0.5)
+
+
+func _is_current_map_boss_node() -> bool:
+	if GameManager.current_run == null:
+		return false
+	var node = GameManager.current_run.get_current_node()
+	return node != null and node.type == MapNodeRef.NodeType.BOSS
+
+
+func _is_run_start_map_transition() -> bool:
+	return (
+		GameManager.current_run != null
+		and GameManager.current_run.current_node_id == -1
+		and not TutorialManager.is_active()
+	)
 
 
 func _get_pattern_colors(combo_type: String) -> Array:
@@ -1466,7 +1513,10 @@ func _on_next_round_pressed() -> void:
 		TutorialManager.report_action("combat_next_round")
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
+	if GameManager.has_resolved_combat_result():
+		tween.tween_callback(GameManager.finish_resolved_combat_result)
+	else:
+		tween.tween_callback(func(): GameManager.end_combat(_result_final_score, true))
 
 
 func _on_playtest_survey_pressed() -> void:
@@ -1476,7 +1526,10 @@ func _on_playtest_survey_pressed() -> void:
 func _go_to_main_menu() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(func(): GameManager.end_combat(_result_final_score, false))
+	if GameManager.has_resolved_combat_result():
+		tween.tween_callback(GameManager.finish_resolved_combat_result)
+	else:
+		tween.tween_callback(func(): GameManager.end_combat(_result_final_score, false))
 
 
 func _build_tutorial_overlay() -> void:

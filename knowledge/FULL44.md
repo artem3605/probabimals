@@ -27,7 +27,7 @@ The complete demo experience showcasing all core systems working together across
 
 ### Progression
 
-- **Multi-round structure** — at least 5–7 rounds with escalating blinds.
+- **Multi-round structure** — 10 map levels with escalating blinds.
 - **Flea market evolution** — later rounds offer rarer faces and more powerful modifiers.
 - **Win/loss conditions** — the player wins the demo by surviving all rounds; losing a round has consequences (e.g. losing dice, reduced budget).
 

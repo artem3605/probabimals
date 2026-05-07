@@ -1,6 +1,10 @@
 extends Node
 
-enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT }
+const RunState := preload("res://scripts/map/run_state.gd")
+const MapGeneratorRef := preload("res://scripts/map/map_generator.gd")
+const MapNodeRef := preload("res://scripts/map/map_node.gd")
+
+enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
 
 const SAVE_PATH := "user://save_game.json"
 const APP_VERSION_SETTING := "application/config/version"
@@ -23,10 +27,13 @@ var hands_per_round: int = 4
 var rerolls_per_hand: int = 3
 var selected_dice: Array[Die] = []
 var current_round: int = 1
+var current_run: RunState = null
+var last_run_result: Dictionary = {}
 const BASE_TARGET: int = 150
 var save_path: String = SAVE_PATH
 var _last_tutorial_completed: bool = false
 var _last_tutorial_active: bool = false
+var _pending_combat_result_phase: int = -1
 
 
 func _ready() -> void:
@@ -38,6 +45,8 @@ func _ready() -> void:
 func start_game(skip_tutorial_intro: bool = false) -> void:
 	delete_save()
 	_reset_run_state()
+	current_run = MapGeneratorRef.generate(randi(), DataManager.get_map_config())
+	last_run_result = {}
 	if skip_tutorial_intro:
 		TutorialManager.clear_active_tutorial()
 	elif TutorialManager.should_auto_start_on_new_game():
@@ -54,12 +63,14 @@ func start_game(skip_tutorial_intro: bool = false) -> void:
 		_setup_intro_combat()
 		_change_phase(Phase.COMBAT)
 	else:
-		_change_phase(Phase.FLEA_MARKET)
+		_change_phase(Phase.MAP)
 
 
 func start_tutorial_replay() -> void:
 	delete_save()
 	_reset_run_state()
+	current_run = null
+	last_run_result = {}
 	TutorialManager.start_replay()
 	_setup_intro_combat()
 	AudioManager.pause_for_ad()
@@ -73,8 +84,10 @@ func skip_active_tutorial() -> void:
 	if not TutorialManager.is_active():
 		return
 	_reset_run_state()
+	current_run = MapGeneratorRef.generate(randi(), DataManager.get_map_config())
+	last_run_result = {}
 	TutorialManager.complete_tutorial()
-	_change_phase(Phase.FLEA_MARKET)
+	_change_phase(Phase.MAP)
 
 
 func _setup_intro_combat() -> void:
@@ -87,6 +100,7 @@ func _setup_intro_combat() -> void:
 
 
 func _reset_run_state() -> void:
+	clear_resolved_combat_result()
 	coins = STARTING_COINS
 	total_score = 0
 	current_round = 1
@@ -170,28 +184,175 @@ func go_to_dice_select() -> void:
 	_change_phase(Phase.DICE_SELECT)
 
 
+func flea_market_continue() -> void:
+	if current_run == null:
+		_change_phase(Phase.DICE_SELECT)
+		return
+	var node: MapNodeRef = current_run.get_current_node()
+	if node == null:
+		push_warning("Unexpected Flea Market continue before selecting a map node.")
+		_change_phase(Phase.MAP)
+		return
+	if node.type == MapNodeRef.NodeType.SHOP:
+		complete_current_node()
+		return
+	push_warning("Unexpected Flea Market continue from non-shop map node %d." % node.id)
+	_change_phase(Phase.MAP)
+
+
 func end_combat(final_score: int, target_beaten: bool) -> void:
+	var destination := _apply_combat_result_state(final_score, target_beaten)
+	_change_phase(destination)
+
+
+func resolve_combat_result_for_overlay(final_score: int, target_beaten: bool) -> Phase:
+	if _pending_combat_result_phase >= 0:
+		return _pending_combat_result_phase as Phase
+	var destination := _apply_combat_result_state(final_score, target_beaten)
+	_pending_combat_result_phase = destination
+	if destination == Phase.MAIN_MENU:
+		delete_save()
+	else:
+		save_game()
+	return destination
+
+
+func finish_resolved_combat_result() -> void:
+	if _pending_combat_result_phase < 0:
+		return
+	var destination := _pending_combat_result_phase as Phase
+	_pending_combat_result_phase = -1
+	_change_phase(destination)
+
+
+func has_resolved_combat_result() -> bool:
+	return _pending_combat_result_phase >= 0
+
+
+func clear_resolved_combat_result() -> void:
+	_pending_combat_result_phase = -1
+
+
+func _apply_combat_result_state(final_score: int, target_beaten: bool) -> Phase:
 	total_score = final_score
 	score_changed.emit(total_score)
 	PokiSDK.gameplay_stop()
+	if TutorialManager.is_active() and TutorialManager.is_intro_step():
+		if target_beaten:
+			_apply_round_advance()
+			return Phase.FLEA_MARKET
+		return Phase.MAIN_MENU
+	if current_run != null:
+		if current_run.current_node_id == -1:
+			if target_beaten:
+				return Phase.MAP
+			_apply_end_run(false)
+			return Phase.MAIN_MENU
+		if target_beaten:
+			return _apply_current_node_completion_state()
+		_apply_end_run(false)
+		return Phase.MAIN_MENU
 	if target_beaten:
-		advance_round()
-	else:
-		go_to_main_menu()
+		_apply_round_advance()
+		return Phase.FLEA_MARKET
+	return Phase.MAIN_MENU
 
 
-func advance_round() -> void:
+func _apply_round_advance() -> void:
 	var reward := 10 + 5 * current_round
 	coins += reward
 	coins_changed.emit(coins)
 	current_round += 1
 	target_score = int(floor(BASE_TARGET * pow(1.5, current_round - 1)))
 	selected_dice.clear()
+
+
+func advance_round() -> void:
+	_apply_round_advance()
 	_change_phase(Phase.FLEA_MARKET)
+
+
+func complete_current_node() -> void:
+	var destination := _apply_current_node_completion_state()
+	if destination >= 0:
+		_change_phase(destination as Phase)
+
+
+func _apply_current_node_completion_state() -> int:
+	if current_run == null:
+		push_warning("Cannot complete a map node without an active run.")
+		return -1
+	var node: MapNodeRef = current_run.get_current_node()
+	if node == null:
+		push_warning("Cannot complete a map node before one is selected.")
+		return -1
+	match node.type:
+		MapNodeRef.NodeType.COMBAT:
+			current_run.complete_current_node()
+			_apply_round_advance()
+			return Phase.MAP
+		MapNodeRef.NodeType.SHOP:
+			current_run.complete_current_node()
+			return Phase.MAP
+		MapNodeRef.NodeType.BOSS:
+			current_run.complete_current_node()
+			_apply_round_reward()
+			selected_dice.clear()
+			_apply_end_run(true)
+			return Phase.MAIN_MENU
+	return -1
+
+
+func enter_map_node(node_id: int) -> void:
+	if current_run == null:
+		push_warning("Cannot enter a map node without an active run.")
+		return
+	var available := current_run.available_node_ids()
+	if not available.has(node_id):
+		push_warning("Cannot enter unavailable map node %d." % node_id)
+		return
+	current_run.enter_node(node_id)
+	var node: MapNodeRef = current_run.nodes[node_id]
+	if node.type == MapNodeRef.NodeType.BOSS:
+		var boss_multiplier := float(DataManager.get_map_config().get("boss_blind_multiplier", 1.5))
+		target_score = int(floor(float(target_score) * boss_multiplier))
+	match node.type:
+		MapNodeRef.NodeType.COMBAT, MapNodeRef.NodeType.BOSS:
+			_change_phase(Phase.DICE_SELECT)
+		MapNodeRef.NodeType.SHOP:
+			_change_phase(Phase.FLEA_MARKET)
+
+
+func end_run(victory: bool) -> void:
+	_apply_end_run(victory)
+	_change_phase(Phase.MAIN_MENU)
+
+
+func _apply_end_run(victory: bool) -> void:
+	last_run_result = {
+		"victory": victory,
+		"round": current_round,
+		"total_score": total_score,
+		"coins": coins,
+	}
+	current_run = null
+	delete_save()
+
+
+func abandon_run() -> void:
+	clear_resolved_combat_result()
+	current_run = null
+	last_run_result = {}
+	delete_save()
 
 
 func get_round_reward() -> int:
 	return 10 + 5 * current_round
+
+
+func _apply_round_reward() -> void:
+	coins += get_round_reward()
+	coins_changed.emit(coins)
 
 
 func get_app_version() -> String:
@@ -222,6 +383,7 @@ func _change_phase(new_phase: Phase) -> void:
 	phase_changed.emit(new_phase)
 	if new_phase != Phase.MAIN_MENU:
 		save_game()
+	_pending_combat_result_phase = -1
 
 	if new_phase == Phase.MAIN_MENU and old_phase != Phase.MAIN_MENU:
 		AudioManager.pause_for_ad()
@@ -240,6 +402,8 @@ func _change_phase(new_phase: Phase) -> void:
 		Phase.COMBAT:
 			get_tree().change_scene_to_file("res://scenes/combat/combat_screen.tscn")
 			PokiSDK.gameplay_start()
+		Phase.MAP:
+			get_tree().change_scene_to_file("res://scenes/map/map_screen.tscn")
 
 
 # -- Save / Load ---------------------------------------------------------------
@@ -255,10 +419,15 @@ func can_load_save(path_override: String = "") -> bool:
 
 func build_save_data() -> Dictionary:
 	var save_phase := current_phase
-	if save_phase == Phase.COMBAT and not TutorialManager.is_active():
-		save_phase = Phase.FLEA_MARKET
+	if _pending_combat_result_phase >= 0:
+		save_phase = _pending_combat_result_phase as Phase
+	elif not TutorialManager.is_active():
+		if save_phase == Phase.COMBAT:
+			save_phase = Phase.DICE_SELECT if current_run != null else Phase.FLEA_MARKET
+		elif save_phase == Phase.MAP and current_run == null:
+			save_phase = Phase.FLEA_MARKET
 
-	return {
+	var data := {
 		"save_version": SAVE_FORMAT_VERSION,
 		"app_version": get_app_version(),
 		"phase": Phase.keys()[save_phase],
@@ -276,6 +445,9 @@ func build_save_data() -> Dictionary:
 		"tutorial_step_id": TutorialManager.step_id,
 		"tutorial_state": TutorialManager.build_save_data(),
 	}
+	if current_run != null:
+		data["current_run"] = _serialize_run_state(current_run)
+	return data
 
 
 func apply_save_data(data: Dictionary) -> Phase:
@@ -286,6 +458,7 @@ func apply_save_data(data: Dictionary) -> Phase:
 
 
 func _apply_normalized_save_data(data: Dictionary) -> Phase:
+	clear_resolved_combat_result()
 	coins = int(data.get("coins", STARTING_COINS))
 	total_score = int(data.get("total_score", 0))
 	target_score = int(data.get("target_score", 150))
@@ -295,6 +468,8 @@ func _apply_normalized_save_data(data: Dictionary) -> Phase:
 	dice_bag = _deserialize_dice_bag(data.get("dice_bag", []))
 	modifiers = _deserialize_modifiers(data.get("modifiers", []))
 	selected_dice = _deserialize_selected_dice(data.get("selected_dice_indices", []))
+	current_run = _deserialize_run_state(data.get("current_run", {}))
+	last_run_result = {}
 	var tutorial_state: Dictionary = data.get("tutorial_state", {})
 	if tutorial_state.is_empty():
 		tutorial_state = {
@@ -396,6 +571,93 @@ func _serialize_dice_bag() -> Array:
 	for d in dice_bag.get_all():
 		dice_arr.append(_serialize_die(d))
 	return dice_arr
+
+
+func _serialize_run_state(run: RunState) -> Dictionary:
+	var node_arr: Array = []
+	var node_ids := run.nodes.keys()
+	node_ids.sort()
+	for id_key in node_ids:
+		var node: MapNodeRef = run.nodes[id_key]
+		var serialized_node := {
+			"id": node.id,
+			"type": MapNodeRef.NodeType.keys()[node.type],
+			"depth": node.depth,
+			"next_ids": node.next_ids.duplicate(),
+		}
+		node_arr.append(serialized_node)
+	return {
+		"seed": run.seed,
+		"current_node_id": run.current_node_id,
+		"visited_node_ids": run.visited_node_ids.duplicate(),
+		"completed_node_ids": run.completed_node_ids.duplicate(),
+		"shop_states": _serialize_shop_states(run.shop_states),
+		"nodes": node_arr,
+	}
+
+
+func _deserialize_run_state(raw: Variant) -> RunState:
+	if not (raw is Dictionary):
+		return null
+	var raw_dict: Dictionary = raw
+	var raw_nodes: Variant = raw_dict.get("nodes", [])
+	if not (raw_nodes is Array):
+		return null
+	var run := RunState.new()
+	run.seed = int(raw_dict.get("seed", 0))
+	run.current_node_id = int(raw_dict.get("current_node_id", -1))
+	run.visited_node_ids = _int_array_from_variant(raw_dict.get("visited_node_ids", []))
+	run.completed_node_ids = _int_array_from_variant(raw_dict.get("completed_node_ids", []))
+	run.shop_states = _deserialize_shop_states(raw_dict.get("shop_states", {}))
+	for raw_node in raw_nodes:
+		if not (raw_node is Dictionary):
+			continue
+		var node_dict: Dictionary = raw_node
+		var next_ids := _int_array_from_variant(node_dict.get("next_ids", []))
+		var node := MapNodeRef.new(
+			int(node_dict.get("id", -1)),
+			_map_node_type_from_save(str(node_dict.get("type", "COMBAT"))),
+			int(node_dict.get("depth", 0)),
+			next_ids
+		)
+		if node.id >= 0:
+			run.nodes[node.id] = node
+	if run.nodes.is_empty():
+		return null
+	return run
+
+
+func _serialize_shop_states(shop_states: Dictionary) -> Dictionary:
+	var result := {}
+	for node_id in shop_states.keys():
+		result[str(node_id)] = shop_states[node_id].duplicate(true)
+	return result
+
+
+func _deserialize_shop_states(raw: Variant) -> Dictionary:
+	var result := {}
+	if not (raw is Dictionary):
+		return result
+	var raw_dict: Dictionary = raw
+	for key in raw_dict.keys():
+		if raw_dict[key] is Dictionary:
+			result[int(key)] = raw_dict[key].duplicate(true)
+	return result
+
+
+func _int_array_from_variant(raw: Variant) -> Array[int]:
+	var result: Array[int] = []
+	if raw is Array:
+		for value in raw:
+			result.append(int(value))
+	return result
+
+
+func _map_node_type_from_save(raw_type: String) -> MapNodeRef.NodeType:
+	var type_idx := MapNodeRef.NodeType.keys().find(raw_type)
+	if type_idx < 0:
+		type_idx = MapNodeRef.NodeType.COMBAT
+	return type_idx as MapNodeRef.NodeType
 
 
 func _serialize_selected_dice_indices() -> Array:
@@ -502,6 +764,8 @@ func _deserialize_face(raw_face: Dictionary) -> DiceFace:
 
 
 func _phase_from_save_name(phase_name: String) -> Phase:
+	if phase_name == "MAP" and current_run == null:
+		return Phase.FLEA_MARKET
 	var phase_idx := Phase.keys().find(phase_name)
 	if phase_idx < 0:
 		phase_idx = Phase.FLEA_MARKET
