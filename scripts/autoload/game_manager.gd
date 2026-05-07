@@ -3,6 +3,7 @@ extends Node
 const RunState := preload("res://scripts/map/run_state.gd")
 const MapGeneratorRef := preload("res://scripts/map/map_generator.gd")
 const MapNodeRef := preload("res://scripts/map/map_node.gd")
+const RunOutcomeResolverRef := preload("res://scripts/run/run_outcome_resolver.gd")
 
 enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
 
@@ -33,7 +34,7 @@ const BASE_TARGET: int = 150
 var save_path: String = SAVE_PATH
 var _last_tutorial_completed: bool = false
 var _last_tutorial_active: bool = false
-var _pending_combat_result_phase: int = -1
+var _run_outcome_resolver := RunOutcomeResolverRef.new()
 
 
 func _ready() -> void:
@@ -201,106 +202,55 @@ func flea_market_continue() -> void:
 
 
 func end_combat(final_score: int, target_beaten: bool) -> void:
-	var destination := _apply_combat_result_state(final_score, target_beaten)
-	_change_phase(destination)
+	PokiSDK.gameplay_stop()
+	var result := _run_outcome_resolver.resolve_combat_result(self, TutorialManager, final_score, target_beaten)
+	_apply_result_events(result)
+	_apply_result_save_action(result)
+	var destination := int(result.get("phase", Phase.MAIN_MENU))
+	_change_phase(destination as Phase)
 
 
 func resolve_combat_result_for_overlay(final_score: int, target_beaten: bool) -> Phase:
-	if _pending_combat_result_phase >= 0:
-		return _pending_combat_result_phase as Phase
-	var destination := _apply_combat_result_state(final_score, target_beaten)
-	_pending_combat_result_phase = destination
-	if destination == Phase.MAIN_MENU:
-		delete_save()
-	else:
-		save_game()
-	return destination
+	var result := _run_outcome_resolver.resolve_combat_result_for_overlay(
+		self, TutorialManager, final_score, target_beaten
+	)
+	if not bool(result.get("already_resolved", false)):
+		PokiSDK.gameplay_stop()
+	_apply_result_events(result)
+	_apply_result_save_action(result)
+	return int(result.get("phase", Phase.MAIN_MENU)) as Phase
 
 
 func finish_resolved_combat_result() -> void:
-	if _pending_combat_result_phase < 0:
+	var destination := _run_outcome_resolver.finish_resolved_combat_result()
+	if destination < 0:
 		return
-	var destination := _pending_combat_result_phase as Phase
-	_pending_combat_result_phase = -1
-	_change_phase(destination)
+	_change_phase(destination as Phase)
 
 
 func has_resolved_combat_result() -> bool:
-	return _pending_combat_result_phase >= 0
+	return _run_outcome_resolver.has_resolved_combat_result()
 
 
 func clear_resolved_combat_result() -> void:
-	_pending_combat_result_phase = -1
-
-
-func _apply_combat_result_state(final_score: int, target_beaten: bool) -> Phase:
-	total_score = final_score
-	score_changed.emit(total_score)
-	PokiSDK.gameplay_stop()
-	if TutorialManager.is_active() and TutorialManager.is_intro_step():
-		if target_beaten:
-			_apply_round_advance()
-			return Phase.FLEA_MARKET
-		return Phase.MAIN_MENU
-	if current_run != null:
-		if current_run.current_node_id == -1:
-			if target_beaten:
-				return Phase.MAP
-			_apply_end_run(false)
-			return Phase.MAIN_MENU
-		if target_beaten:
-			return _apply_current_node_completion_state()
-		_apply_end_run(false)
-		return Phase.MAIN_MENU
-	if target_beaten:
-		_apply_round_advance()
-		return Phase.FLEA_MARKET
-	return Phase.MAIN_MENU
-
-
-func _apply_round_advance() -> void:
-	var reward := 10 + 5 * current_round
-	coins += reward
-	coins_changed.emit(coins)
-	current_round += 1
-	target_score = int(floor(BASE_TARGET * pow(1.5, current_round - 1)))
-	selected_dice.clear()
+	_run_outcome_resolver.clear_resolved_combat_result()
 
 
 func advance_round() -> void:
-	_apply_round_advance()
-	_change_phase(Phase.FLEA_MARKET)
+	var result := _run_outcome_resolver.advance_round(self)
+	_apply_result_events(result)
+	_apply_result_save_action(result)
+	var destination := int(result.get("phase", Phase.FLEA_MARKET))
+	_change_phase(destination as Phase)
 
 
 func complete_current_node() -> void:
-	var destination := _apply_current_node_completion_state()
+	var result := _run_outcome_resolver.complete_current_node(self)
+	_apply_result_events(result)
+	_apply_result_save_action(result)
+	var destination := int(result.get("phase", -1))
 	if destination >= 0:
 		_change_phase(destination as Phase)
-
-
-func _apply_current_node_completion_state() -> int:
-	if current_run == null:
-		push_warning("Cannot complete a map node without an active run.")
-		return -1
-	var node: MapNodeRef = current_run.get_current_node()
-	if node == null:
-		push_warning("Cannot complete a map node before one is selected.")
-		return -1
-	match node.type:
-		MapNodeRef.NodeType.COMBAT:
-			current_run.complete_current_node()
-			_apply_round_advance()
-			return Phase.MAP
-		MapNodeRef.NodeType.SHOP:
-			current_run.complete_current_node()
-			return Phase.MAP
-		MapNodeRef.NodeType.BOSS:
-			current_run.complete_current_node()
-			_apply_round_reward()
-			selected_dice.clear()
-			_apply_end_run(true)
-			return Phase.MAIN_MENU
-	return -1
 
 
 func enter_map_node(node_id: int) -> void:
@@ -324,19 +274,10 @@ func enter_map_node(node_id: int) -> void:
 
 
 func end_run(victory: bool) -> void:
-	_apply_end_run(victory)
+	var result := _run_outcome_resolver.end_run(self, victory)
+	_apply_result_events(result)
+	_apply_result_save_action(result)
 	_change_phase(Phase.MAIN_MENU)
-
-
-func _apply_end_run(victory: bool) -> void:
-	last_run_result = {
-		"victory": victory,
-		"round": current_round,
-		"total_score": total_score,
-		"coins": coins,
-	}
-	current_run = null
-	delete_save()
 
 
 func abandon_run() -> void:
@@ -350,9 +291,23 @@ func get_round_reward() -> int:
 	return 10 + 5 * current_round
 
 
-func _apply_round_reward() -> void:
-	coins += get_round_reward()
-	coins_changed.emit(coins)
+func _apply_result_save_action(result: Dictionary) -> void:
+	match str(result.get("save_action", RunOutcomeResolverRef.SAVE_ACTION_NONE)):
+		RunOutcomeResolverRef.SAVE_ACTION_SAVE:
+			save_game()
+		RunOutcomeResolverRef.SAVE_ACTION_DELETE:
+			delete_save()
+
+
+func _apply_result_events(result: Dictionary) -> void:
+	var events: Variant = result.get("events", {})
+	if not (events is Dictionary):
+		return
+	var event_dict: Dictionary = events
+	if event_dict.has("score_changed"):
+		score_changed.emit(int(event_dict["score_changed"]))
+	if event_dict.has("coins_changed"):
+		coins_changed.emit(int(event_dict["coins_changed"]))
 
 
 func get_app_version() -> String:
@@ -383,7 +338,7 @@ func _change_phase(new_phase: Phase) -> void:
 	phase_changed.emit(new_phase)
 	if new_phase != Phase.MAIN_MENU:
 		save_game()
-	_pending_combat_result_phase = -1
+	clear_resolved_combat_result()
 
 	if new_phase == Phase.MAIN_MENU and old_phase != Phase.MAIN_MENU:
 		AudioManager.pause_for_ad()
@@ -419,8 +374,9 @@ func can_load_save(path_override: String = "") -> bool:
 
 func build_save_data() -> Dictionary:
 	var save_phase := current_phase
-	if _pending_combat_result_phase >= 0:
-		save_phase = _pending_combat_result_phase as Phase
+	var pending_combat_result_phase := _run_outcome_resolver.get_pending_combat_result_phase()
+	if pending_combat_result_phase >= 0:
+		save_phase = pending_combat_result_phase as Phase
 	elif not TutorialManager.is_active():
 		if save_phase == Phase.COMBAT:
 			save_phase = Phase.DICE_SELECT if current_run != null else Phase.FLEA_MARKET

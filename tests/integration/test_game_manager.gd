@@ -154,6 +154,17 @@ func test_end_combat_in_run_victory_routes_through_complete_current_node() -> vo
 	assert_eq(_manager.current_phase, _manager.Phase.MAP)
 
 
+func test_end_combat_emits_score_changed_from_game_manager() -> void:
+	_manager.current_phase = _manager.Phase.COMBAT
+	_manager.current_run = null
+	var final_score: int = _manager.target_score
+	watch_signals(_manager)
+
+	_manager.end_combat(final_score, true)
+
+	assert_signal_emitted_with_parameters(_manager, "score_changed", [final_score])
+
+
 func test_end_combat_completed_tutorial_run_start_goes_to_map() -> void:
 	_manager.current_phase = _manager.Phase.COMBAT
 	_manager.current_run = _build_test_run_state()
@@ -282,6 +293,18 @@ func test_complete_current_node_combat_advances_round_and_goes_to_map() -> void:
 	assert_eq(_manager.target_score, 337)
 	assert_eq(_manager.selected_dice.size(), 0)
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.MAP])
+
+
+func test_complete_current_node_emits_state_change_signals_from_game_manager() -> void:
+	_manager.current_run = _build_test_run_state()
+	_manager.current_run.current_node_id = 1
+	_manager.current_round = 2
+	_manager.coins = 10
+	watch_signals(_manager)
+
+	_manager.complete_current_node()
+
+	assert_signal_emitted_with_parameters(_manager, "coins_changed", [30])
 
 
 func test_complete_current_node_shop_goes_to_map_without_round_advance() -> void:
