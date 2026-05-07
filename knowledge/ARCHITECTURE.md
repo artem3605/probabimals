@@ -83,6 +83,7 @@ scripts/
   combat/
     combat_manager.gd
     combat_dice.gd
+    combat_result_overlay_plan.gd # pure combat result overlay copy/button visibility rules
     combat_probability_panel.gd
   shop/
     shop_generator.gd
@@ -222,6 +223,8 @@ Save behavior:
 - `combat_ended(final_score, target_beaten)`
 
 `CombatScreen` owns presentation, overlays, animation, tutorial gating, and result-overlay navigation. It delegates durable state changes to `GameManager`.
+
+`CombatResultOverlayPlan` owns pure combat result overlay display rules: victory/defeat copy, reward visibility, and result button visibility. `CombatScreen` applies the plan to Godot controls and keeps animation/audio concerns local to the scene.
 
 ### Shop
 
