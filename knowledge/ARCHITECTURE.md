@@ -86,6 +86,7 @@ scripts/
   combat/
     combat_manager.gd
     combat_dice.gd
+    last_reroll_suspense_planner.gd # final-reroll suspense timing and reveal-order rules
     combat_probability_panel.gd
   shop/
     shop_generator.gd
@@ -244,6 +245,8 @@ Save behavior:
 - `combat_ended(final_score, target_beaten)`
 
 `CombatScreen` owns presentation, overlays, animation, tutorial gating, and result-overlay navigation. It delegates durable state changes to `GameManager`.
+
+`LastRerollSuspensePlanner` owns the pure final-reroll suspense rules: when suspense applies, which dice remain unrevealed, the randomized reveal order, and stop-delay timing. `CombatScreen` applies that plan to tweens and dice visuals.
 
 ### Shop
 
