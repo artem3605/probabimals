@@ -21,6 +21,7 @@ First-run tutorial bootstraps the same run state but temporarily follows:
 `Intro Combat -> FleaMarket tutorial -> DiceSelect tutorial -> Tutorial Combat -> Map`
 
 The intro combat is special-cased while the tutorial intro step is active. After the final tutorial combat completes, the tutorial is inactive and the still-unselected run (`current_node_id == -1`) routes to `Map`.
+Tutorial replay follows the same visible flow; if it was started without an active run, `GameManager` creates a fresh unselected run as soon as the tutorial completes so the next combat victory also routes to `Map`.
 
 ## Screens
 
@@ -123,7 +124,7 @@ Key state:
 Primary methods:
 
 - `start_game(skip_tutorial_intro := false)` resets state, creates a generated run, and routes either to intro combat or map.
-- `start_tutorial_replay()` runs tutorial without keeping the active map run.
+- `start_tutorial_replay()` runs tutorial from settings; when replay completion leaves no active map run, `GameManager` creates one before routing onward.
 - `skip_active_tutorial()` completes tutorial and creates/routes to a normal map run.
 - `enter_map_node(node_id)` validates availability, marks the current map node, applies boss target scaling when needed, then routes to dice select or flea market.
 - `complete_current_node()` delegates combat/shop/boss completion state to `RunOutcomeResolver`, then routes to map or run end.

@@ -73,10 +73,34 @@ func test_map_node_buttons_describe_shop_and_dice_roll_actions() -> void:
 func test_map_screen_panel_fits_compact_viewport() -> void:
 	var map_screen: Control = MapScreenScene.instantiate()
 	var panel_size: Vector2 = map_screen._target_map_panel_size(Vector2(960, 540))
+	var max_height: float = (
+		540.0
+		- map_screen.SCREEN_MARGIN_TOP
+		- map_screen.SCREEN_MARGIN_BOTTOM
+		- map_screen.MAP_CONTENT_SEPARATION
+		- 96.0
+	)
 	map_screen.free()
 
 	assert_lte(panel_size.x, 896.0)
-	assert_lte(panel_size.y, 324.0)
+	assert_lte(panel_size.y, max_height)
+
+
+func test_map_screen_top_bar_sits_high_without_origin_shadow() -> void:
+	var map_screen: Control = MapScreenScene.instantiate()
+	add_child_autofree(map_screen)
+	await wait_process_frames(2)
+
+	var menu_btn := _find_button_with_text(map_screen, "MENU")
+	assert_not_null(menu_btn)
+	if menu_btn == null:
+		return
+	assert_lte(menu_btn.global_position.y, 44.0)
+
+	var unlaid_out_btn := Button.new()
+	map_screen.add_child(unlaid_out_btn)
+	unlaid_out_btn.size = Vector2(96, 56)
+	assert_false(map_screen._should_draw_button_shadow(unlaid_out_btn))
 
 
 func test_map_screen_keeps_visited_route_completed() -> void:
@@ -155,3 +179,10 @@ func test_map_screen_keeps_depth_one_child_edges_dim_at_run_start() -> void:
 
 	var available := run.available_node_ids()
 	assert_eq(map_screen._edge_color_for(run.nodes[1], 2, run, available), map_screen.EDGE_COLOR_DIM)
+
+
+func _find_button_with_text(root: Node, text: String) -> Button:
+	for child in root.find_children("*", "Button", true, false):
+		if child is Button and child.text == text:
+			return child
+	return null

@@ -180,6 +180,32 @@ func test_end_combat_completed_tutorial_run_start_goes_to_map() -> void:
 	assert_eq_deep(_manager.current_run.completed_node_ids, [] as Array[int])
 
 
+func test_completed_tutorial_without_existing_run_creates_map_run() -> void:
+	_manager.current_phase = _manager.Phase.COMBAT
+	_manager.current_run = null
+	TutorialManager.apply_save_data(
+		{
+			"mode": TutorialManager.MODE_REPLAY,
+			"step_id": TutorialManager.STEP_COMBAT_GOOD_LUCK,
+			"completed": false,
+			"checkpoint_scene": TutorialManager.SCENE_COMBAT,
+			"loaded_die_index": 5,
+			"improved_die_index": 0,
+			"selected_bag_indices": [0, 1, 2, 3, 5],
+			"required_combat_hold_indices": [0, 4],
+		}
+	)
+
+	TutorialManager.report_action("combat_roll", {"roll_number": 0})
+	_manager._on_tutorial_state_changed()
+	_manager.end_combat(_manager.target_score, true)
+
+	assert_eq(_manager.current_phase, _manager.Phase.MAP)
+	assert_not_null(_manager.current_run)
+	assert_eq(_manager.current_run.current_node_id, -1)
+	assert_true(_manager.current_run.nodes.size() >= 2)
+
+
 func test_end_combat_first_run_intro_win_uses_tutorial_continuation() -> void:
 	await _manager.start_game(false)
 	var intro_target: int = _manager.target_score
@@ -921,11 +947,12 @@ func test_can_load_save_returns_false_for_future_save_version() -> void:
 	assert_false(_manager.can_load_save(save_path))
 
 
-func test_tutorial_completion_persists_save_without_phase_change() -> void:
+func test_tutorial_completion_without_run_persists_new_map_run() -> void:
 	var save_path := "user://gut_tutorial_complete_%d.json" % Time.get_ticks_usec()
 	_temp_paths.append(save_path)
 	_manager.save_path = save_path
 	_manager.current_phase = _manager.Phase.COMBAT
+	_manager.current_run = null
 	TutorialManager.start_first_run()
 	TutorialManager.enter_scene(TutorialManager.SCENE_COMBAT)
 
@@ -940,7 +967,9 @@ func test_tutorial_completion_persists_save_without_phase_change() -> void:
 	var data: Dictionary = json.data
 	assert_true(bool(data.get("tutorial_completed", false)))
 	assert_eq(str(data.get("tutorial_mode", "")), TutorialManager.MODE_INACTIVE)
-	assert_eq(str(data.get("phase", "")), "FLEA_MARKET")
+	assert_eq(str(data.get("phase", "")), "DICE_SELECT")
+	assert_not_null(_manager.current_run)
+	assert_false(Dictionary(data.get("current_run", {})).is_empty())
 
 
 func test_can_load_save_accepts_v1_save_version() -> void:

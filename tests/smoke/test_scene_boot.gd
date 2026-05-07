@@ -3,9 +3,12 @@ extends GutTest
 const TestData = preload("res://tests/support/test_data.gd")
 
 const MAIN_MENU_SCENE := preload("res://scenes/main_menu/main_menu.tscn")
+const MAP_SCENE := preload("res://scenes/map/map_screen.tscn")
 const FLEA_MARKET_SCENE := preload("res://scenes/flea_market/flea_market_screen.tscn")
 const DICE_SELECT_SCENE := preload("res://scenes/dice_select/dice_select_screen.tscn")
 const COMBAT_SCENE := preload("res://scenes/combat/combat_screen.tscn")
+const MapNode := preload("res://scripts/map/map_node.gd")
+const RunState := preload("res://scripts/map/run_state.gd")
 
 
 func before_each() -> void:
@@ -24,6 +27,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	GameManager.current_run = null
 	TutorialManager.completed = false
 	TutorialManager.clear_active_tutorial()
 
@@ -56,6 +60,39 @@ func test_primary_scenes_instantiate_without_runtime_errors() -> void:
 	assert_not_null(flea_market)
 	assert_not_null(dice_select)
 	assert_not_null(combat)
+
+
+func test_standard_gameplay_screens_share_high_top_bar_position() -> void:
+	GameManager.current_run = _make_tiny_run()
+	var map := MAP_SCENE.instantiate()
+	autoqfree(map)
+	add_child_autofree(map)
+
+	var flea_market := FLEA_MARKET_SCENE.instantiate()
+	autoqfree(flea_market)
+	add_child_autofree(flea_market)
+
+	var dice_select := DICE_SELECT_SCENE.instantiate()
+	autoqfree(dice_select)
+	add_child_autofree(dice_select)
+
+	GameManager.selected_dice = [
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
+	]
+	var combat := COMBAT_SCENE.instantiate()
+	autoqfree(combat)
+	add_child_autofree(combat)
+	await wait_process_frames(2)
+
+	for screen in [map, flea_market, dice_select, combat]:
+		var menu_btn: Button = _find_button_with_text(screen, "MENU")
+		assert_not_null(menu_btn)
+		if menu_btn != null:
+			assert_lte(menu_btn.global_position.y, 44.0)
 
 
 func test_flea_market_wrapped_description_labels_do_not_fit_to_content_width() -> void:
@@ -150,3 +187,12 @@ func _find_button_with_text(root: Node, text: String):
 		if child is Button and child.text == text:
 			return child
 	return null
+
+
+func _make_tiny_run() -> RunState:
+	var combat := MapNode.new(1, MapNode.NodeType.COMBAT, 1, [2] as Array[int])
+	var boss := MapNode.new(2, MapNode.NodeType.BOSS, 2, [] as Array[int])
+	var run := RunState.new()
+	run.nodes = {1: combat, 2: boss}
+	run.current_node_id = -1
+	return run

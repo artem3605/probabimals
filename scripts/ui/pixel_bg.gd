@@ -26,7 +26,7 @@ const SCREEN_OUTER_SEPARATION := 32
 const SCREEN_ACTION_BAR_SEPARATION := 24
 const SCREEN_MARGIN_LEFT := 32
 const SCREEN_MARGIN_RIGHT := 32
-const SCREEN_MARGIN_TOP := 64
+const SCREEN_MARGIN_TOP := 40
 const SCREEN_MARGIN_BOTTOM := 24
 const TITLE_BAR_SEPARATION := 8
 const TITLE_UNDERLINE_SIZE := Vector2(296, 4)
@@ -270,7 +270,7 @@ func _connect_button_sfx(btn: Button) -> void:
 ## Draw drop-shadow rectangles behind a list of buttons.
 func _draw_button_shadows(buttons: Array, shadow_offset := BUTTON_SHADOW_OFFSET) -> void:
 	for btn in buttons:
-		if not is_instance_valid(btn) or not btn.visible:
+		if not _should_draw_button_shadow(btn):
 			continue
 		var b := btn as BaseButton
 		var off := shadow_offset
@@ -278,3 +278,11 @@ func _draw_button_shadows(buttons: Array, shadow_offset := BUTTON_SHADOW_OFFSET)
 		if mode == BaseButton.DRAW_PRESSED or mode == BaseButton.DRAW_HOVER_PRESSED:
 			off = BUTTON_PRESSED_SHADOW_OFFSET
 		draw_rect(Rect2(btn.global_position - global_position + off, btn.size), SHADOW_COLOR)
+
+
+func _should_draw_button_shadow(btn: Variant) -> bool:
+	if not is_instance_valid(btn) or not btn is BaseButton or not btn.visible:
+		return false
+	if btn.global_position == Vector2.ZERO and btn.size != Vector2.ZERO:
+		return false
+	return true

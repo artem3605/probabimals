@@ -389,9 +389,18 @@ func _resolve_save_path(path_override: String) -> String:
 func _on_tutorial_state_changed() -> void:
 	var just_completed := TutorialManager.completed and not _last_tutorial_completed
 	var just_cleared_active := _last_tutorial_active and not TutorialManager.is_active()
+	if current_phase != Phase.MAIN_MENU and just_completed:
+		_ensure_post_tutorial_run()
 	_sync_tutorial_tracking()
 	if current_phase != Phase.MAIN_MENU and (just_completed or just_cleared_active):
 		save_game()
+
+
+func _ensure_post_tutorial_run() -> void:
+	if current_run != null:
+		return
+	current_run = MapGeneratorRef.generate(randi(), DataManager.get_map_config())
+	last_run_result = {}
 
 
 func _sync_tutorial_tracking() -> void:
