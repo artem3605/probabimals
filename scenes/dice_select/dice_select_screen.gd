@@ -3,6 +3,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
 const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
+const DiceSelectionModelRef = preload("res://scripts/dice/dice_selection_model.gd")
 const MAX_SELECTION := 5
 const DICE_SELECT_CONTENT_SEPARATION := 32
 const DICE_SELECT_TOP_BAR_SEPARATION := 16
@@ -30,6 +31,7 @@ var _desc_title: RichTextLabel
 var _desc_rarity: RichTextLabel
 var _desc_body: RichTextLabel
 var _tutorial_overlay: Control
+var _selection_model := DiceSelectionModelRef.new()
 
 
 func _ready() -> void:
@@ -138,38 +140,14 @@ func _build_dice_grid(parent: VBoxContainer) -> void:
 
 
 func _build_groups() -> void:
-	_groups.clear()
-	var all_dice := GameManager.dice_bag.get_all()
-	var key_order: Array[String] = []
-	var key_map: Dictionary = {}
-	for i in all_dice.size():
-		var die: Die = all_dice[i]
-		var key := _die_group_key(die)
-		if not key_map.has(key):
-			key_map[key] = {"die": die, "color": die.color, "total": 0, "selected": 0, "indices": []}
-			key_order.append(key)
-		key_map[key]["total"] += 1
-		key_map[key]["indices"].append(i)
-	for k in key_order:
-		_groups.append(key_map[k])
-
-
-func _die_group_key(die: Die) -> String:
-	var parts: Array[String] = []
-	for f: DiceFace in die.faces:
-		parts.append("%d:%d:%.2f" % [f.value, f.face_type, f.effect_value])
-	parts.sort()
-	return "%s|%s" % [die.color, "|".join(parts)]
+	_groups = _selection_model.build_groups(GameManager.dice_bag.get_all())
 
 
 # -- State management ----------------------------------------------------------
 
 
 func _total_selected() -> int:
-	var total := 0
-	for g in _groups:
-		total += int(g["selected"])
-	return total
+	return _selection_model.total_selected(_groups)
 
 
 func _update_state() -> void:
@@ -260,16 +238,12 @@ func _on_card_hover_exit() -> void:
 
 
 func _on_plus_pressed(group_index: int) -> void:
-	var g := _groups[group_index]
-	if int(g["selected"]) < int(g["total"]) and _total_selected() < MAX_SELECTION:
-		g["selected"] = int(g["selected"]) + 1
+	_selection_model.increment(_groups, group_index, MAX_SELECTION)
 	_update_state()
 
 
 func _on_minus_pressed(group_index: int) -> void:
-	var g := _groups[group_index]
-	if int(g["selected"]) > 0:
-		g["selected"] = int(g["selected"]) - 1
+	_selection_model.decrement(_groups, group_index)
 	_update_state()
 
 
@@ -277,18 +251,9 @@ func _on_confirm_pressed() -> void:
 	if _total_selected() != MAX_SELECTION:
 		return
 
-	var all_dice := GameManager.dice_bag.get_all()
-	var selected: Array[Die] = []
-	var selected_indices: Array[int] = []
-	for g in _groups:
-		var count: int = int(g["selected"])
-		if count <= 0:
-			continue
-		var indices: Array = g["indices"]
-		for j in count:
-			var bag_index := int(indices[j])
-			selected.append(all_dice[bag_index])
-			selected_indices.append(bag_index)
+	var all_dice: Array[Die] = GameManager.dice_bag.get_all()
+	var selected: Array[Die] = _selection_model.selected_dice(_groups, all_dice)
+	var selected_indices: Array[int] = _selection_model.selected_indices(_groups)
 
 	if TutorialManager.is_active():
 		if not TutorialManager.selection_meets_requirements(selected_indices):
@@ -316,15 +281,7 @@ func _group_is_required(group: Dictionary) -> bool:
 
 
 func _get_selected_indices() -> Array[int]:
-	var indices: Array[int] = []
-	for g in _groups:
-		var count: int = int(g["selected"])
-		if count <= 0:
-			continue
-		var group_indices: Array = g["indices"]
-		for j in count:
-			indices.append(int(group_indices[j]))
-	return indices
+	return _selection_model.selected_indices(_groups)
 
 
 func _build_tutorial_overlay() -> void:

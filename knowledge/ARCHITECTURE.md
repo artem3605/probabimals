@@ -27,7 +27,7 @@ The intro combat is special-cased while the tutorial intro step is active. After
 - **MainMenu**: start, continue, settings/tutorial replay, survey, exit, and victory/defeat run result overlay.
 - **Map**: generated 10-depth route map with start, combat, shop, and boss nodes. Opens near the next relevant node and persists run state.
 - **FleaMarket**: shop plus dice bag management. Used both outside a run and for shop map nodes. Shop-node offerings, sold flags, and reroll count persist on the current `RunState`.
-- **DiceSelect**: choose dice from the bag before combat. Active-run menu exits abandon the run.
+- **DiceSelect**: choose dice from the bag before combat. Presentation and tutorial UI live in the scene; grouping and selection rules live in `DiceSelectionModel`. Active-run menu exits abandon the run.
 - **Combat**: roll/hold/reroll/score loop with probability panel, pause/result overlays, tutorial overlay support, and run result resolution.
 
 ## Directory Structure
@@ -77,6 +77,7 @@ scripts/
     die.gd
     dice_bag.gd
     dice_face.gd
+    dice_selection_model.gd       # DiceSelect grouping, selection counts, and bag-index projection
   scoring/
     combo_detector.gd
     combo_odds_helper.gd
@@ -220,6 +221,7 @@ Save behavior:
 
 - `Die` holds six `DiceFace` instances plus metadata such as color/name/rarity.
 - `DiceBag` stores owned dice and supplies draw/get/remove helpers.
+- `DiceSelectionModel` groups equivalent dice, enforces selection counts, and projects selected bag indices/dice for DiceSelect.
 - Faces can be swapped in the flea market to alter probability distributions.
 
 ### Scoring
@@ -261,7 +263,7 @@ Pixel background with top bar, coin display, shop offerings, inventory/dice face
 
 ### DiceSelect
 
-Pixel background with dice selection groups, selected dice list, ready/menu controls, and tutorial constraints for required dice.
+Pixel background with dice selection groups, selected dice list, ready/menu controls, and tutorial constraints for required dice. Dice grouping, count changes, and selected bag-index projection are delegated to `DiceSelectionModel`.
 
 ### Combat
 
