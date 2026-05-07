@@ -3,6 +3,8 @@ extends Node
 signal state_changed
 signal step_changed(step_id: String)
 
+const TutorialActionFlowScript = preload("res://scripts/tutorial/tutorial_action_flow.gd")
+
 const MODE_INACTIVE := "inactive"
 const MODE_FIRST_RUN := "first_run"
 const MODE_REPLAY := "replay"
@@ -190,6 +192,7 @@ var loaded_die_index: int = -1
 var improved_die_index: int = -1
 var selected_bag_indices: Array[int] = []
 var required_combat_hold_indices: Array[int] = []
+var _action_flow := TutorialActionFlowScript.new()
 
 
 func is_active() -> bool:
@@ -302,97 +305,41 @@ func report_action(action_id: String, payload: Dictionary = {}) -> bool:
 	if not is_active():
 		return false
 
-	match step_id:
-		STEP_INTRO_WELCOME:
-			if action_id == "advance_intro":
-				_set_step(STEP_INTRO_ROLL)
-				return true
-		STEP_INTRO_ROLL:
-			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 0:
-				_set_step(STEP_INTRO_HOLD)
-				return true
-		STEP_INTRO_HOLD:
-			if action_id == "hold_changed":
-				var held_indices := _to_int_array(payload.get("held_indices", []))
-				held_indices.sort()
-				var required := required_combat_hold_indices.duplicate()
-				required.sort()
-				if held_indices == required:
-					_set_step(STEP_INTRO_REROLL)
-					return true
-		STEP_INTRO_REROLL:
-			if action_id == "combat_roll" and int(payload.get("roll_number", -1)) == 1:
-				_set_step(STEP_INTRO_PAIR)
-				return true
-		STEP_INTRO_PAIR:
-			if action_id == "advance_intro":
-				_set_step(STEP_INTRO_FINISH)
-				return true
-		STEP_INTRO_FINISH:
-			if action_id == "combat_score":
-				_set_step(STEP_INTRO_WIN)
-				return true
-		STEP_INTRO_WIN:
-			if action_id == "combat_next_round":
-				return true
-		STEP_MARKET_INTRO:
-			if action_id == "advance_intro":
-				_set_step(STEP_MARKET_SCORE)
-				return true
-		STEP_MARKET_SCORE:
-			if action_id == "advance_intro":
-				_set_step(STEP_BUY_LOADED_DIE)
-				return true
-		STEP_BUY_LOADED_DIE:
-			if action_id == "buy_item" and payload.get("item_id", "") == "loaded_die":
-				loaded_die_index = int(payload.get("die_index", loaded_die_index))
-				_set_step(STEP_BUY_EXTRA_SIX)
-				return true
-		STEP_BUY_EXTRA_SIX:
-			if action_id == "open_face_item" and payload.get("item_id", "") == "extra_6":
-				improved_die_index = -1
-				_set_step(STEP_CHOOSE_SWAP_DIE)
-				return true
-		STEP_CHOOSE_SWAP_DIE:
-			if action_id == "choose_swap_die":
-				var die_color := str(payload.get("die_color", ""))
-				if die_color == "colorless":
-					improved_die_index = int(payload.get("die_index", -1))
-					_set_step(STEP_CHOOSE_SWAP_FACE)
-					return true
-			elif action_id == "cancel_face_item":
-				improved_die_index = -1
-				_set_step(STEP_BUY_EXTRA_SIX)
-				return true
-		STEP_CHOOSE_SWAP_FACE:
-			if action_id == "swap_face" and int(payload.get("die_index", -1)) == improved_die_index:
-				_set_step(STEP_GO_TO_DICE_SELECT)
-				return true
-			elif action_id == "back_face_item":
-				improved_die_index = -1
-				_set_step(STEP_CHOOSE_SWAP_DIE)
-				return true
-			elif action_id == "cancel_face_item":
-				improved_die_index = -1
-				_set_step(STEP_BUY_EXTRA_SIX)
-				return true
-		STEP_GO_TO_DICE_SELECT:
-			if action_id == "go_to_dice_select":
-				_set_step(STEP_SELECT_REQUIRED_DICE)
-				return true
-		STEP_SELECT_REQUIRED_DICE:
-			if action_id == "confirm_selection":
-				var indices := _to_int_array(payload.get("selected_indices", []))
-				if selection_meets_requirements(indices):
-					set_selected_bag_indices(indices)
-					_set_step(STEP_COMBAT_GOOD_LUCK)
-					return true
-		STEP_COMBAT_GOOD_LUCK:
-			if action_id == "combat_roll":
-				complete_tutorial()
-				return true
+	var result := _action_flow.resolve(step_id, action_id, payload, _build_action_flow_context(payload))
+	if not bool(result.get("accepted", false)):
+		return false
 
-	return false
+	_apply_action_flow_result(result)
+	return true
+
+
+func _build_action_flow_context(payload: Dictionary) -> Dictionary:
+	var selected_indices := _to_int_array(payload.get("selected_indices", []))
+	return {
+		"required_combat_hold_indices": required_combat_hold_indices.duplicate(),
+		"loaded_die_index": loaded_die_index,
+		"improved_die_index": improved_die_index,
+		"selection_meets_requirements": selection_meets_requirements(selected_indices),
+	}
+
+
+func _apply_action_flow_result(result: Dictionary) -> void:
+	var updates: Dictionary = result.get("updates", {})
+	if updates.has("loaded_die_index"):
+		loaded_die_index = int(updates["loaded_die_index"])
+	if updates.has("improved_die_index"):
+		improved_die_index = int(updates["improved_die_index"])
+
+	if result.has("selected_indices"):
+		set_selected_bag_indices(_to_int_array(result["selected_indices"]))
+
+	if bool(result.get("complete_tutorial", false)):
+		complete_tutorial()
+		return
+
+	var next_step := str(result.get("next_step", ""))
+	if not next_step.is_empty():
+		_set_step(next_step)
 
 
 func get_fixed_shop_offerings() -> Array[Dictionary]:

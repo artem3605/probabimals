@@ -86,6 +86,8 @@ scripts/
     combat_probability_panel.gd
   shop/
     shop_generator.gd
+  tutorial/
+    tutorial_action_flow.gd       # pure tutorial action transition rules
   ui/
     pixel_bg.gd
     item_card.gd
@@ -151,6 +153,8 @@ Accessors include:
 - scripted roll values
 - required shop purchases, dice selections, and combat holds
 - save/load serialization for tutorial checkpoint persistence
+
+`TutorialActionFlow` owns pure tutorial action transition rules. `TutorialManager.report_action(...)` delegates action/payload evaluation to it, then applies accepted step transitions and state updates.
 
 Scene scripts call `TutorialManager.report_action(...)` and `enter_scene(...)` to advance tutorial steps.
 
