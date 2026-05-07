@@ -69,6 +69,8 @@ scripts/
     audio_manager.gd             # SFX/music and volume persistence
   run/
     run_outcome_resolver.gd      # combat, node completion, and run-end state transitions
+  save/
+    save_data_codec.gd           # save schema, migration, serialization, and restore state application
   map/
     map_generator.gd             # data-driven route generation
     map_node.gd                  # node id/type/depth/edges
@@ -209,7 +211,9 @@ The resolver returns save-action metadata to `GameManager`; `GameManager` remain
 
 ## Save And Load
 
-`GameManager.build_save_data()` writes format-versioned JSON with player state, tutorial state, and `current_run` when present.
+`GameManager` owns save file IO and load-time phase changes. `SaveDataCodec` owns the save data interface: format versioning, migration, phase normalization, player/run/tutorial serialization, and restoring normalized data back onto `GameManager`/`TutorialManager`.
+
+`GameManager.build_save_data()` delegates to `SaveDataCodec` to produce format-versioned JSON with player state, tutorial state, and `current_run` when present.
 
 Save behavior:
 
@@ -219,7 +223,7 @@ Save behavior:
 - Run victory/defeat and abandon delete the active save so MainMenu cannot continue stale pre-end state.
 - Active-run Combat result overlays resolve state immediately: victory writes the next `MAP`/run-end state before the overlay button is pressed; defeat deletes the save and records defeat result data before the overlay button is pressed.
 
-`GameManager.apply_save_data()` migrates old saves to the current format, restores player/run/tutorial state, and returns the phase to load.
+`GameManager.apply_save_data()` delegates to `SaveDataCodec` to migrate old saves to the current format, restore player/run/tutorial state, and return the phase to load.
 
 ## Core Gameplay Systems
 
