@@ -15,7 +15,7 @@ const CARD_BG := Color("c8e6f5")
 const DISABLED_BG := Color("99a1af")
 const DISABLED_TEXT := Color("4a5565")
 const NODE_BORDER_WIDTH := 4
-const NODE_MARGIN := 8
+const NODE_MARGIN := 14
 const NODE_FONT_SIZE := 14
 const NODE_CAPTION_FONT_SIZE := 7
 const ICON_VERTICAL_OFFSET := -7.0
@@ -42,7 +42,7 @@ func _ready() -> void:
 	_pixel_font = load("res://assets/fonts/PressStart2P-Regular.ttf")
 	pressed.connect(_on_pressed)
 	if custom_minimum_size == Vector2.ZERO:
-		custom_minimum_size = Vector2(56, 56)
+		custom_minimum_size = Vector2(72, 72)
 	_apply_visual()
 
 

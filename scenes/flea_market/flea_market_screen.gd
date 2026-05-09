@@ -20,7 +20,7 @@ const FLEA_MARKET_COIN_PANEL_SIZE := Vector2(124, 48)
 const FLEA_MARKET_COIN_ROW_SEPARATION := 8
 const FLEA_MARKET_COIN_LABEL_FONT_SIZE := 16
 const FLEA_MARKET_MY_BAG_BUTTON_SIZE := Vector2(124, 44)
-const FLEA_MARKET_MY_BAG_FONT_SIZE := 12
+const FLEA_MARKET_MY_BAG_FONT_SIZE := 16
 const FLEA_MARKET_SHOP_ROW_SEPARATION := 32
 const FLEA_MARKET_DESC_PANEL_SIZE := Vector2(420, 0)
 const FLEA_MARKET_DESC_PANEL_MARGIN := 16
@@ -68,6 +68,8 @@ var _pending_face_item: Dictionary = {}
 var _pending_shop_index: int = -1
 var _selected_die_index: int = -1
 var _tutorial_overlay: Control
+var _bag_overlay: ColorRect
+var _bag_content_vbox: GridContainer
 var _shop_generator = ShopGeneratorScript.new()
 var _reroll_count: int = 0
 
@@ -136,6 +138,7 @@ func _build_ui() -> void:
 	_all_buttons.append(_ready_btn)
 
 	_build_face_swap_overlay()
+	_build_bag_overlay()
 	_build_tutorial_overlay()
 
 
@@ -179,10 +182,24 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	coin_hbox.add_child(_coin_label)
 
 	_my_dice_btn = _make_colored_button(
-		"MY BAG", FLEA_MARKET_MY_BAG_BUTTON_SIZE, BLUE, BLUE.lightened(0.15), FLEA_MARKET_MY_BAG_FONT_SIZE
+		"", FLEA_MARKET_MY_BAG_BUTTON_SIZE, BLUE, BLUE.lightened(0.15), FLEA_MARKET_MY_BAG_FONT_SIZE
 	)
-	_my_dice_btn.mouse_entered.connect(_on_my_dice_hover_enter)
-	_my_dice_btn.mouse_exited.connect(_on_my_dice_hover_exit)
+	var bag_center := CenterContainer.new()
+	bag_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bag_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_my_dice_btn.add_child(bag_center)
+	var bag_hbox := HBoxContainer.new()
+	bag_hbox.add_theme_constant_override("separation", 8)
+	bag_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bag_center.add_child(bag_hbox)
+	var bag_icon := _BackpackIcon.new()
+	bag_icon.custom_minimum_size = Vector2(14, 14)
+	bag_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bag_hbox.add_child(bag_icon)
+	var bag_label := _make_pixel_label("BAG", FLEA_MARKET_MY_BAG_FONT_SIZE)
+	bag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bag_hbox.add_child(bag_label)
+	_my_dice_btn.pressed.connect(_on_my_bag_pressed)
 	_stats_vbox.add_child(_my_dice_btn)
 	_all_buttons.append(_my_dice_btn)
 
@@ -455,34 +472,13 @@ func _shop_seed_for(node_id: int, reroll_count: int) -> int:
 	return abs(hash("%d:%d:%d" % [GameManager.current_run.seed, node_id, reroll_count]))
 
 
-func _on_my_dice_hover_enter() -> void:
-	var dice := GameManager.dice_bag.get_all()
-	var groups: Dictionary = {}
-	for d: Die in dice:
-		var vals := d.get_face_values().duplicate()
-		vals.sort()
-		var faces_str := "(%s)" % ",".join(vals.map(func(f: int) -> String: return str(f)))
-		var key := "%s %s" % [d.die_name, faces_str]
-		if not groups.has(key):
-			groups[key] = 0
-		groups[key] += 1
-
-	_desc_title.text = "MY BAG"
-	_desc_title.add_theme_color_override("default_color", GOLD)
-	_desc_rarity.text = ""
-	var lines := ""
-	for key: String in groups:
-		var count: int = groups[key]
-		if count > 1:
-			lines += "%s x%d\n" % [key, count]
-		else:
-			lines += "%s\n" % key
-	_set_description_body_text(_desc_body, lines.strip_edges())
-	_desc_panel.visible = true
+func _on_my_bag_pressed() -> void:
+	_refresh_bag_overlay()
+	_bag_overlay.visible = true
 
 
-func _on_my_dice_hover_exit() -> void:
-	_desc_panel.visible = false
+func _close_bag_overlay() -> void:
+	_bag_overlay.visible = false
 
 
 func _on_card_hover_enter(card: Control) -> void:
@@ -541,6 +537,103 @@ func _on_shop_item_buy(index: int) -> void:
 
 
 # -- Face swap overlay ---------------------------------------------------------
+
+
+func _build_bag_overlay() -> void:
+	_bag_overlay = ColorRect.new()
+	_bag_overlay.color = Color(0, 0, 0, 0.85)
+	_bag_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bag_overlay.visible = false
+	add_child(_bag_overlay)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_bag_overlay.add_child(center)
+
+	var panel := _make_panel(DARK, GOLD, Vector2(0, 0), FLEA_MARKET_DESC_PANEL_MARGIN)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var title := _make_pixel_label("MY BAG", FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	_bag_content_vbox = GridContainer.new()
+	_bag_content_vbox.columns = 2
+	_bag_content_vbox.add_theme_constant_override("h_separation", 20)
+	_bag_content_vbox.add_theme_constant_override("v_separation", 10)
+	_bag_content_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(_bag_content_vbox)
+
+	var close_btn := _make_colored_button("CLOSE", Vector2(120, 36), PINK, PINK.lightened(0.15), 10)
+	close_btn.pressed.connect(_close_bag_overlay)
+	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vbox.add_child(close_btn)
+
+	_bag_overlay.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed:
+			_close_bag_overlay()
+	)
+
+
+func _refresh_bag_overlay() -> void:
+	for child in _bag_content_vbox.get_children():
+		child.queue_free()
+
+	var dice := GameManager.dice_bag.get_all()
+	if dice.is_empty():
+		var lbl := _make_pixel_label("(empty)", 11, DISABLED_TEXT)
+		_bag_content_vbox.add_child(lbl)
+		return
+
+	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
+	for d: Die in dice:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		_bag_content_vbox.add_child(row)
+
+		var icon_panel := PanelContainer.new()
+		var icon_style := StyleBoxFlat.new()
+		icon_style.bg_color = DIE_COLORS.get(d.color, Color.WHITE)
+		icon_style.border_color = BORDER_BLACK
+		icon_style.set_border_width_all(3)
+		icon_style.set_content_margin_all(4)
+		icon_panel.add_theme_stylebox_override("panel", icon_style)
+		icon_panel.custom_minimum_size = Vector2(64, 64)
+		row.add_child(icon_panel)
+
+		var face_panel := DiceFacePanel.new()
+		face_panel.set_face_color(DIE_COLORS.get(d.color, Color.WHITE))
+		face_panel.set_value(5)
+		face_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icon_panel.add_child(face_panel)
+
+		var info_vbox := VBoxContainer.new()
+		info_vbox.add_theme_constant_override("separation", 4)
+		info_vbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(info_vbox)
+
+		var name_lbl := _make_pixel_label(d.die_name, 12, Color.WHITE)
+		info_vbox.add_child(name_lbl)
+
+		var vals := d.get_face_values()
+		vals.sort()
+		var faces_bb := SemanticMarkup.format_faces_list(vals)
+		var faces_rtl := RichTextLabel.new()
+		faces_rtl.bbcode_enabled = true
+		faces_rtl.fit_content = true
+		faces_rtl.scroll_active = false
+		faces_rtl.autowrap_mode = TextServer.AUTOWRAP_OFF
+		faces_rtl.add_theme_font_override("normal_font", _pixel_font)
+		faces_rtl.add_theme_font_size_override("normal_font_size", 10)
+		faces_rtl.add_theme_color_override("default_color", Color.WHITE)
+		faces_rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		faces_rtl.text = "(%s)" % faces_bb
+		info_vbox.add_child(faces_rtl)
 
 
 func _build_face_swap_overlay() -> void:
@@ -947,3 +1040,26 @@ func _on_tutorial_step_changed(_step: String) -> void:
 func _on_tutorial_state_changed() -> void:
 	_update_buy_buttons()
 	_refresh_tutorial_ui()
+
+
+class _BackpackIcon extends Control:
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		var outline := Color("2a1a0a")
+		var body := Color("8b5e3c")
+		var flap := Color("a67c52")
+		var strap := Color("5c3a1e")
+		var buckle := Color("ffd700")
+		# Handle
+		draw_rect(Rect2(w * 0.3, h * 0.02, w * 0.4, h * 0.22), strap)
+		draw_rect(Rect2(w * 0.38, h * 0.08, w * 0.24, h * 0.12), body)
+		# Body
+		draw_rect(Rect2(w * 0.08, h * 0.22, w * 0.84, h * 0.72), body)
+		# Flap top
+		draw_rect(Rect2(w * 0.08, h * 0.22, w * 0.84, h * 0.24), flap)
+		# Buckle
+		draw_rect(Rect2(w * 0.38, h * 0.4, w * 0.24, h * 0.12), buckle)
+		# Outline
+		draw_rect(Rect2(w * 0.08, h * 0.22, w * 0.84, h * 0.72), outline, false, 2.0)
+		draw_rect(Rect2(w * 0.3, h * 0.02, w * 0.4, h * 0.22), outline, false, 1.5)
