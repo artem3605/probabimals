@@ -342,10 +342,14 @@ func _refresh_shop_display() -> void:
 
 func _draw_shop_card_shadows() -> void:
 	for child in _shop_container.get_children():
-		if not child is ItemCard or not child.visible:
+		if not _should_draw_shop_card_shadow(child):
 			continue
 		var gp: Vector2 = child.global_position - global_position
 		draw_rect(Rect2(gp + FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET, child.size), SHADOW_COLOR)
+
+
+func _should_draw_shop_card_shadow(card: Variant) -> bool:
+	return card is ItemCard and _should_draw_control_shadow(card)
 
 
 func _create_coin_icon() -> TextureRect:

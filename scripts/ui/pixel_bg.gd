@@ -283,6 +283,12 @@ func _draw_button_shadows(buttons: Array, shadow_offset := BUTTON_SHADOW_OFFSET)
 func _should_draw_button_shadow(btn: Variant) -> bool:
 	if not is_instance_valid(btn) or not btn is BaseButton or not btn.visible:
 		return false
-	if btn.global_position == Vector2.ZERO and btn.size != Vector2.ZERO:
+	return _should_draw_control_shadow(btn)
+
+
+func _should_draw_control_shadow(control: Variant) -> bool:
+	if not is_instance_valid(control) or not control is Control or not control.visible:
+		return false
+	if control.global_position == Vector2.ZERO and control.size != Vector2.ZERO:
 		return false
 	return true
