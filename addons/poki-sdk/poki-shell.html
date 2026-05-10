@@ -218,15 +218,19 @@ function startGameLoading() {
 	}
 }
 
-PokiSDK.init().then(function () {
-	startGameLoading();
-}).catch(function () {
-	startGameLoading();
-});
+if (typeof PokiSDK !== 'undefined') {
+	PokiSDK.init().then(function () {
+		startGameLoading();
+	}).catch(function () {
+		startGameLoading();
+	});
 
-var hn = window.location.hostname;
-if (hn === 'localhost' || hn === '127.0.0.1') {
-	PokiSDK.setDebug(true);
+	var hn = window.location.hostname;
+	if (hn === 'localhost' || hn === '127.0.0.1') {
+		PokiSDK.setDebug(true);
+	}
+} else {
+	startGameLoading();
 }
 		</script>
 	</body>
