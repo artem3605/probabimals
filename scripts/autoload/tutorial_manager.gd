@@ -61,7 +61,7 @@ const STEP_TEXT := {
 	{
 		"title": "WELCOME!",
 		"body":
-		"In this game you will roll dice! Your goal this round: score 60 points. See the target there? Let's go!",
+		"In this game you will roll dice! Your goal this round: score 60 or more points. See the target there? Let's go!",
 		"show_next": true,
 		"show_skip": true,
 		"skip_text": "SKIP TUTORIAL",
