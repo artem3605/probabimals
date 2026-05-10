@@ -4,7 +4,7 @@
 
 **Probabimals** — round-based dice strategy game inspired by Yahtzee and Balatro. Players collect and customize dice, then roll them in combat to score points through combinations.
 
-**Core Loop:** buy dice and parts at the flea market → customize dice faces → roll combos in combat to beat the target score.
+**Core Loop:** buy dice and parts at the shop → customize dice faces → roll combos in combat to beat the target score.
 
 **Design Pillars:**
 
@@ -87,7 +87,7 @@ project.godot
 
 scenes/
   main_menu/
-  flea_market/
+  shop/
   combat/
 
 scripts/
@@ -119,8 +119,8 @@ resources/
 
 Each round consists of two phases:
 
-**Phase 1 — Preparation ("The Flea Market"):**
-- The player visits a flea market to buy dice, replacement faces, and modifiers.
+**Phase 1 — Preparation ("The Shop"):**
+- The player visits a shop to buy dice, replacement faces, and modifiers.
 - **Dice** go into the player's bag. Each die has 6 faces (default: numbers 1–6).
 - **Faces** can be swapped onto existing dice to change their odds (Dice Forge style).
 - **Modifiers** are joker-like items that transform scoring rules globally.
@@ -135,7 +135,7 @@ Each round consists of two phases:
 ### Key Concepts
 
 - **Die** — a six-sided die from the player's bag. Base dice are colorless with faces 1–6. Colored dice are rarer and unlock color-based combos.
-- **Face** — a single side of a die. Faces can be swapped at the flea market to change a die's number distribution (e.g. replace a 1-face with a second 6-face).
+- **Face** — a single side of a die. Faces can be swapped at the shop to change a die's number distribution (e.g. replace a 1-face with a second 6-face).
 - **Modifier** — a joker-like item with a global effect on scoring (e.g. "all Full Houses score double", "pairs count as triples"). The primary source of build-defining power.
 - **Combo** — a scoring pattern in the rolled dice. Based on Yahtzee: Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee (five of a kind). Colored dice add Flush (5 dice of the same color).
 - **Reroll** — the player's tactical tool. After rolling, keep favorable dice and reroll the rest. Limited to 2 rerolls per hand by default.
@@ -189,7 +189,7 @@ The smallest playable version that demonstrates the core loop.
 #### Three Screens
 
 1. **MainMenu** — Start and Exit buttons.
-2. **FleaMarket** — Simplified shop (fixed catalogue) + dice bag management on one screen.
+2. **Shop** — Simplified shop (fixed catalogue) + dice bag management on one screen.
 3. **Combat** — Roll dice, keep/reroll, score combos against a target.
 
 #### What's In
@@ -197,7 +197,7 @@ The smallest playable version that demonstrates the core loop.
 | Feature | Details |
 |---------|---------|
 | Dice | 5 colorless dice with default faces (1–6) |
-| Flea market | Fixed catalogue of ~10–12 items (extra dice, replacement faces, modifiers) with coin prices |
+| Shop | Fixed catalogue of ~10–12 items (extra dice, replacement faces, modifiers) with coin prices |
 | Item taxonomy | Dice (add to bag) + Faces (swap onto a die) + Modifiers (global scoring effects) |
 | Coin budget | Player starts with a fixed coin amount; items have costs |
 | Customization | Select a die → swap one of its faces with a purchased face |
@@ -208,14 +208,14 @@ The smallest playable version that demonstrates the core loop.
 #### What's Out
 
 - Colored dice and flush combos
-- Randomized flea market stock
+- Randomized shop stock
 - Round progression, difficulty scaling
 - Visual polish, animations, sound
 - Meta-progression (unlocks, carry-over)
 
 #### Deliverable
 
-A single playable session: flea market → buy dice and faces → customize dice → combat → roll combos → final result.
+A single playable session: shop → buy dice and faces → customize dice → combat → roll combos → final result.
 
 ---
 
@@ -225,7 +225,7 @@ The complete demo experience showcasing all core systems across multiple rounds.
 
 **Goal:** Deliver a polished demo playable for 15–30 minutes, demonstrating the full preparation → combat loop.
 
-#### Flea Market
+#### Shop
 
 - Randomized selection of dice, faces, and modifiers each round.
 - Rarity tiers for items (common, uncommon, rare).
@@ -234,7 +234,7 @@ The complete demo experience showcasing all core systems across multiple rounds.
 
 #### Dice Building
 
-- Swap faces on any owned die at the flea market.
+- Swap faces on any owned die at the shop.
 - Colored dice unlock the Flush combo (5 dice of the same color).
 - Visible die stats (face distribution, expected value).
 - Modifier synergies — certain modifier combos unlock bonus effects.
@@ -249,13 +249,13 @@ The complete demo experience showcasing all core systems across multiple rounds.
 #### Progression
 
 - 10 map levels with escalating blinds.
-- Flea market evolution — rarer faces and powerful modifiers in later rounds.
+- Shop evolution — rarer faces and powerful modifiers in later rounds.
 - Win/loss conditions — survive all rounds to win; losing has consequences (lost dice, reduced budget).
 
 #### Polish
 
 - Animations — dice rolling, face swapping, score tallying.
-- Sound design — dice sounds, market ambiance, victory/defeat cues.
+- Sound design — dice sounds, shop ambiance, victory/defeat cues.
 - UI/UX — intuitive dice management, clear info hierarchy.
 - Tutorial — guided first round.
 
@@ -270,7 +270,7 @@ Self-contained demo: multiple rounds of shopping → dice customization → comb
 | System | BASIC4 | FULL44 adds |
 |--------|--------|-------------|
 | Dice | 5 colorless dice, default faces | Colored dice, flush combos, larger bag |
-| Flea Market | Fixed catalogue, flat coin budget | Randomized stock, scaling prices, rarity tiers |
+| Shop | Fixed catalogue, flat coin budget | Randomized stock, scaling prices, rarity tiers |
 | Items | ~10–12 items: dice, faces, modifiers | Large pool, synergies, conditional modifiers |
 | Combat | Roll + reroll, Yahtzee combos, single target score | Escalating blinds, rich modifier interactions |
 | Progression | Single round | 10-level map run, persistent inventory, difficulty scaling |
@@ -285,7 +285,7 @@ The game runs on an **Action → Reward → Expansion** cycle. Each pass through
 ```mermaid
 graph LR
     Action["Action\n(Combat: Roll, Hold, Reroll)"] -->|"beat the blind"| Reward["Reward\n(Coins, Progression, Feedback)"]
-    Reward -->|"spend coins"| Expansion["Expansion\n(Flea Market: Dice, Faces, Modifiers)"]
+    Reward -->|"spend coins"| Expansion["Expansion\n(Shop: Dice, Faces, Modifiers)"]
     Expansion -->|"stronger build"| Action
 ```
 
@@ -310,7 +310,7 @@ Rewards operate on two timescales:
 **Round-end:**
 - Beating the blind earns coins and advances to the next round.
 
-### Expansion — The Flea Market
+### Expansion — The Shop
 
 Between rounds, the player spends earned coins to reshape their build:
 
@@ -394,7 +394,7 @@ The relationship between player power and blind targets defines the emotional ar
 | 6 | Very high | Modifier combos required | Mastery — only well-designed builds survive |
 | 7 | Peak | Full engine or bust | Climax — all-or-nothing finale |
 
-### Flea Market Evolution
+### Shop Evolution
 
 The shop's item pool shifts across rounds to support the power curve:
 
@@ -411,4 +411,4 @@ Prices scale with rarity: common faces cost 4–10 coins, uncommon 12–18, rare
 
 Failing a blind ends the run. The player loses all progress — dice, faces, modifiers, coins — and starts over from round 1 with the default setup.
 
-This creates clear stakes: every round matters, and there is no safety net. The restart loop is fast (flea market → combat takes under a minute), so failure feels like "one more try" rather than wasted time. Over repeated runs the player learns which builds work, making each attempt sharper than the last.
+This creates clear stakes: every round matters, and there is no safety net. The restart loop is fast (shop → combat takes under a minute), so failure feels like "one more try" rather than wasted time. Over repeated runs the player learns which builds work, making each attempt sharper than the last.

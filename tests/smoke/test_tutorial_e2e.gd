@@ -1,6 +1,6 @@
 extends GutTest
 
-const FLEA_MARKET_SCENE := preload("res://scenes/flea_market/flea_market_screen.tscn")
+const SHOP_SCENE := preload("res://scenes/shop/shop_screen.tscn")
 const DICE_SELECT_SCENE := preload("res://scenes/dice_select/dice_select_screen.tscn")
 const COMBAT_SCENE := preload("res://scenes/combat/combat_screen.tscn")
 const ItemCard = preload("res://scripts/ui/item_card.gd")
@@ -121,20 +121,20 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	GameManager.target_score = GameManager.BASE_TARGET
 	GameManager.coins = 35
 	GameManager.selected_dice.clear()
-	TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_INTRO)
+	TutorialManager.enter_scene(TutorialManager.SCENE_SHOP)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SHOP_INTRO)
 
-	var flea_market = FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+	var shop = SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 	await wait_process_frames(3)
 
-	flea_market._tutorial_overlay._next_btn.emit_signal("pressed")
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_SCORE)
-	flea_market._tutorial_overlay._next_btn.emit_signal("pressed")
+	shop._tutorial_overlay._next_btn.emit_signal("pressed")
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SHOP_SCORE)
+	shop._tutorial_overlay._next_btn.emit_signal("pressed")
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_BUY_LOADED_DIE)
-	var loaded_index := _find_shop_index(flea_market._shop_offerings, "loaded_die")
-	var loaded_card = flea_market._shop_cards[loaded_index]
+	var loaded_index := _find_shop_index(shop._shop_offerings, "loaded_die")
+	var loaded_card = shop._shop_cards[loaded_index]
 	assert_false(loaded_card.buy_button.disabled)
 	assert_eq(loaded_card.buy_button.text, "BUY")
 	assert_false(loaded_card.is_accented())
@@ -142,8 +142,8 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	loaded_card.buy_button.emit_signal("pressed")
 	await wait_process_frames(2)
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_BUY_EXTRA_SIX)
-	var extra_six_index := _find_shop_index(flea_market._shop_offerings, "extra_6")
-	var extra_six_card = flea_market._shop_cards[extra_six_index]
+	var extra_six_index := _find_shop_index(shop._shop_offerings, "extra_6")
+	var extra_six_card = shop._shop_cards[extra_six_index]
 	assert_false(extra_six_card.buy_button.disabled)
 	assert_eq(extra_six_card.buy_button.text, "BUY")
 	assert_false(extra_six_card.is_accented())
@@ -152,18 +152,18 @@ func test_tutorial_flow_reaches_completion_end_to_end() -> void:
 	await wait_process_frames(2)
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_CHOOSE_SWAP_DIE)
 
-	flea_market._on_swap_die_selected(0)
+	shop._on_swap_die_selected(0)
 	await wait_process_frames(2)
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_CHOOSE_SWAP_FACE)
 	var replace_face_index := GameManager.dice_bag.get_die(0).get_face_values().find(1)
 	if replace_face_index < 0:
 		replace_face_index = 0
-	flea_market._on_swap_face_selected(replace_face_index)
+	shop._on_swap_face_selected(replace_face_index)
 	await wait_process_frames(2)
 	assert_eq(TutorialManager.improved_die_index, 0)
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_GO_TO_DICE_SELECT)
 
-	assert_false(flea_market._ready_btn.disabled)
+	assert_false(shop._ready_btn.disabled)
 	assert_true(TutorialManager.report_action("go_to_dice_select"))
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SELECT_REQUIRED_DICE)
 

@@ -11,14 +11,14 @@ The normal run flow is:
 Map nodes decide which preparation surface comes next:
 
 - **Combat/Boss nodes** route to `DiceSelect`, then `Combat`.
-- **Shop nodes** route to `FleaMarket`, then back to `Map`.
+- **Shop nodes** route to `Shop`, then back to `Map`.
 - **Boss victory** ends the run with a victory result.
 - **Combat defeat** ends the run with a defeat result.
 - **Menu/quit from active run phases** abandons the run and deletes the active save without a victory/defeat result.
 
 First-run tutorial bootstraps the same run state but temporarily follows:
 
-`Intro Combat -> FleaMarket tutorial -> DiceSelect tutorial -> Tutorial Combat -> Map`
+`Intro Combat -> Shop tutorial -> DiceSelect tutorial -> Tutorial Combat -> Map`
 
 The intro combat is special-cased while the tutorial intro step is active. After the final tutorial combat completes, the tutorial is inactive and the still-unselected run (`current_node_id == -1`) routes to `Map`.
 Tutorial replay follows the same visible flow; if it was started without an active run, `GameManager` creates a fresh unselected run as soon as the tutorial completes so the next combat victory also routes to `Map`.
@@ -27,7 +27,7 @@ Tutorial replay follows the same visible flow; if it was started without an acti
 
 - **MainMenu**: start, continue, settings/tutorial replay, survey, exit, and victory/defeat run result overlay.
 - **Map**: generated 10-depth route map with start, combat, shop, and boss nodes. Opens near the next relevant node and persists run state.
-- **FleaMarket**: shop plus dice bag management. Used both outside a run and for shop map nodes. Shop-node offerings, sold flags, and reroll count persist on the current `RunState`.
+- **Shop**: shop plus dice bag management. Used both outside a run and for shop map nodes. Shop-node offerings, sold flags, and reroll count persist on the current `RunState`.
 - **DiceSelect**: choose dice from the bag before combat. Presentation and tutorial UI live in the scene; grouping and selection rules live in `DiceSelectionModel`. Active-run menu exits abandon the run.
 - **Combat**: roll/hold/reroll/score loop with probability panel, pause/result overlays, tutorial overlay support, and run result resolution.
 
@@ -52,9 +52,9 @@ scenes/
     map_screen.gd
     map_node_button.tscn         # icon + caption button for map nodes
     map_node_button.gd
-  flea_market/
-    flea_market_screen.tscn
-    flea_market_screen.gd
+  shop/
+    shop_screen.tscn
+    shop_screen.gd
   dice_select/
     dice_select_screen.tscn
     dice_select_screen.gd
@@ -115,7 +115,7 @@ scripts/
 
 Key state:
 
-- `current_phase: Phase` — `MAIN_MENU`, `FLEA_MARKET`, `DICE_SELECT`, `COMBAT`, `MAP`.
+- `current_phase: Phase` — `MAIN_MENU`, `SHOP`, `DICE_SELECT`, `COMBAT`, `MAP`.
 - `current_run: RunState` — active generated map run, or `null` outside active runs.
 - `last_run_result: Dictionary` — transient victory/defeat data rendered by MainMenu.
 - `coins`, `dice_bag`, `modifiers`, `selected_dice`, `total_score`, `target_score`, `current_round`, `hands_per_round`, `rerolls_per_hand`.
@@ -126,12 +126,12 @@ Primary methods:
 - `start_game(skip_tutorial_intro := false)` resets state, creates a generated run, and routes either to intro combat or map.
 - `start_tutorial_replay()` runs tutorial from settings; when replay completion leaves no active map run, `GameManager` creates one before routing onward.
 - `skip_active_tutorial()` completes tutorial and creates/routes to a normal map run.
-- `enter_map_node(node_id)` validates availability, marks the current map node, applies boss target scaling when needed, then routes to dice select or flea market.
+- `enter_map_node(node_id)` validates availability, marks the current map node, applies boss target scaling when needed, then routes to dice select or shop.
 - `complete_current_node()` delegates combat/shop/boss completion state to `RunOutcomeResolver`, then routes to map or run end.
 - `end_combat(final_score, target_beaten)` delegates combat result state to `RunOutcomeResolver` and immediately changes phase.
 - `resolve_combat_result_for_overlay(final_score, target_beaten)` delegates active-run combat result state to `RunOutcomeResolver` and writes/deletes the save while the Combat result overlay remains visible.
 - `finish_resolved_combat_result()` changes scene after the player presses the already-resolved result overlay button.
-- `flea_market_continue()` completes shop nodes or falls back to dice select outside runs.
+- `shop_continue()` completes shop nodes or falls back to dice select outside runs.
 - `end_run(victory)` delegates final run result state to `RunOutcomeResolver`, deletes the save, and routes to MainMenu.
 - `abandon_run()` clears the active run without result feedback and deletes the save.
 
@@ -221,7 +221,7 @@ The resolver returns save-action metadata to `GameManager`; `GameManager` remain
 Save behavior:
 
 - Non-tutorial `COMBAT` saves normalize to `DICE_SELECT` for active runs, so a mid-combat reload restarts before combat rather than inside a volatile roll state.
-- `MAP` without an active run normalizes to `FLEA_MARKET` for legacy compatibility.
+- `MAP` without an active run normalizes to `SHOP` for legacy compatibility.
 - Active run state includes serialized map nodes, current node, visited/completed nodes, and shop states.
 - Run victory/defeat and abandon delete the active save so MainMenu cannot continue stale pre-end state.
 - Active-run Combat result overlays resolve state immediately: victory writes the next `MAP`/run-end state before the overlay button is pressed; defeat deletes the save and records defeat result data before the overlay button is pressed.
@@ -235,7 +235,7 @@ Save behavior:
 - `Die` holds six `DiceFace` instances plus metadata such as color/name/rarity.
 - `DiceBag` stores owned dice and supplies draw/get/remove helpers.
 - `DiceSelectionModel` groups equivalent dice, enforces selection counts, and projects selected bag indices/dice for DiceSelect.
-- Faces can be swapped in the flea market to alter probability distributions.
+- Faces can be swapped in the shop to alter probability distributions.
 
 ### Scoring
 
@@ -264,7 +264,7 @@ Save behavior:
 
 `ShopPurchaseResolver` applies item and face-swap purchases to the run wallet, dice bag, modifiers, and reroll count. It returns purchase outcomes so `GameManager` can keep owning state signals such as `coins_changed`.
 
-`FleaMarketScreen` handles shop presentation, face-swap selection UI, rerolls, tutorial market steps, and persistence of map shop-node state through `RunState.shop_states`. Purchase mutation routes through `GameManager`, which delegates item and face-swap rules to `ShopPurchaseResolver`.
+`ShopScreen` handles shop presentation, face-swap selection UI, rerolls, tutorial shop steps, and persistence of map shop-node state through `RunState.shop_states`. Purchase mutation routes through `GameManager`, which delegates item and face-swap rules to `ShopPurchaseResolver`.
 
 ## Scene Trees
 
@@ -278,7 +278,7 @@ Control root with pixel background, title, Start/Continue/Settings/Survey/Exit b
 
 Pixel background with top bar (`MENU`, title, coins), framed scroll container, generated map node buttons, drawn start/path edges, and automatic scroll-to-relevant-node behavior.
 
-### FleaMarket
+### Shop
 
 Pixel background with top bar, coin display, shop offerings, inventory/dice face management, ready/continue routing, and tutorial overlay integration.
 
@@ -303,7 +303,7 @@ Use `make test` for the full GUT suite, `make static-check` for Godot import/syn
 | System | BASIC4 | FULL44 adds |
 |--------|--------|-------------|
 | Dice | 5 colorless dice, default faces | Larger bag, rarity-driven dice, richer face/modifier pool |
-| Flea Market | Fixed/simple catalogue | Randomized stock, rerolls, persistent shop-node state |
+| Shop | Fixed/simple catalogue | Randomized stock, rerolls, persistent shop-node state |
 | Items | Dice, faces, modifiers | Synergies, rarity tiers, conditional modifiers |
 | Combat | Roll + reroll, Yahtzee combos, single target | Escalating targets, probability panel, richer feedback |
 | Progression | Single round | 10-depth map run with combat/shop/boss nodes |

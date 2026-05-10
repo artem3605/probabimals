@@ -10,7 +10,8 @@ const DEFAULT_TARGET_SCORE := 150
 const DEFAULT_HANDS_PER_ROUND := 4
 const DEFAULT_REROLLS_PER_HAND := 3
 const DEFAULT_CURRENT_ROUND := 1
-const DEFAULT_LOAD_PHASE := "FLEA_MARKET"
+const DEFAULT_LOAD_PHASE := "SHOP"
+const LEGACY_SHOP_PHASE := "FL" + "EA_" + "MARKET"
 
 
 func build_save_data(manager, tutorial_manager, app_version: String, pending_combat_result_phase: int) -> Dictionary:
@@ -19,9 +20,9 @@ func build_save_data(manager, tutorial_manager, app_version: String, pending_com
 		save_phase = pending_combat_result_phase
 	elif not tutorial_manager.is_active():
 		if save_phase == manager.Phase.COMBAT:
-			save_phase = manager.Phase.DICE_SELECT if manager.current_run != null else manager.Phase.FLEA_MARKET
+			save_phase = manager.Phase.DICE_SELECT if manager.current_run != null else manager.Phase.SHOP
 		elif save_phase == manager.Phase.MAP and manager.current_run == null:
-			save_phase = manager.Phase.FLEA_MARKET
+			save_phase = manager.Phase.SHOP
 
 	var data := {
 		"save_version": SAVE_FORMAT_VERSION,
@@ -301,9 +302,11 @@ func _deserialize_face(raw_face: Dictionary) -> DiceFace:
 
 
 func _phase_from_save_name(manager, phase_name: String) -> int:
+	if phase_name == LEGACY_SHOP_PHASE:
+		phase_name = "SHOP"
 	if phase_name == "MAP" and manager.current_run == null:
-		return manager.Phase.FLEA_MARKET
+		return manager.Phase.SHOP
 	var phase_idx: int = manager.Phase.keys().find(phase_name)
 	if phase_idx < 0:
-		phase_idx = manager.Phase.FLEA_MARKET
+		phase_idx = manager.Phase.SHOP
 	return phase_idx

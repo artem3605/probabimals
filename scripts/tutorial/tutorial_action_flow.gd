@@ -8,8 +8,8 @@ const STEP_INTRO_REROLL := "intro_reroll"
 const STEP_INTRO_PAIR := "intro_pair"
 const STEP_INTRO_FINISH := "intro_finish"
 const STEP_INTRO_WIN := "intro_win"
-const STEP_MARKET_INTRO := "market_intro"
-const STEP_MARKET_SCORE := "market_score"
+const STEP_SHOP_INTRO := "shop_intro"
+const STEP_SHOP_SCORE := "shop_score"
 const STEP_BUY_LOADED_DIE := "buy_loaded_die"
 const STEP_BUY_EXTRA_SIX := "buy_extra_six"
 const STEP_CHOOSE_SWAP_DIE := "choose_swap_die"
@@ -45,10 +45,10 @@ func resolve(step_id: String, action_id: String, payload: Dictionary = {}, conte
 		STEP_INTRO_WIN:
 			if action_id == "combat_next_round":
 				return _accepted()
-		STEP_MARKET_INTRO:
+		STEP_SHOP_INTRO:
 			if action_id == "advance_intro":
-				return _accepted(STEP_MARKET_SCORE)
-		STEP_MARKET_SCORE:
+				return _accepted(STEP_SHOP_SCORE)
+		STEP_SHOP_SCORE:
 			if action_id == "advance_intro":
 				return _accepted(STEP_BUY_LOADED_DIE)
 		STEP_BUY_LOADED_DIE:

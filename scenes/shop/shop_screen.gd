@@ -10,36 +10,36 @@ const SemanticMarkup = preload("res://scripts/ui/semantic_markup.gd")
 const MapNodeRef = preload("res://scripts/map/map_node.gd")
 const REROLL_COST := 10
 const SHOP_SLOTS := ShopGeneratorScript.DEFAULT_SHOP_SLOTS
-const FLEA_MARKET_CONTENT_SEPARATION := 48
-const FLEA_MARKET_TOP_BAR_SEPARATION := 16
-const FLEA_MARKET_STATS_SEPARATION := 12
-const FLEA_MARKET_REROLL_BUTTON_SIZE := Vector2(220, 68)
-const FLEA_MARKET_REROLL_FONT_SIZE := 16
-const FLEA_MARKET_READY_BUTTON_SIZE := Vector2(0, 68)
-const FLEA_MARKET_READY_FONT_SIZE := 16
-const FLEA_MARKET_COIN_PANEL_SIZE := Vector2(124, 48)
-const FLEA_MARKET_COIN_ROW_SEPARATION := 8
-const FLEA_MARKET_COIN_LABEL_FONT_SIZE := 16
-const FLEA_MARKET_MY_BAG_BUTTON_SIZE := Vector2(124, 44)
-const FLEA_MARKET_MY_BAG_FONT_SIZE := 16
-const FLEA_MARKET_SHOP_ROW_SEPARATION := 32
-const FLEA_MARKET_DESC_PANEL_SIZE := Vector2(420, 0)
-const FLEA_MARKET_DESC_PANEL_MARGIN := 16
-const FLEA_MARKET_DESC_SEPARATION := 12
-const FLEA_MARKET_DESC_TITLE_FONT_SIZE := 14
-const FLEA_MARKET_DESC_BODY_FONT_SIZE := 12
-const FLEA_MARKET_DESC_BODY_WIDTH := FLEA_MARKET_DESC_PANEL_SIZE.x - FLEA_MARKET_DESC_PANEL_MARGIN * 2
-const FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET := Vector2(4, 4)
-const FLEA_MARKET_COIN_ICON_SIZE := Vector2(24, 24)
-const FLEA_MARKET_FACE_SWAP_OUTER_SEPARATION := 32
-const FLEA_MARKET_FACE_SWAP_CONTENT_SEPARATION := 32
-const FLEA_MARKET_FACE_SWAP_TOP_SPACER := 80
-const FLEA_MARKET_FACE_SWAP_TITLE_FONT_SIZE := 24
-const FLEA_MARKET_FACE_SWAP_CARD_SEPARATION := 24
-const FLEA_MARKET_FACE_SWAP_ACTION_BUTTON_SIZE := Vector2(200, 68)
-const FLEA_MARKET_FACE_SWAP_ACTION_BUTTON_FONT_SIZE := 16
-const FLEA_MARKET_EFFECT_LABEL_FONT_SIZE := 10
-const FLEA_MARKET_EFFECT_LABEL_SIZE := Vector2(96, 16)
+const SHOP_CONTENT_SEPARATION := 48
+const SHOP_TOP_BAR_SEPARATION := 16
+const SHOP_STATS_SEPARATION := 12
+const SHOP_REROLL_BUTTON_SIZE := Vector2(220, 68)
+const SHOP_REROLL_FONT_SIZE := 16
+const SHOP_READY_BUTTON_SIZE := Vector2(0, 68)
+const SHOP_READY_FONT_SIZE := 16
+const SHOP_COIN_PANEL_SIZE := Vector2(124, 48)
+const SHOP_COIN_ROW_SEPARATION := 8
+const SHOP_COIN_LABEL_FONT_SIZE := 16
+const SHOP_MY_BAG_BUTTON_SIZE := Vector2(124, 44)
+const SHOP_MY_BAG_FONT_SIZE := 16
+const SHOP_SHOP_ROW_SEPARATION := 32
+const SHOP_DESC_PANEL_SIZE := Vector2(420, 0)
+const SHOP_DESC_PANEL_MARGIN := 16
+const SHOP_DESC_SEPARATION := 12
+const SHOP_DESC_TITLE_FONT_SIZE := 14
+const SHOP_DESC_BODY_FONT_SIZE := 12
+const SHOP_DESC_BODY_WIDTH := SHOP_DESC_PANEL_SIZE.x - SHOP_DESC_PANEL_MARGIN * 2
+const SHOP_SHOP_CARD_SHADOW_OFFSET := Vector2(4, 4)
+const SHOP_COIN_ICON_SIZE := Vector2(24, 24)
+const SHOP_FACE_SWAP_OUTER_SEPARATION := 32
+const SHOP_FACE_SWAP_CONTENT_SEPARATION := 32
+const SHOP_FACE_SWAP_TOP_SPACER := 80
+const SHOP_FACE_SWAP_TITLE_FONT_SIZE := 24
+const SHOP_FACE_SWAP_CARD_SEPARATION := 24
+const SHOP_FACE_SWAP_ACTION_BUTTON_SIZE := Vector2(200, 68)
+const SHOP_FACE_SWAP_ACTION_BUTTON_FONT_SIZE := 16
+const SHOP_EFFECT_LABEL_FONT_SIZE := 10
+const SHOP_EFFECT_LABEL_SIZE := Vector2(96, 16)
 
 var _shop_offerings: Array[Dictionary] = []
 var _sold: Array[bool] = []
@@ -86,7 +86,7 @@ func _ready() -> void:
 	TutorialManager.step_changed.connect(_on_tutorial_step_changed)
 	TutorialManager.state_changed.connect(_on_tutorial_state_changed)
 	if TutorialManager.is_active():
-		TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
+		TutorialManager.enter_scene(TutorialManager.SCENE_SHOP)
 	_refresh_tutorial_ui()
 	AudioManager.play_music(&"menu")
 
@@ -102,7 +102,7 @@ func _draw() -> void:
 
 
 func _build_ui() -> void:
-	var layout := _make_screen_layout(FLEA_MARKET_CONTENT_SEPARATION)
+	var layout := _make_screen_layout(SHOP_CONTENT_SEPARATION)
 	var content: VBoxContainer = layout["content"]
 	var action_bar: HBoxContainer = layout["action_bar"]
 
@@ -110,9 +110,7 @@ func _build_ui() -> void:
 	_build_shop_row(content)
 	_build_description_panel(content)
 
-	_reroll_btn = _make_colored_button(
-		"", FLEA_MARKET_REROLL_BUTTON_SIZE, PINK, PINK.lightened(0.15), FLEA_MARKET_REROLL_FONT_SIZE
-	)
+	_reroll_btn = _make_colored_button("", SHOP_REROLL_BUTTON_SIZE, PINK, PINK.lightened(0.15), SHOP_REROLL_FONT_SIZE)
 	var rtl := RichTextLabel.new()
 	rtl.bbcode_enabled = true
 	rtl.fit_content = true
@@ -123,7 +121,7 @@ func _build_ui() -> void:
 	rtl.grow_vertical = Control.GROW_DIRECTION_BOTH
 	rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rtl.add_theme_font_override("normal_font", _pixel_font)
-	rtl.add_theme_font_size_override("normal_font_size", FLEA_MARKET_REROLL_FONT_SIZE)
+	rtl.add_theme_font_size_override("normal_font_size", SHOP_REROLL_FONT_SIZE)
 	rtl.add_theme_color_override("default_color", DARK)
 	rtl.text = "[center]REFRESH [img=24]res://assets/art/ui/coin.png[/img]%d[/center]" % REROLL_COST
 	_reroll_btn.add_child(rtl)
@@ -132,7 +130,7 @@ func _build_ui() -> void:
 	_all_buttons.append(_reroll_btn)
 
 	_ready_btn = _make_colored_button(
-		"READY!", FLEA_MARKET_READY_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), FLEA_MARKET_READY_FONT_SIZE
+		"READY!", SHOP_READY_BUTTON_SIZE, GREEN, GREEN.lightened(0.15), SHOP_READY_FONT_SIZE
 	)
 	_ready_btn.pressed.connect(_on_ready_pressed)
 	action_bar.add_child(_ready_btn)
@@ -145,7 +143,7 @@ func _build_ui() -> void:
 
 func _build_top_bar(parent: VBoxContainer) -> void:
 	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", FLEA_MARKET_TOP_BAR_SEPARATION)
+	bar.add_theme_constant_override("separation", SHOP_TOP_BAR_SEPARATION)
 	bar.alignment = BoxContainer.ALIGNMENT_CENTER
 	parent.add_child(bar)
 
@@ -157,7 +155,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	left_box.add_child(menu_btn)
 	_all_buttons.append(menu_btn)
 
-	bar.add_child(_make_title_bar("FLEA MARKET"))
+	bar.add_child(_make_title_bar("SHOP"))
 
 	var right_wrapper := HBoxContainer.new()
 	right_wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -165,26 +163,24 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	bar.add_child(right_wrapper)
 
 	_stats_vbox = VBoxContainer.new()
-	_stats_vbox.add_theme_constant_override("separation", FLEA_MARKET_STATS_SEPARATION)
+	_stats_vbox.add_theme_constant_override("separation", SHOP_STATS_SEPARATION)
 	right_wrapper.add_child(_stats_vbox)
 
-	_coin_panel = _make_panel(GOLD, BORDER_BLACK, FLEA_MARKET_COIN_PANEL_SIZE)
+	_coin_panel = _make_panel(GOLD, BORDER_BLACK, SHOP_COIN_PANEL_SIZE)
 	_stats_vbox.add_child(_coin_panel)
 
 	var coin_hbox := HBoxContainer.new()
-	coin_hbox.add_theme_constant_override("separation", FLEA_MARKET_COIN_ROW_SEPARATION)
+	coin_hbox.add_theme_constant_override("separation", SHOP_COIN_ROW_SEPARATION)
 	coin_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_coin_panel.add_child(coin_hbox)
 
 	var coin_icon := _create_coin_icon()
 	coin_hbox.add_child(coin_icon)
 
-	_coin_label = _make_pixel_label("", FLEA_MARKET_COIN_LABEL_FONT_SIZE)
+	_coin_label = _make_pixel_label("", SHOP_COIN_LABEL_FONT_SIZE)
 	coin_hbox.add_child(_coin_label)
 
-	_my_dice_btn = _make_colored_button(
-		"", FLEA_MARKET_MY_BAG_BUTTON_SIZE, BLUE, BLUE.lightened(0.15), FLEA_MARKET_MY_BAG_FONT_SIZE
-	)
+	_my_dice_btn = _make_colored_button("", SHOP_MY_BAG_BUTTON_SIZE, BLUE, BLUE.lightened(0.15), SHOP_MY_BAG_FONT_SIZE)
 	var bag_center := CenterContainer.new()
 	bag_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bag_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -197,7 +193,7 @@ func _build_top_bar(parent: VBoxContainer) -> void:
 	bag_icon.custom_minimum_size = Vector2(14, 14)
 	bag_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bag_hbox.add_child(bag_icon)
-	var bag_label := _make_pixel_label("BAG", FLEA_MARKET_MY_BAG_FONT_SIZE)
+	var bag_label := _make_pixel_label("BAG", SHOP_MY_BAG_FONT_SIZE)
 	bag_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bag_hbox.add_child(bag_label)
 	_my_dice_btn.pressed.connect(_on_my_bag_pressed)
@@ -210,7 +206,7 @@ func _build_shop_row(parent: VBoxContainer) -> void:
 	parent.add_child(center)
 
 	_shop_container = HBoxContainer.new()
-	_shop_container.add_theme_constant_override("separation", FLEA_MARKET_SHOP_ROW_SEPARATION)
+	_shop_container.add_theme_constant_override("separation", SHOP_SHOP_ROW_SEPARATION)
 	center.add_child(_shop_container)
 
 
@@ -218,13 +214,13 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	var center := CenterContainer.new()
 	parent.add_child(center)
 
-	_desc_panel = _make_panel(DARK, GOLD, FLEA_MARKET_DESC_PANEL_SIZE, FLEA_MARKET_DESC_PANEL_MARGIN)
+	_desc_panel = _make_panel(DARK, GOLD, SHOP_DESC_PANEL_SIZE, SHOP_DESC_PANEL_MARGIN)
 	_desc_panel.visible = false
 	_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(_desc_panel)
 
 	var desc_vbox := VBoxContainer.new()
-	desc_vbox.add_theme_constant_override("separation", FLEA_MARKET_DESC_SEPARATION)
+	desc_vbox.add_theme_constant_override("separation", SHOP_DESC_SEPARATION)
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_desc_panel.add_child(desc_vbox)
 
@@ -233,17 +229,17 @@ func _build_description_panel(parent: VBoxContainer) -> void:
 	title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	desc_vbox.add_child(title_row)
 
-	_desc_title = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	_desc_title = _make_pixel_rtl(SHOP_DESC_TITLE_FONT_SIZE, GOLD)
 	_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(_desc_title)
 
-	_desc_rarity = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_desc_rarity = _make_pixel_rtl(SHOP_DESC_TITLE_FONT_SIZE, Color.WHITE)
 	_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	title_row.add_child(_desc_rarity)
 
-	_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
+	_desc_body = _make_pixel_rtl(SHOP_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_configure_wrapped_description_body(_desc_body)
 	desc_vbox.add_child(_desc_body)
 
@@ -346,7 +342,7 @@ func _draw_shop_card_shadows() -> void:
 		if not _should_draw_shop_card_shadow(child):
 			continue
 		var gp: Vector2 = child.global_position - global_position
-		draw_rect(Rect2(gp + FLEA_MARKET_SHOP_CARD_SHADOW_OFFSET, child.size), SHADOW_COLOR)
+		draw_rect(Rect2(gp + SHOP_SHOP_CARD_SHADOW_OFFSET, child.size), SHADOW_COLOR)
 
 
 func _should_draw_shop_card_shadow(card: Variant) -> bool:
@@ -356,7 +352,7 @@ func _should_draw_shop_card_shadow(card: Variant) -> bool:
 func _create_coin_icon() -> TextureRect:
 	var rect := TextureRect.new()
 	rect.texture = preload("res://assets/art/ui/coin.png")
-	rect.custom_minimum_size = FLEA_MARKET_COIN_ICON_SIZE
+	rect.custom_minimum_size = SHOP_COIN_ICON_SIZE
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -440,7 +436,7 @@ func _on_ready_pressed() -> void:
 		TutorialManager.report_action("go_to_dice_select")
 		GameManager.go_to_dice_select()
 		return
-	GameManager.flea_market_continue()
+	GameManager.shop_continue()
 
 
 func _go_to_main_menu() -> void:
@@ -555,14 +551,14 @@ func _build_bag_overlay() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_bag_overlay.add_child(center)
 
-	var panel := _make_panel(DARK, GOLD, Vector2(0, 0), FLEA_MARKET_DESC_PANEL_MARGIN)
+	var panel := _make_panel(DARK, GOLD, Vector2(0, 0), SHOP_DESC_PANEL_MARGIN)
 	center.add_child(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
 	panel.add_child(vbox)
 
-	var title := _make_pixel_label("MY BAG", FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	var title := _make_pixel_label("MY BAG", SHOP_DESC_TITLE_FONT_SIZE, GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
@@ -652,19 +648,19 @@ func _build_face_swap_overlay() -> void:
 	_face_swap_overlay.add_child(margin)
 
 	var outer := VBoxContainer.new()
-	outer.add_theme_constant_override("separation", FLEA_MARKET_FACE_SWAP_OUTER_SEPARATION)
+	outer.add_theme_constant_override("separation", SHOP_FACE_SWAP_OUTER_SEPARATION)
 	margin.add_child(outer)
 
 	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", FLEA_MARKET_FACE_SWAP_CONTENT_SEPARATION)
+	content.add_theme_constant_override("separation", SHOP_FACE_SWAP_CONTENT_SEPARATION)
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(content)
 
 	var top_spacer := Control.new()
-	top_spacer.custom_minimum_size = Vector2(0, FLEA_MARKET_FACE_SWAP_TOP_SPACER)
+	top_spacer.custom_minimum_size = Vector2(0, SHOP_FACE_SWAP_TOP_SPACER)
 	content.add_child(top_spacer)
 
-	_face_swap_title = _make_pixel_label("", FLEA_MARKET_FACE_SWAP_TITLE_FONT_SIZE, GOLD)
+	_face_swap_title = _make_pixel_label("", SHOP_FACE_SWAP_TITLE_FONT_SIZE, GOLD)
 	_face_swap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	content.add_child(_face_swap_title)
 
@@ -672,19 +668,19 @@ func _build_face_swap_overlay() -> void:
 	content.add_child(cards_center)
 
 	_face_swap_cards = HBoxContainer.new()
-	_face_swap_cards.add_theme_constant_override("separation", FLEA_MARKET_FACE_SWAP_CARD_SEPARATION)
+	_face_swap_cards.add_theme_constant_override("separation", SHOP_FACE_SWAP_CARD_SEPARATION)
 	cards_center.add_child(_face_swap_cards)
 
 	var desc_center := CenterContainer.new()
 	content.add_child(desc_center)
 
-	_swap_desc_panel = _make_panel(DARK, GOLD, FLEA_MARKET_DESC_PANEL_SIZE, FLEA_MARKET_DESC_PANEL_MARGIN)
+	_swap_desc_panel = _make_panel(DARK, GOLD, SHOP_DESC_PANEL_SIZE, SHOP_DESC_PANEL_MARGIN)
 	_swap_desc_panel.visible = false
 	_swap_desc_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	desc_center.add_child(_swap_desc_panel)
 
 	var desc_vbox := VBoxContainer.new()
-	desc_vbox.add_theme_constant_override("separation", FLEA_MARKET_DESC_SEPARATION)
+	desc_vbox.add_theme_constant_override("separation", SHOP_DESC_SEPARATION)
 	desc_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_swap_desc_panel.add_child(desc_vbox)
 
@@ -693,17 +689,17 @@ func _build_face_swap_overlay() -> void:
 	swap_title_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	desc_vbox.add_child(swap_title_row)
 
-	_swap_desc_title = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, GOLD)
+	_swap_desc_title = _make_pixel_rtl(SHOP_DESC_TITLE_FONT_SIZE, GOLD)
 	_swap_desc_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	swap_title_row.add_child(_swap_desc_title)
 
-	_swap_desc_rarity = _make_pixel_rtl(FLEA_MARKET_DESC_TITLE_FONT_SIZE, Color.WHITE)
+	_swap_desc_rarity = _make_pixel_rtl(SHOP_DESC_TITLE_FONT_SIZE, Color.WHITE)
 	_swap_desc_rarity.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_swap_desc_rarity.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_swap_desc_rarity.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	swap_title_row.add_child(_swap_desc_rarity)
 
-	_swap_desc_body = _make_pixel_rtl(FLEA_MARKET_DESC_BODY_FONT_SIZE, Color.WHITE)
+	_swap_desc_body = _make_pixel_rtl(SHOP_DESC_BODY_FONT_SIZE, Color.WHITE)
 	_configure_wrapped_description_body(_swap_desc_body)
 	desc_vbox.add_child(_swap_desc_body)
 
@@ -711,11 +707,7 @@ func _build_face_swap_overlay() -> void:
 	outer.add_child(btn_center)
 
 	_face_swap_action_btn = _make_colored_button(
-		"CANCEL",
-		FLEA_MARKET_FACE_SWAP_ACTION_BUTTON_SIZE,
-		PINK,
-		PINK.lightened(0.15),
-		FLEA_MARKET_FACE_SWAP_ACTION_BUTTON_FONT_SIZE
+		"CANCEL", SHOP_FACE_SWAP_ACTION_BUTTON_SIZE, PINK, PINK.lightened(0.15), SHOP_FACE_SWAP_ACTION_BUTTON_FONT_SIZE
 	)
 	_face_swap_action_btn.pressed.connect(_on_face_swap_cancel)
 	btn_center.add_child(_face_swap_action_btn)
@@ -795,10 +787,10 @@ func _show_face_picker(die_index: int) -> void:
 			var effect_label := Label.new()
 			effect_label.text = effect_text
 			effect_label.add_theme_font_override("font", _pixel_font)
-			effect_label.add_theme_font_size_override("font_size", FLEA_MARKET_EFFECT_LABEL_FONT_SIZE)
+			effect_label.add_theme_font_size_override("font_size", SHOP_EFFECT_LABEL_FONT_SIZE)
 			effect_label.add_theme_color_override("font_color", DARK)
 			effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			effect_label.custom_minimum_size = FLEA_MARKET_EFFECT_LABEL_SIZE
+			effect_label.custom_minimum_size = SHOP_EFFECT_LABEL_SIZE
 			card.bottom_control = effect_label
 			card._vbox.add_child(card.bottom_control)
 
@@ -943,7 +935,7 @@ func _refresh_tutorial_ui() -> void:
 	_update_ready_button_label()
 	_ready_btn.disabled = TutorialManager.is_active() and not TutorialManager.can_go_to_dice_select()
 
-	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_FLEA_MARKET:
+	if not TutorialManager.is_active() or TutorialManager.checkpoint_scene != TutorialManager.SCENE_SHOP:
 		_tutorial_overlay.hide_overlay()
 		return
 
@@ -965,9 +957,9 @@ func _refresh_tutorial_ui() -> void:
 
 func _get_tutorial_highlight_target() -> Variant:
 	match TutorialManager.step_id:
-		TutorialManager.STEP_MARKET_INTRO:
+		TutorialManager.STEP_SHOP_INTRO:
 			return _shop_container
-		TutorialManager.STEP_MARKET_SCORE:
+		TutorialManager.STEP_SHOP_SCORE:
 			return _stats_vbox
 		TutorialManager.STEP_BUY_LOADED_DIE:
 			return _find_shop_action_target("loaded_die")
@@ -999,8 +991,8 @@ func _on_tutorial_next_pressed() -> void:
 	if (
 		TutorialManager.step_id
 		in [
-			TutorialManager.STEP_MARKET_INTRO,
-			TutorialManager.STEP_MARKET_SCORE,
+			TutorialManager.STEP_SHOP_INTRO,
+			TutorialManager.STEP_SHOP_SCORE,
 		]
 	):
 		TutorialManager.report_action("advance_intro")
@@ -1022,14 +1014,14 @@ func _configure_wrapped_description_body(rtl: RichTextLabel) -> void:
 	rtl.fit_content = false
 	rtl.autowrap_mode = TextServer.AUTOWRAP_WORD
 	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rtl.custom_minimum_size.x = FLEA_MARKET_DESC_BODY_WIDTH
-	rtl.size.x = FLEA_MARKET_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.x = SHOP_DESC_BODY_WIDTH
+	rtl.size.x = SHOP_DESC_BODY_WIDTH
 
 
 func _set_description_body_text(rtl: RichTextLabel, value: String) -> void:
 	rtl.text = value
-	rtl.size.x = FLEA_MARKET_DESC_BODY_WIDTH
-	rtl.custom_minimum_size.y = maxf(float(FLEA_MARKET_DESC_BODY_FONT_SIZE), rtl.get_content_height())
+	rtl.size.x = SHOP_DESC_BODY_WIDTH
+	rtl.custom_minimum_size.y = maxf(float(SHOP_DESC_BODY_FONT_SIZE), rtl.get_content_height())
 
 
 func _on_tutorial_skip_pressed() -> void:

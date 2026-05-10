@@ -95,7 +95,7 @@ These apply to all agents in every phase:
 3. **Data-driven** — game parameters live in `resources/data/*.json`, not hardcoded in GDScript.
 4. **Two autoloads only** — `GameManager` (state) and `DataManager` (data). No new singletons without team discussion.
 5. **Signal-driven communication** — scenes talk via signals, not direct references.
-6. **Three-screen architecture** — all gameplay fits into MainMenu, FleaMarket, and Combat.
+6. **Three-screen architecture** — all gameplay fits into MainMenu, Shop, and Combat.
 7. **Item taxonomy** — three categories only: Dice, Faces, Modifiers.
 
 ## File Structure

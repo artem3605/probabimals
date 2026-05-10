@@ -7,7 +7,7 @@ const RunOutcomeResolverRef := preload("res://scripts/run/run_outcome_resolver.g
 const SaveDataCodecRef := preload("res://scripts/save/save_data_codec.gd")
 const ShopPurchaseResolverRef := preload("res://scripts/shop/shop_purchase_resolver.gd")
 
-enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
+enum Phase { MAIN_MENU, SHOP, DICE_SELECT, COMBAT, MAP }
 
 const SAVE_PATH := "user://save_game.json"
 const APP_VERSION_SETTING := "application/config/version"
@@ -141,8 +141,8 @@ func go_to_combat() -> void:
 	_change_phase(Phase.COMBAT)
 
 
-func go_to_flea_market() -> void:
-	_change_phase(Phase.FLEA_MARKET)
+func go_to_shop() -> void:
+	_change_phase(Phase.SHOP)
 
 
 func go_to_main_menu() -> void:
@@ -153,19 +153,19 @@ func go_to_dice_select() -> void:
 	_change_phase(Phase.DICE_SELECT)
 
 
-func flea_market_continue() -> void:
+func shop_continue() -> void:
 	if current_run == null:
 		_change_phase(Phase.DICE_SELECT)
 		return
 	var node: MapNodeRef = current_run.get_current_node()
 	if node == null:
-		push_warning("Unexpected Flea Market continue before selecting a map node.")
+		push_warning("Unexpected Shop continue before selecting a map node.")
 		_change_phase(Phase.MAP)
 		return
 	if node.type == MapNodeRef.NodeType.SHOP:
 		complete_current_node()
 		return
-	push_warning("Unexpected Flea Market continue from non-shop map node %d." % node.id)
+	push_warning("Unexpected Shop continue from non-shop map node %d." % node.id)
 	_change_phase(Phase.MAP)
 
 
@@ -208,7 +208,7 @@ func advance_round() -> void:
 	var result := _run_outcome_resolver.advance_round(self)
 	_apply_result_events(result)
 	_apply_result_save_action(result)
-	var destination := int(result.get("phase", Phase.FLEA_MARKET))
+	var destination := int(result.get("phase", Phase.SHOP))
 	_change_phase(destination as Phase)
 
 
@@ -238,7 +238,7 @@ func enter_map_node(node_id: int) -> void:
 		MapNodeRef.NodeType.COMBAT, MapNodeRef.NodeType.BOSS:
 			_change_phase(Phase.DICE_SELECT)
 		MapNodeRef.NodeType.SHOP:
-			_change_phase(Phase.FLEA_MARKET)
+			_change_phase(Phase.SHOP)
 
 
 func end_run(victory: bool) -> void:
@@ -317,8 +317,8 @@ func _change_phase(new_phase: Phase) -> void:
 	match new_phase:
 		Phase.MAIN_MENU:
 			get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")
-		Phase.FLEA_MARKET:
-			get_tree().change_scene_to_file("res://scenes/flea_market/flea_market_screen.tscn")
+		Phase.SHOP:
+			get_tree().change_scene_to_file("res://scenes/shop/shop_screen.tscn")
 			PokiSDK.gameplay_start()
 		Phase.DICE_SELECT:
 			get_tree().change_scene_to_file("res://scenes/dice_select/dice_select_screen.tscn")

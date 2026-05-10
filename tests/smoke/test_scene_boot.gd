@@ -4,7 +4,7 @@ const TestData = preload("res://tests/support/test_data.gd")
 
 const MAIN_MENU_SCENE := preload("res://scenes/main_menu/main_menu.tscn")
 const MAP_SCENE := preload("res://scenes/map/map_screen.tscn")
-const FLEA_MARKET_SCENE := preload("res://scenes/flea_market/flea_market_screen.tscn")
+const SHOP_SCENE := preload("res://scenes/shop/shop_screen.tscn")
 const DICE_SELECT_SCENE := preload("res://scenes/dice_select/dice_select_screen.tscn")
 const COMBAT_SCENE := preload("res://scenes/combat/combat_screen.tscn")
 const MapNode := preload("res://scripts/map/map_node.gd")
@@ -37,9 +37,9 @@ func test_primary_scenes_instantiate_without_runtime_errors() -> void:
 	autoqfree(main_menu)
 	add_child_autofree(main_menu)
 
-	var flea_market := FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+	var shop := SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 
 	var dice_select := DICE_SELECT_SCENE.instantiate()
 	autoqfree(dice_select)
@@ -57,7 +57,7 @@ func test_primary_scenes_instantiate_without_runtime_errors() -> void:
 	add_child_autofree(combat)
 
 	assert_not_null(main_menu)
-	assert_not_null(flea_market)
+	assert_not_null(shop)
 	assert_not_null(dice_select)
 	assert_not_null(combat)
 
@@ -68,9 +68,9 @@ func test_standard_gameplay_screens_share_high_top_bar_position() -> void:
 	autoqfree(map)
 	add_child_autofree(map)
 
-	var flea_market := FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+	var shop := SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 
 	var dice_select := DICE_SELECT_SCENE.instantiate()
 	autoqfree(dice_select)
@@ -88,34 +88,34 @@ func test_standard_gameplay_screens_share_high_top_bar_position() -> void:
 	add_child_autofree(combat)
 	await wait_process_frames(2)
 
-	for screen in [map, flea_market, dice_select, combat]:
+	for screen in [map, shop, dice_select, combat]:
 		var menu_btn: Button = _find_button_with_text(screen, "MENU")
 		assert_not_null(menu_btn)
 		if menu_btn != null:
 			assert_lte(menu_btn.global_position.y, 44.0)
 
 
-func test_flea_market_wrapped_description_labels_do_not_fit_to_content_width() -> void:
-	var flea_market := FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+func test_shop_wrapped_description_labels_do_not_fit_to_content_width() -> void:
+	var shop := SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 	await wait_process_frames(2)
 
-	assert_eq(flea_market._desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
-	assert_false(flea_market._desc_body.fit_content)
-	assert_eq(flea_market._swap_desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
-	assert_false(flea_market._swap_desc_body.fit_content)
+	assert_eq(shop._desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(shop._desc_body.fit_content)
+	assert_eq(shop._swap_desc_body.autowrap_mode, TextServer.AUTOWRAP_WORD)
+	assert_false(shop._swap_desc_body.fit_content)
 
 
-func test_flea_market_skips_shop_card_shadows_before_first_layout() -> void:
-	var flea_market := FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+func test_shop_skips_shop_card_shadows_before_first_layout() -> void:
+	var shop := SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 
-	var first_card: Control = flea_market._shop_cards[0]
+	var first_card: Control = shop._shop_cards[0]
 	assert_eq(first_card.global_position, Vector2.ZERO)
 	assert_ne(first_card.size, Vector2.ZERO)
-	assert_false(flea_market._should_draw_shop_card_shadow(first_card))
+	assert_false(shop._should_draw_shop_card_shadow(first_card))
 
 
 func test_combat_wrapped_description_label_does_not_fit_to_content_width() -> void:

@@ -1,6 +1,6 @@
 extends GutTest
 
-const FLEA_MARKET_SCENE := preload("res://scenes/flea_market/flea_market_screen.tscn")
+const SHOP_SCENE := preload("res://scenes/shop/shop_screen.tscn")
 const COMBAT_SCREEN_SCENE := preload("res://scenes/combat/combat_screen.tscn")
 const DICE_SELECT_SCENE := preload("res://scenes/dice_select/dice_select_screen.tscn")
 const MAP_SCREEN_SCENE := preload("res://scenes/map/map_screen.tscn")
@@ -41,7 +41,7 @@ func before_each() -> void:
 	GameManager.save_path = save_path
 	_temp_paths.append(save_path)
 	GameManager.current_run = null
-	GameManager.current_phase = GameManager.Phase.FLEA_MARKET
+	GameManager.current_phase = GameManager.Phase.SHOP
 	GameManager.coins = 50
 	GameManager.total_score = 0
 	GameManager.target_score = GameManager.BASE_TARGET
@@ -117,12 +117,12 @@ func _build_boss_start_run_state() -> RunState:
 	return state
 
 
-func _add_flea_market_screen():
-	var flea_market = FLEA_MARKET_SCENE.instantiate()
-	autoqfree(flea_market)
-	add_child_autofree(flea_market)
+func _add_shop_screen():
+	var shop = SHOP_SCENE.instantiate()
+	autoqfree(shop)
+	add_child_autofree(shop)
 	await wait_process_frames(2)
-	return flea_market
+	return shop
 
 
 func _add_combat_screen():
@@ -149,8 +149,8 @@ func _add_map_screen():
 	return map_screen
 
 
-func _press_ready_button(flea_market) -> void:
-	flea_market._ready_btn.emit_signal("pressed")
+func _press_ready_button(shop) -> void:
+	shop._ready_btn.emit_signal("pressed")
 	await wait_process_frames(2)
 
 
@@ -162,16 +162,16 @@ func _press_menu_button(screen: Node) -> void:
 	await wait_process_frames(2)
 
 
-func _offering_ids(flea_market) -> Array[String]:
+func _offering_ids(shop) -> Array[String]:
 	var ids: Array[String] = []
-	for item in flea_market._shop_offerings:
+	for item in shop._shop_offerings:
 		ids.append(str(item.get("id", "")))
 	return ids
 
 
-func _first_direct_buy_index(flea_market) -> int:
-	for i in range(flea_market._shop_offerings.size()):
-		if str(flea_market._shop_offerings[i].get("category", "")) != "face":
+func _first_direct_buy_index(shop) -> int:
+	for i in range(shop._shop_offerings.size()):
+		if str(shop._shop_offerings[i].get("category", "")) != "face":
 			return i
 	return -1
 
@@ -202,7 +202,7 @@ func _apply_tutorial_step(step_id: String) -> void:
 				"mode": TutorialManager.MODE_FIRST_RUN,
 				"step_id": step_id,
 				"completed": false,
-				"checkpoint_scene": TutorialManager.SCENE_FLEA_MARKET,
+				"checkpoint_scene": TutorialManager.SCENE_SHOP,
 				"loaded_die_index": 5,
 				"improved_die_index": 0,
 				"selected_bag_indices": [],
@@ -212,56 +212,56 @@ func _apply_tutorial_step(step_id: String) -> void:
 	)
 
 
-func test_flea_market_ready_button_says_continue_on_shop_run_node() -> void:
+func test_shop_ready_button_says_continue_on_shop_run_node() -> void:
 	GameManager.current_run = _build_test_run_state(3)
 
-	var flea_market = await _add_flea_market_screen()
+	var shop = await _add_shop_screen()
 
-	assert_eq(flea_market._ready_btn.text, "CONTINUE")
+	assert_eq(shop._ready_btn.text, "CONTINUE")
 
 
-func test_flea_market_ready_button_says_ready_outside_run() -> void:
+func test_shop_ready_button_says_ready_outside_run() -> void:
 	GameManager.current_run = null
 
-	var flea_market = await _add_flea_market_screen()
+	var shop = await _add_shop_screen()
 
-	assert_eq(flea_market._ready_btn.text, "READY!")
+	assert_eq(shop._ready_btn.text, "READY!")
 
 
-func test_flea_market_ready_button_says_ready_at_run_start() -> void:
+func test_shop_ready_button_says_ready_at_run_start() -> void:
 	GameManager.current_run = _build_test_run_state(-1)
 
-	var flea_market = await _add_flea_market_screen()
+	var shop = await _add_shop_screen()
 
-	assert_eq(flea_market._ready_btn.text, "READY!")
+	assert_eq(shop._ready_btn.text, "READY!")
 
 
-func test_flea_market_ready_button_press_outside_run_goes_to_dice_select() -> void:
+func test_shop_ready_button_press_outside_run_goes_to_dice_select() -> void:
 	GameManager.current_run = null
 
-	var flea_market = await _add_flea_market_screen()
-	await _press_ready_button(flea_market)
+	var shop = await _add_shop_screen()
+	await _press_ready_button(shop)
 
 	assert_eq(GameManager.current_phase, GameManager.Phase.DICE_SELECT)
 
 
-func test_flea_market_ready_button_press_on_shop_run_node_goes_to_map() -> void:
+func test_shop_ready_button_press_on_shop_run_node_goes_to_map() -> void:
 	GameManager.current_run = _build_test_run_state(3)
 
-	var flea_market = await _add_flea_market_screen()
-	assert_eq(flea_market._ready_btn.text, "CONTINUE")
-	await _press_ready_button(flea_market)
+	var shop = await _add_shop_screen()
+	assert_eq(shop._ready_btn.text, "CONTINUE")
+	await _press_ready_button(shop)
 
 	assert_eq(GameManager.current_phase, GameManager.Phase.MAP)
 
 
-func test_flea_market_map_shop_state_survives_scene_reload_purchase_and_reroll() -> void:
+func test_shop_map_shop_state_survives_scene_reload_purchase_and_reroll() -> void:
 	GameManager.current_run = _build_test_run_state(3)
 	GameManager.current_run.seed = 123
-	GameManager.current_phase = GameManager.Phase.FLEA_MARKET
+	GameManager.current_phase = GameManager.Phase.SHOP
 	GameManager.coins = 200
 
-	var first_market = await _add_flea_market_screen()
+	var first_market = await _add_shop_screen()
 	var first_ids := _offering_ids(first_market)
 	var buy_index := _first_direct_buy_index(first_market)
 	assert_gte(buy_index, 0)
@@ -270,7 +270,7 @@ func test_flea_market_map_shop_state_survives_scene_reload_purchase_and_reroll()
 	assert_true(first_market._sold[buy_index])
 	assert_true(GameManager.has_save())
 
-	var after_buy_market = await _add_flea_market_screen()
+	var after_buy_market = await _add_shop_screen()
 	assert_eq(_offering_ids(after_buy_market), first_ids)
 	assert_true(after_buy_market._sold[buy_index])
 	after_buy_market._on_reroll_pressed()
@@ -278,20 +278,20 @@ func test_flea_market_map_shop_state_survives_scene_reload_purchase_and_reroll()
 	var rerolled_ids := _offering_ids(after_buy_market)
 	assert_eq(GameManager.current_run.get_shop_state(3).get("reroll_count", -1), 1)
 
-	var restored_market = await _add_flea_market_screen()
+	var restored_market = await _add_shop_screen()
 	assert_eq(_offering_ids(restored_market), rerolled_ids)
 	assert_eq(restored_market._sold, [false, false, false, false, false])
 
 
-func test_flea_market_menu_button_abandons_active_run_without_result() -> void:
+func test_shop_menu_button_abandons_active_run_without_result() -> void:
 	GameManager.current_run = _build_test_run_state(3)
-	GameManager.current_phase = GameManager.Phase.FLEA_MARKET
+	GameManager.current_phase = GameManager.Phase.SHOP
 	GameManager.last_run_result = {}
 	GameManager.save_game()
 	assert_true(GameManager.can_load_save())
 
-	var flea_market = await _add_flea_market_screen()
-	await _press_menu_button(flea_market)
+	var shop = await _add_shop_screen()
+	await _press_menu_button(shop)
 
 	assert_null(GameManager.current_run)
 	assert_eq(GameManager.current_phase, GameManager.Phase.MAIN_MENU)
@@ -300,23 +300,23 @@ func test_flea_market_menu_button_abandons_active_run_without_result() -> void:
 	assert_false(GameManager.can_load_save())
 
 
-func test_flea_market_ready_button_reports_tutorial_go_to_dice_select() -> void:
+func test_shop_ready_button_reports_tutorial_go_to_dice_select() -> void:
 	_apply_tutorial_step(TutorialManager.STEP_GO_TO_DICE_SELECT)
 
-	var flea_market = await _add_flea_market_screen()
-	await _press_ready_button(flea_market)
+	var shop = await _add_shop_screen()
+	await _press_ready_button(shop)
 
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SELECT_REQUIRED_DICE)
 	assert_eq(GameManager.current_phase, GameManager.Phase.DICE_SELECT)
 
 
-func test_flea_market_ready_button_during_first_run_keeps_tutorial_on_dice_select() -> void:
+func test_shop_ready_button_during_first_run_keeps_tutorial_on_dice_select() -> void:
 	_apply_tutorial_step(TutorialManager.STEP_GO_TO_DICE_SELECT)
 	GameManager.current_run = _build_test_run_state(-1)
-	GameManager.current_phase = GameManager.Phase.FLEA_MARKET
+	GameManager.current_phase = GameManager.Phase.SHOP
 
-	var flea_market = await _add_flea_market_screen()
-	await _press_ready_button(flea_market)
+	var shop = await _add_shop_screen()
+	await _press_ready_button(shop)
 
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SELECT_REQUIRED_DICE)
 	assert_eq(GameManager.current_phase, GameManager.Phase.DICE_SELECT)

@@ -30,7 +30,7 @@ Dice customization (face swaps, modifier purchases) currently mutates state dire
 
 **What changes:** Actions like `SwapFaceCommand`, `BuyItemCommand`, `SellItemCommand` are created, pushed onto a history stack, and executed. `GameManager` exposes `undo()` and `redo()`.
 
-**Why at scale:** Players want to experiment with builds without fear. Undo/redo makes the flea market a design sandbox. Command objects also enable replay logging and server-side validation for multiplayer.
+**Why at scale:** Players want to experiment with builds without fear. Undo/redo makes the shop a design sandbox. Command objects also enable replay logging and server-side validation for multiplayer.
 
 ### 1.4 Strategy Pattern (Pluggable Scoring)
 
@@ -129,7 +129,7 @@ graph TD
 
 ```mermaid
 sequenceDiagram
-    participant UI as Flea Market UI
+    participant UI as Shop UI
     participant GM as GameManager
     participant Cmd as SwapFaceCommand
     participant Stack as Command Stack
@@ -158,22 +158,22 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> MainMenuState
     MainMenuState --> TutorialState: first launch
-    MainMenuState --> FleaMarketState: new game / continue
+    MainMenuState --> ShopState: new game / continue
     MainMenuState --> MultiplayerLobbyState: multiplayer
 
-    TutorialState --> FleaMarketState: tutorial complete
+    TutorialState --> ShopState: tutorial complete
 
-    FleaMarketState --> InventoryState: open inventory
-    InventoryState --> FleaMarketState: close
-    FleaMarketState --> DiceSelectState: ready
+    ShopState --> InventoryState: open inventory
+    InventoryState --> ShopState: close
+    ShopState --> DiceSelectState: ready
 
     DiceSelectState --> CombatState: confirm
 
     CombatState --> BossState: boss round
-    CombatState --> FleaMarketState: win
+    CombatState --> ShopState: win
     CombatState --> GameOverState: lose
 
-    BossState --> FleaMarketState: win
+    BossState --> ShopState: win
     BossState --> GameOverState: lose
 
     GameOverState --> MainMenuState: return
@@ -304,17 +304,17 @@ func update(_delta: float) -> void:
     pass
 
 
-# scripts/state_machine/flea_market_state.gd
-class_name FleaMarketState
+# scripts/state_machine/shop_state.gd
+class_name ShopState
 extends GameState
 
 func enter(params: Dictionary = {}) -> void:
-    EventBus.phase_entered.emit("flea_market")
+    EventBus.phase_entered.emit("shop")
     PokiSDK.gameplay_start()
-    get_tree().change_scene_to_file("res://scenes/flea_market/flea_market_screen.tscn")
+    get_tree().change_scene_to_file("res://scenes/shop/shop_screen.tscn")
 
 func exit() -> void:
-    EventBus.phase_exited.emit("flea_market")
+    EventBus.phase_exited.emit("shop")
     GameManager.save_game()
 
 
@@ -431,7 +431,7 @@ Same as the base project, with additions:
 
 | Element | Convention | Example |
 |---------|-----------|---------|
-| State classes | `*State` suffix | `FleaMarketState`, `CombatState` |
+| State classes | `*State` suffix | `ShopState`, `CombatState` |
 | Command classes | `*Command` suffix | `SwapFaceCommand`, `BuyItemCommand` |
 | Strategy classes | `*Scoring` suffix | `ClassicScoring`, `SpeedRunScoring` |
 | Resource classes | `*Resource` suffix | `FaceResource`, `ComboRuleResource` |

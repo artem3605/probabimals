@@ -110,7 +110,7 @@ func test_boss_victory_records_terminal_result_and_requests_delete() -> void:
 	assert_eq(_manager.target_score, 200)
 
 
-func test_tutorial_intro_win_advances_to_flea_market_without_ending_run() -> void:
+func test_tutorial_intro_win_advances_to_shop_without_ending_run() -> void:
 	if _resolver == null:
 		return
 	_manager.current_run = _build_test_run_state()
@@ -121,7 +121,7 @@ func test_tutorial_intro_win_advances_to_flea_market_without_ending_run() -> voi
 
 	var result: Dictionary = _resolver.resolve_combat_result(_manager, TutorialManager, 60, true)
 
-	assert_eq(result.get("phase"), _manager.Phase.FLEA_MARKET)
+	assert_eq(result.get("phase"), _manager.Phase.SHOP)
 	assert_eq(result.get("save_action"), _resolver.SAVE_ACTION_NONE)
 	assert_not_null(_manager.current_run)
 	assert_eq(_manager.current_round, 1)
@@ -141,7 +141,7 @@ func test_advance_round_uses_resolver_state_transition_and_returns_events() -> v
 
 	var result: Dictionary = _resolver.advance_round(_manager)
 
-	assert_eq(result.get("phase"), _manager.Phase.FLEA_MARKET)
+	assert_eq(result.get("phase"), _manager.Phase.SHOP)
 	assert_eq_deep(result.get("events", {}), {"coins_changed": 70})
 	assert_eq(_manager.coins, 70)
 	assert_eq(_manager.current_round, 3)

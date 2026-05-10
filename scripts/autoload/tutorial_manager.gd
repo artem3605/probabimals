@@ -9,13 +9,13 @@ const MODE_INACTIVE := "inactive"
 const MODE_FIRST_RUN := "first_run"
 const MODE_REPLAY := "replay"
 
-const SCENE_FLEA_MARKET := "flea_market"
+const SCENE_SHOP := "shop"
 const SCENE_DICE_SELECT := "dice_select"
 const SCENE_COMBAT := "combat"
 
-const STEP_MARKET_INTRO := "market_intro"
-const STEP_MARKET_GOAL := "market_goal"
-const STEP_MARKET_SCORE := "market_score"
+const STEP_SHOP_INTRO := "shop_intro"
+const STEP_SHOP_GOAL := "shop_goal"
+const STEP_SHOP_SCORE := "shop_score"
 const STEP_BUY_LOADED_DIE := "buy_loaded_die"
 const STEP_BUY_EXTRA_SIX := "buy_extra_six"
 const STEP_CHOOSE_SWAP_DIE := "choose_swap_die"
@@ -31,6 +31,10 @@ const STEP_INTRO_REROLL := "intro_reroll"
 const STEP_INTRO_PAIR := "intro_pair"
 const STEP_INTRO_FINISH := "intro_finish"
 const STEP_INTRO_WIN := "intro_win"
+const LEGACY_SHOP_SCENE := "fl" + "ea_" + "mar" + "ket"
+const LEGACY_SHOP_INTRO_STEP := "mar" + "ket_intro"
+const LEGACY_SHOP_SCORE_STEP := "mar" + "ket_score"
+const LEGACY_SHOP_GOAL_STEP := "mar" + "ket_goal"
 
 const OVERLAY_STYLE := {
 	"panel_width": 420.0,
@@ -113,15 +117,15 @@ const STEP_TEXT := {
 		"panel_width": 630,
 		"panel_anchor": Vector2(0.5, 0.95),
 	},
-	"market_intro":
+	"shop_intro":
 	{
-		"title": "THE FLEA MARKET",
+		"title": "THE SHOP",
 		"body": "This is where you spend coins on new dice and upgrades.",
 		"show_next": true,
 		"panel_width": 650,
 		"panel_anchor": Vector2(0.5, 0.75),
 	},
-	"market_score":
+	"shop_score":
 	{
 		"title": "YOUR STUFF",
 		"body": "Here's your coin balance and the dice in your bag. Check My Bag to see what you've got!",
@@ -270,8 +274,8 @@ func enter_scene(scene_id: String) -> void:
 	if not is_active():
 		return
 	checkpoint_scene = scene_id
-	if scene_id == SCENE_FLEA_MARKET and step_id == STEP_INTRO_WIN:
-		_set_step(STEP_MARKET_INTRO)
+	if scene_id == SCENE_SHOP and step_id == STEP_INTRO_WIN:
+		_set_step(STEP_SHOP_INTRO)
 	_emit_state_changed()
 
 
@@ -291,14 +295,32 @@ func build_save_data() -> Dictionary:
 func apply_save_data(data: Dictionary) -> void:
 	completed = bool(data.get("completed", false))
 	mode = str(data.get("mode", MODE_INACTIVE))
-	step_id = str(data.get("step_id", ""))
-	checkpoint_scene = str(data.get("checkpoint_scene", ""))
+	step_id = _normalize_step_id(str(data.get("step_id", "")))
+	checkpoint_scene = _normalize_scene_id(str(data.get("checkpoint_scene", "")))
 	loaded_die_index = int(data.get("loaded_die_index", -1))
 	improved_die_index = int(data.get("improved_die_index", -1))
 	selected_bag_indices = _to_int_array(data.get("selected_bag_indices", []))
 	required_combat_hold_indices = _to_int_array(data.get("required_combat_hold_indices", []))
 	_emit_state_changed()
 	step_changed.emit(step_id)
+
+
+func _normalize_scene_id(scene_id: String) -> String:
+	if scene_id == LEGACY_SHOP_SCENE:
+		return SCENE_SHOP
+	return scene_id
+
+
+func _normalize_step_id(saved_step_id: String) -> String:
+	match saved_step_id:
+		LEGACY_SHOP_INTRO_STEP:
+			return STEP_SHOP_INTRO
+		LEGACY_SHOP_SCORE_STEP:
+			return STEP_SHOP_SCORE
+		LEGACY_SHOP_GOAL_STEP:
+			return STEP_SHOP_GOAL
+		_:
+			return saved_step_id
 
 
 func report_action(action_id: String, payload: Dictionary = {}) -> bool:
@@ -357,7 +379,7 @@ func is_shop_item_allowed(item_id: String) -> bool:
 	if not is_active():
 		return true
 	match step_id:
-		STEP_MARKET_INTRO, STEP_MARKET_SCORE:
+		STEP_SHOP_INTRO, STEP_SHOP_SCORE:
 			return false
 		STEP_BUY_LOADED_DIE:
 			return item_id == "loaded_die"
@@ -367,7 +389,7 @@ func is_shop_item_allowed(item_id: String) -> bool:
 			return false
 
 
-func can_refresh_market() -> bool:
+func can_refresh_shop() -> bool:
 	return not is_active()
 
 

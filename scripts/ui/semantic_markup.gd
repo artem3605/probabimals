@@ -43,7 +43,7 @@ static func format_description(text: String) -> String:
 
 static func combo_color_hex(combo_type: String) -> String:
 	# Try the live priority panel first if it's reachable. The panel is owned
-	# by combat_screen and may not exist yet on flea market or dice select.
+	# by combat_screen and may not exist yet on shop or dice select.
 	var tree := Engine.get_main_loop()
 	if tree is SceneTree:
 		var root := (tree as SceneTree).root
