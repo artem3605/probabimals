@@ -2,6 +2,7 @@ extends "res://scripts/ui/pixel_bg.gd"
 
 const ItemCard = preload("res://scripts/ui/item_card.gd")
 const ShopItemCard = preload("res://scripts/ui/shop_item_card.gd")
+const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 const ShopGeneratorScript = preload("res://scripts/shop/shop_generator.gd")
 const ScoreFormat = preload("res://scripts/ui/score_format.gd")
 const TutorialOverlay = preload("res://scripts/ui/tutorial_overlay.gd")
@@ -593,7 +594,6 @@ func _refresh_bag_overlay() -> void:
 		_bag_content_vbox.add_child(lbl)
 		return
 
-	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 	for d: Die in dice:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -764,7 +764,6 @@ func _show_face_picker(die_index: int) -> void:
 	var new_value: int = _pending_face_item.get("params", {}).get("value", 0)
 	_face_swap_title.text = "%s\nReplace which face with %d?" % [die.die_name.to_upper(), new_value]
 
-	const DiceFacePanel = preload("res://scripts/ui/dice_face_panel.gd")
 	_clear_swap_cards()
 	_swap_desc_panel.visible = false
 	var card_color: Color = DIE_COLORS.get(die.color, Color.WHITE)
