@@ -107,6 +107,17 @@ func test_flea_market_wrapped_description_labels_do_not_fit_to_content_width() -
 	assert_false(flea_market._swap_desc_body.fit_content)
 
 
+func test_flea_market_skips_shop_card_shadows_before_first_layout() -> void:
+	var flea_market := FLEA_MARKET_SCENE.instantiate()
+	autoqfree(flea_market)
+	add_child_autofree(flea_market)
+
+	var first_card: Control = flea_market._shop_cards[0]
+	assert_eq(first_card.global_position, Vector2.ZERO)
+	assert_ne(first_card.size, Vector2.ZERO)
+	assert_false(flea_market._should_draw_shop_card_shadow(first_card))
+
+
 func test_combat_wrapped_description_label_does_not_fit_to_content_width() -> void:
 	GameManager.selected_dice = [
 		TestData.die_from_values([1, 2, 3, 4, 5, 6]),
