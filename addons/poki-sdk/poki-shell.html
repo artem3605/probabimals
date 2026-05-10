@@ -114,12 +114,41 @@ const GODOT_CONFIG = $GODOT_CONFIG;
 const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 const engine = new Engine(GODOT_CONFIG);
 
+var gameZoom = 1.0;
+var ZOOM_MIN = 1.0;
+var ZOOM_MAX = 3.0;
+var ZOOM_STEP = 0.1;
+
+function setGameZoom(z) {
+	gameZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(z * 10) / 10));
+	var c = document.getElementById('canvas');
+	c.style.transformOrigin = 'center center';
+	c.style.transform = gameZoom === 1.0 ? '' : 'scale(' + gameZoom + ')';
+}
+
 window.addEventListener('keydown', function (ev) {
 	if (['ArrowDown', 'ArrowUp', ' '].includes(ev.key)) {
 		ev.preventDefault();
 	}
+	var ctrl = ev.ctrlKey || ev.metaKey;
+	if (ctrl && (ev.key === '=' || ev.key === '+')) {
+		ev.preventDefault();
+		setGameZoom(gameZoom + ZOOM_STEP);
+	} else if (ctrl && ev.key === '-') {
+		ev.preventDefault();
+		setGameZoom(gameZoom - ZOOM_STEP);
+	} else if (ctrl && ev.key === '0') {
+		ev.preventDefault();
+		setGameZoom(1.0);
+	}
 });
-window.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false });
+
+window.addEventListener('wheel', function (ev) {
+	ev.preventDefault();
+	if (ev.ctrlKey || ev.metaKey) {
+		setGameZoom(gameZoom + (ev.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+	}
+}, { passive: false });
 
 function startGameLoading() {
 	const statusOverlay = document.getElementById('status');
