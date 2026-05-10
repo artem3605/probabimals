@@ -38,7 +38,7 @@ Each week has one main event that gives players a reason to wishlist Probabimals
 | --- | --- | --- | --- |
 | 1 | Trailer release | Publish the main trailer with the clearest "Balatro x Yahtzee" hook and the Steam link in every post. | Steam, YouTube, TikTok, Discord |
 | 2 | Demo release | Publish the playable demo and announce it everywhere, framing the demo as the easiest way to try the game before wishlisting. | Steam, browser demo link, TikTok, Discord |
-| 3 | Developer stream | Run a live developer stream showing the flea market, face swapping, rerolls, and combo payoffs, then cut clips from the stream. | YouTube or Twitch, then TikTok and Discord |
+| 3 | Developer stream | Run a live developer stream showing the shop, face swapping, rerolls, and combo payoffs, then cut clips from the stream. | YouTube or Twitch, then TikTok and Discord |
 | 4 | Steam Early Access launch | Launch the game in Steam Early Access and announce the release with store assets, gameplay clips, and a direct wishlist-to-play funnel. | Steam, Discord, TikTok |
 | 5 | Festival participation | Join an online festival or demo showcase and announce the event as a limited-time chance to discover the game early. | Steam, festival page, Discord, TikTok |
 | 6 | Influencer / YouTuber video | Amplify a creator video or first-look playthrough of Probabimals and repost the strongest clips and reactions. | YouTube, Discord, TikTok, Steam news |

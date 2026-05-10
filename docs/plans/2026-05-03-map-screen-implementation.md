@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a 4th top-level screen — Map — that turns existing FleaMarket and Combat screens into nodes of a single roguelike run, ending in a Boss combat.
+**Goal:** Add a 4th top-level screen — Map — that turns existing Shop and Combat screens into nodes of a single roguelike run, ending in a Boss combat.
 
-**Architecture:** New `Phase.MAP` and `current_run` field on `GameManager`. New screens/scripts: `MapScreen`, `MapNodeButton`, `RunState`, `MapGenerator`, `MapNode`. Existing `advance_round()`, `end_combat()`, and `FleaMarket` "Combat" button become run-aware: they consult `current_run` to decide whether to transition to `Phase.MAP` or fall through to legacy single-round flow. `current_run` is in-memory only — not serialized into save data. Reuses existing `current_round` for blind progression rather than introducing a parallel counter.
+**Architecture:** New `Phase.MAP` and `current_run` field on `GameManager`. New screens/scripts: `MapScreen`, `MapNodeButton`, `RunState`, `MapGenerator`, `MapNode`. Existing `advance_round()`, `end_combat()`, and `Shop` "Combat" button become run-aware: they consult `current_run` to decide whether to transition to `Phase.MAP` or fall through to legacy single-round flow. `current_run` is in-memory only — not serialized into save data. Reuses existing `current_round` for blind progression rather than introducing a parallel counter.
 
 **Tech Stack:** Godot 4.6, GDScript, GUT for tests, JSON config under `resources/data/`.
 
@@ -50,7 +50,7 @@ scripts/autoload/game_manager.gd        # Phase.MAP, current_run, last_run_resul
 scripts/autoload/data_manager.gd        # load + validate map_config.json
 scenes/main_menu/main_menu.gd           # show ResultsOverlay if last_run_result is set
 scenes/combat/combat_screen.gd          # surface "back to menu" affordance as abandon_run when in a run (no other code change — end_combat dispatch is in GameManager)
-scenes/flea_market/flea_market_screen.gd # rename Combat button to Continue and route through complete_current_node when in a SHOP map node
+scenes/shop/shop_screen.gd # rename Combat button to Continue and route through complete_current_node when in a SHOP map node
 project.godot                           # nothing to change (no new autoload); GameManager already exists
 ```
 
@@ -64,7 +64,7 @@ project.godot                           # nothing to change (no new autoload); G
 ### `Phase` enum after this slice
 
 ```gdscript
-enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
+enum Phase { MAIN_MENU, SHOP, DICE_SELECT, COMBAT, MAP }
 ```
 
 `MAP` is appended at the end so existing save files (which serialize phase by name via `Phase.keys()[…]`) continue to deserialize without ambiguity. Saves never contain `MAP` (we don't persist runs).
@@ -778,7 +778,7 @@ Edit `scripts/autoload/game_manager.gd`.
 Replace the `Phase` enum line:
 
 ```gdscript
-enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT, MAP }
+enum Phase { MAIN_MENU, SHOP, DICE_SELECT, COMBAT, MAP }
 ```
 
 Add new fields next to `var current_round: int = 1`:
@@ -814,11 +814,11 @@ In `_apply_normalized_save_data`, after the existing assignments add an explicit
 	last_run_result = {}
 ```
 
-Also handle a `MAP` phase in a save (which we shouldn't write, but defensively). At the top of `build_save_data`, the existing block coerces COMBAT to FLEA_MARKET when not in tutorial; extend it to also coerce MAP to FLEA_MARKET:
+Also handle a `MAP` phase in a save (which we shouldn't write, but defensively). At the top of `build_save_data`, the existing block coerces COMBAT to SHOP when not in tutorial; extend it to also coerce MAP to SHOP:
 
 ```gdscript
 	if (save_phase == Phase.COMBAT or save_phase == Phase.MAP) and not TutorialManager.is_active():
-		save_phase = Phase.FLEA_MARKET
+		save_phase = Phase.SHOP
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -861,7 +861,7 @@ Expected: failure — `current_run` is null after `start_game`.
 
 - [ ] **Step 3: Modify `start_game`, `start_tutorial_replay`, `skip_active_tutorial`**
 
-In `scripts/autoload/game_manager.gd`, modify `start_game`. Just before `_change_phase(Phase.FLEA_MARKET)` (i.e., right after the existing reset/tutorial branching), add a call:
+In `scripts/autoload/game_manager.gd`, modify `start_game`. Just before `_change_phase(Phase.SHOP)` (i.e., right after the existing reset/tutorial branching), add a call:
 
 ```gdscript
 	current_run = MapGeneratorRef.generate(randi(), DataManager.get_map_config())
@@ -921,18 +921,18 @@ git commit -m "feat(map): initialize current_run in start_game; clear in tutoria
 Append to `tests/integration/test_game_manager.gd`:
 
 ```gdscript
-func test_advance_round_outside_run_goes_to_flea_market() -> void:
+func test_advance_round_outside_run_goes_to_shop() -> void:
 	GameManager.current_run = null
 	GameManager.last_run_result = {}
 	GameManager.current_round = 1
 	GameManager.advance_round()
-	assert_eq(GameManager.current_phase, GameManager.Phase.FLEA_MARKET)
+	assert_eq(GameManager.current_phase, GameManager.Phase.SHOP)
 	assert_eq(GameManager.current_round, 2)
 
 
 func test_complete_current_node_in_run_after_first_combat_goes_to_map() -> void:
 	GameManager.start_game(true)
-	# After start_game, current_node_id is -1 and phase is FLEA_MARKET (not under tutorial).
+	# After start_game, current_node_id is -1 and phase is SHOP (not under tutorial).
 	# Simulate the first combat ending in victory:
 	GameManager.complete_current_node()
 	assert_eq(GameManager.current_phase, GameManager.Phase.MAP)
@@ -974,9 +974,9 @@ func _apply_round_advance() -> void:
 
 
 func advance_round() -> void:
-	# Legacy single-round flow: bump round and return to flea market.
+	# Legacy single-round flow: bump round and return to shop.
 	_apply_round_advance()
-	_change_phase(Phase.FLEA_MARKET)
+	_change_phase(Phase.SHOP)
 ```
 
 Add new methods at the end of the file:
@@ -984,7 +984,7 @@ Add new methods at the end of the file:
 ```gdscript
 func complete_current_node() -> void:
 	# Called after a victorious COMBAT (CombatScreen end_combat dispatch) or
-	# after a SHOP node Continue (FleaMarket "Continue" button) while in a run.
+	# after a SHOP node Continue (Shop "Continue" button) while in a run.
 	if current_run == null:
 		push_warning("complete_current_node called outside of a run")
 		return
@@ -1023,7 +1023,7 @@ func enter_map_node(node_id: int) -> void:
 		MapNodeRef.NodeType.COMBAT, MapNodeRef.NodeType.BOSS:
 			_change_phase(Phase.COMBAT)
 		MapNodeRef.NodeType.SHOP:
-			_change_phase(Phase.FLEA_MARKET)
+			_change_phase(Phase.SHOP)
 
 
 func end_run(victory: bool) -> void:
@@ -1087,7 +1087,7 @@ func test_end_combat_outside_run_uses_legacy_advance_or_main_menu() -> void:
 	GameManager.last_run_result = {}
 	GameManager.current_round = 1
 	GameManager.end_combat(GameManager.target_score, true)
-	assert_eq(GameManager.current_phase, GameManager.Phase.FLEA_MARKET)
+	assert_eq(GameManager.current_phase, GameManager.Phase.SHOP)
 	assert_eq(GameManager.current_round, 2)
 ```
 
@@ -1131,17 +1131,17 @@ git commit -m "feat(map): make end_combat run-aware"
 
 ---
 
-## Task 10: Make FleaMarket "Combat" button route-aware (Continue when in SHOP node)
+## Task 10: Make Shop "Combat" button route-aware (Continue when in SHOP node)
 
 **Files:**
-- Modify: `scenes/flea_market/flea_market_screen.gd`
+- Modify: `scenes/shop/shop_screen.gd`
 - Test: `tests/integration/test_run_flow.gd` (new)
 
 - [ ] **Step 1: Identify the existing button**
 
-Find the existing combat-button handler in `scenes/flea_market/flea_market_screen.gd`. It calls `GameManager.go_to_combat()`. We won't search-and-replace blindly — locate it first:
+Find the existing combat-button handler in `scenes/shop/shop_screen.gd`. It calls `GameManager.go_to_combat()`. We won't search-and-replace blindly — locate it first:
 
-Run: `grep -n -E "go_to_combat|on_combat_button|_combat_btn" scenes/flea_market/flea_market_screen.gd`
+Run: `grep -n -E "go_to_combat|on_combat_button|_combat_btn" scenes/shop/shop_screen.gd`
 
 You should see one or more sites. The key call is `GameManager.go_to_combat()` in the button's `pressed` handler.
 
@@ -1152,7 +1152,7 @@ Create `tests/integration/test_run_flow.gd`:
 ```gdscript
 extends GutTest
 
-const FleaMarketScreen := preload("res://scenes/flea_market/flea_market_screen.gd")
+const ShopScreen := preload("res://scenes/shop/shop_screen.gd")
 
 
 func _enter_shop_node() -> void:
@@ -1175,33 +1175,33 @@ func _enter_shop_node() -> void:
 	GameManager.enter_map_node(shop_id)
 
 
-func test_flea_market_continue_in_run_returns_to_map() -> void:
+func test_shop_continue_in_run_returns_to_map() -> void:
 	_enter_shop_node()
-	assert_eq(GameManager.current_phase, GameManager.Phase.FLEA_MARKET)
+	assert_eq(GameManager.current_phase, GameManager.Phase.SHOP)
 	# Simulate "Continue" press by calling the public dispatcher used by the button.
-	GameManager.flea_market_continue()
+	GameManager.shop_continue()
 	assert_eq(GameManager.current_phase, GameManager.Phase.MAP)
 
 
-func test_flea_market_continue_outside_run_goes_to_combat() -> void:
+func test_shop_continue_outside_run_goes_to_combat() -> void:
 	GameManager.current_run = null
 	GameManager.last_run_result = {}
-	GameManager.flea_market_continue()
+	GameManager.shop_continue()
 	assert_eq(GameManager.current_phase, GameManager.Phase.COMBAT)
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `make test`
-Expected: failure — `flea_market_continue` does not exist on `GameManager`.
+Expected: failure — `shop_continue` does not exist on `GameManager`.
 
 - [ ] **Step 4: Add the dispatcher on `GameManager`**
 
 In `scripts/autoload/game_manager.gd`, add:
 
 ```gdscript
-func flea_market_continue() -> void:
-	# Single entry point used by the FleaMarket "Combat" / "Continue" button.
+func shop_continue() -> void:
+	# Single entry point used by the Shop "Combat" / "Continue" button.
 	# - Outside a run: legacy → go to combat.
 	# - In a run, current node is a SHOP: complete the node, return to map.
 	# - In a run, no node entered yet (onboarding): go to combat.
@@ -1215,14 +1215,14 @@ func flea_market_continue() -> void:
 	if node.type == MapNodeRef.NodeType.SHOP:
 		complete_current_node()
 		return
-	# Defensive: should not be in FleaMarket while current node is COMBAT/BOSS.
-	push_warning("flea_market_continue called with unexpected node type")
+	# Defensive: should not be in Shop while current node is COMBAT/BOSS.
+	push_warning("shop_continue called with unexpected node type")
 	_change_phase(Phase.MAP)
 ```
 
-- [ ] **Step 5: Wire the FleaMarket button to the dispatcher and update its label**
+- [ ] **Step 5: Wire the Shop button to the dispatcher and update its label**
 
-Edit `scenes/flea_market/flea_market_screen.gd`. Replace the call site `GameManager.go_to_combat()` (in the button handler) with `GameManager.flea_market_continue()`.
+Edit `scenes/shop/shop_screen.gd`. Replace the call site `GameManager.go_to_combat()` (in the button handler) with `GameManager.shop_continue()`.
 
 Then update the button label to reflect run state. Find the place where the combat button is configured (search for the button text — likely "COMBAT" or "Combat"). Add or modify the text-update logic so that on `_ready` or on `phase_changed`:
 
@@ -1250,8 +1250,8 @@ Expected: pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add scripts/autoload/game_manager.gd scenes/flea_market/flea_market_screen.gd tests/integration/test_run_flow.gd
-git commit -m "feat(map): route FleaMarket Continue through GameManager.flea_market_continue"
+git add scripts/autoload/game_manager.gd scenes/shop/shop_screen.gd tests/integration/test_run_flow.gd
+git commit -m "feat(map): route Shop Continue through GameManager.shop_continue"
 ```
 
 ---
@@ -1685,7 +1685,7 @@ In `scenes/combat/combat_screen.gd`, locate the handler that calls `GameManager.
 	GameManager.go_to_main_menu()
 ```
 
-Apply the same change in `scenes/flea_market/flea_market_screen.gd` if it has a similar quit-to-menu path. (Run `grep -n go_to_main_menu scenes/flea_market/flea_market_screen.gd`; if present, wrap the call.)
+Apply the same change in `scenes/shop/shop_screen.gd` if it has a similar quit-to-menu path. (Run `grep -n go_to_main_menu scenes/shop/shop_screen.gd`; if present, wrap the call.)
 
 - [ ] **Step 5: Run tests and static check**
 
@@ -1695,7 +1695,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scenes/combat/combat_screen.gd scenes/flea_market/flea_market_screen.gd tests/integration/test_run_flow.gd
+git add scenes/combat/combat_screen.gd scenes/shop/shop_screen.gd tests/integration/test_run_flow.gd
 git commit -m "feat(map): abandon run when player returns to main menu mid-run"
 ```
 
@@ -1791,11 +1791,11 @@ Expected: pass — tests, lint, format-check, typecheck, security all green.
 
 Open the project in Godot 4.6 and play it. Verify:
 
-1. New Game from MainMenu → FleaMarket appears (button says "COMBAT").
+1. New Game from MainMenu → Shop appears (button says "COMBAT").
 2. Press Combat → fight a round; on victory you arrive at the Map screen.
 3. Map shows ~6 columns of nodes; only level-1 nodes are clickable.
 4. Click an available Combat node → Combat screen with a higher target than before; win → back to Map.
-5. Click an available Shop node → FleaMarket appears, button now says "CONTINUE"; press → back to Map.
+5. Click an available Shop node → Shop appears, button now says "CONTINUE"; press → back to Map.
 6. Reach the boss, win → MainMenu shows VICTORY overlay with stats.
 7. Start another run, lose a combat → MainMenu shows DEFEATED overlay.
 8. Start a run, hit the pause/quit-to-menu button mid-combat → MainMenu, no overlay.
@@ -1812,5 +1812,5 @@ If you made code changes during manual smoke, commit them per the existing patte
 
 - **Spec coverage:** All sections of the design spec (architecture, run flow, generation, blinds, UI, tests, edge cases) are mapped to tasks. The addendum's reconciliation points (`current_round` reuse, `_apply_round_advance` split, no save persistence, abandon vs end_run) are covered in Tasks 6–9, 15, 17.
 - **Placeholders:** No TBDs. Every step has either runnable code or an exact command.
-- **Type consistency:** `MapNode.NodeType.{COMBAT, SHOP, BOSS}` is used consistently. `RunState.available_node_ids() -> Array[int]` matches all callers. `complete_current_node`, `enter_map_node`, `end_run`, `abandon_run`, `flea_market_continue` all defined in Task 8/10 and used identically afterward.
-- **Risk note:** Task 10 step 1 grep is the only "discover then patch" step. If the FleaMarket combat-button handler is more entangled than expected (e.g. multiple buttons share logic), you may need a small adapter — keep the call replacement minimal: `GameManager.go_to_combat()` → `GameManager.flea_market_continue()` and a label refresh on `phase_changed`.
+- **Type consistency:** `MapNode.NodeType.{COMBAT, SHOP, BOSS}` is used consistently. `RunState.available_node_ids() -> Array[int]` matches all callers. `complete_current_node`, `enter_map_node`, `end_run`, `abandon_run`, `shop_continue` all defined in Task 8/10 and used identically afterward.
+- **Risk note:** Task 10 step 1 grep is the only "discover then patch" step. If the Shop combat-button handler is more entangled than expected (e.g. multiple buttons share logic), you may need a small adapter — keep the call replacement minimal: `GameManager.go_to_combat()` → `GameManager.shop_continue()` and a label refresh on `phase_changed`.

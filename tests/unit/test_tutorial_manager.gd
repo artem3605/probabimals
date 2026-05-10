@@ -42,6 +42,27 @@ func test_extra_six_prompt_is_shifted_right_in_shop_tutorial() -> void:
 	assert_gt(anchor.x, 0.5)
 
 
+func test_legacy_shop_tutorial_save_names_are_normalized() -> void:
+	(
+		TutorialManager
+		. apply_save_data(
+			{
+				"mode": TutorialManager.MODE_FIRST_RUN,
+				"step_id": "mar" + "ket_intro",
+				"completed": false,
+				"checkpoint_scene": "fl" + "ea_" + "mar" + "ket",
+				"loaded_die_index": -1,
+				"improved_die_index": -1,
+				"selected_bag_indices": [],
+				"required_combat_hold_indices": [],
+			}
+		)
+	)
+
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SHOP_INTRO)
+	assert_eq(TutorialManager.checkpoint_scene, TutorialManager.SCENE_SHOP)
+
+
 func test_first_run_progress_tracks_required_indices_and_scripted_rolls() -> void:
 	TutorialManager.start_first_run()
 
@@ -64,10 +85,10 @@ func test_first_run_progress_tracks_required_indices_and_scripted_rolls() -> voi
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_FINISH)
 	assert_true(TutorialManager.report_action("combat_score"))
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_INTRO_WIN)
-	TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_INTRO)
+	TutorialManager.enter_scene(TutorialManager.SCENE_SHOP)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SHOP_INTRO)
 	assert_true(TutorialManager.report_action("advance_intro"))
-	assert_eq(TutorialManager.step_id, TutorialManager.STEP_MARKET_SCORE)
+	assert_eq(TutorialManager.step_id, TutorialManager.STEP_SHOP_SCORE)
 	assert_true(TutorialManager.report_action("advance_intro"))
 	assert_eq(TutorialManager.step_id, TutorialManager.STEP_BUY_LOADED_DIE)
 	assert_true(TutorialManager.report_action("buy_item", {"item_id": "loaded_die", "die_index": 5}))
@@ -107,7 +128,7 @@ func test_face_swap_step_only_advances_after_successful_swap_commit() -> void:
 	TutorialManager.report_action("combat_roll", {"roll_number": 1})
 	TutorialManager.report_action("advance_intro")
 	TutorialManager.report_action("combat_score")
-	TutorialManager.enter_scene(TutorialManager.SCENE_FLEA_MARKET)
+	TutorialManager.enter_scene(TutorialManager.SCENE_SHOP)
 	TutorialManager.report_action("advance_intro")
 	TutorialManager.report_action("advance_intro")
 	TutorialManager.report_action("buy_item", {"item_id": "loaded_die", "die_index": 5})

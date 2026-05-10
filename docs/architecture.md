@@ -40,7 +40,7 @@ Key signal flows:
 The game has four phases, each mapped to a dedicated scene:
 
 ```
-MAIN_MENU  →  FLEA_MARKET  →  DICE_SELECT  →  COMBAT
+MAIN_MENU  →  SHOP  →  DICE_SELECT  →  COMBAT
                    ↑                              |
                    └──────── (win) ───────────────┘
                                     (lose) → MAIN_MENU
@@ -77,7 +77,7 @@ The codebase splits into three layers:
 |-------|-----------|----------|
 | **Data (Model)** | `RefCounted` | `Die`, `DiceFace`, `DiceBag` |
 | **Logic (Controller)** | `RefCounted` / `Node` | `CombatManager`, `ComboDetector`, `ScoringEngine` |
-| **Presentation (View)** | `Control` / `Node` | Scene scripts: `combat_screen.gd`, `flea_market_screen.gd` |
+| **Presentation (View)** | `Control` / `Node` | Scene scripts: `combat_screen.gd`, `shop_screen.gd` |
 
 Data objects hold state and expose pure methods (`Die.roll()`, `DiceBag.draw(n)`). Logic objects orchestrate rules. UI scripts wire controls to signals and update visuals — they never compute scores or detect combos.
 
@@ -106,7 +106,7 @@ graph TD
 
     subgraph scenes [Scenes]
         MainMenu["Main Menu"]
-        FleaMarket["Flea Market"]
+        Shop["Shop"]
         DiceSelect["Dice Select"]
         CombatScreen["Combat Screen"]
     end
@@ -126,15 +126,15 @@ graph TD
     ShopJSON -->|"_load_shop_catalogue()"| DM
     CombosJSON -->|"_load_combo_rules()"| DM
 
-    DM -->|"get_shop_catalogue()"| FleaMarket
+    DM -->|"get_shop_catalogue()"| Shop
     DM -->|"get_combo_rules()"| CD
 
     GM -->|"_change_phase()"| MainMenu
-    GM -->|"_change_phase()"| FleaMarket
+    GM -->|"_change_phase()"| Shop
     GM -->|"_change_phase()"| DiceSelect
     GM -->|"_change_phase()"| CombatScreen
 
-    FleaMarket -->|"buy_item()"| GM
+    Shop -->|"buy_item()"| GM
     DiceSelect -->|"selected_dice"| GM
     GM -->|"dice, target, modifiers"| CM
 
@@ -193,12 +193,12 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> MAIN_MENU
-    MAIN_MENU --> FLEA_MARKET: start_game() / load_game()
-    FLEA_MARKET --> DICE_SELECT: go_to_dice_select()
+    MAIN_MENU --> SHOP: start_game() / load_game()
+    SHOP --> DICE_SELECT: go_to_dice_select()
     DICE_SELECT --> COMBAT: go_to_combat()
-    COMBAT --> FLEA_MARKET: target beaten → advance_round()
+    COMBAT --> SHOP: target beaten → advance_round()
     COMBAT --> MAIN_MENU: target not beaten
-    FLEA_MARKET --> MAIN_MENU: menu button
+    SHOP --> MAIN_MENU: menu button
     DICE_SELECT --> MAIN_MENU: menu button
     COMBAT --> MAIN_MENU: menu button
 ```
@@ -214,7 +214,7 @@ stateDiagram-v2
 ```gdscript
 # scripts/autoload/game_manager.gd
 
-enum Phase { MAIN_MENU, FLEA_MARKET, DICE_SELECT, COMBAT }
+enum Phase { MAIN_MENU, SHOP, DICE_SELECT, COMBAT }
 
 signal phase_changed(new_phase: Phase)
 
@@ -236,8 +236,8 @@ func _change_phase(new_phase: Phase) -> void:
     match new_phase:
         Phase.MAIN_MENU:
             get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")
-        Phase.FLEA_MARKET:
-            get_tree().change_scene_to_file("res://scenes/flea_market/flea_market_screen.tscn")
+        Phase.SHOP:
+            get_tree().change_scene_to_file("res://scenes/shop/shop_screen.tscn")
             PokiSDK.gameplay_start()
         Phase.DICE_SELECT:
             get_tree().change_scene_to_file("res://scenes/dice_select/dice_select_screen.tscn")
@@ -370,7 +370,7 @@ func calculate_score(combo: Dictionary, rolled_faces: Array[DiceFace],
 | Classes | `PascalCase` | `CombatManager`, `ScoringEngine` |
 | Constants | `UPPER_SNAKE_CASE` | `SAVE_PATH`, `SFX_POOL_SIZE` |
 | Signals | `snake_case`, past tense verb | `dice_rolled`, `phase_changed` |
-| Enums | `PascalCase` type, `UPPER_CASE` values | `Phase.FLEA_MARKET` |
+| Enums | `PascalCase` type, `UPPER_CASE` values | `Phase.SHOP` |
 | File names | `snake_case.gd` | `combat_manager.gd` |
 
 ### Code Review Checklist

@@ -17,7 +17,7 @@ func resolve_combat_result(manager, tutorial_manager, final_score: int, target_b
 	if tutorial_manager.is_active() and tutorial_manager.is_intro_step():
 		if target_beaten:
 			events.merge(_apply_round_advance(manager), true)
-			return _outcome(manager.Phase.FLEA_MARKET, SAVE_ACTION_NONE, false, events)
+			return _outcome(manager.Phase.SHOP, SAVE_ACTION_NONE, false, events)
 		return _outcome(manager.Phase.MAIN_MENU, SAVE_ACTION_NONE, false, events)
 
 	if manager.current_run != null:
@@ -31,7 +31,7 @@ func resolve_combat_result(manager, tutorial_manager, final_score: int, target_b
 
 	if target_beaten:
 		events.merge(_apply_round_advance(manager), true)
-		return _outcome(manager.Phase.FLEA_MARKET, SAVE_ACTION_NONE, false, events)
+		return _outcome(manager.Phase.SHOP, SAVE_ACTION_NONE, false, events)
 	return _outcome(manager.Phase.MAIN_MENU, SAVE_ACTION_NONE, false, events)
 
 
@@ -76,7 +76,7 @@ func end_run(manager, victory: bool) -> Dictionary:
 
 
 func advance_round(manager) -> Dictionary:
-	return _outcome(manager.Phase.FLEA_MARKET, SAVE_ACTION_NONE, false, _apply_round_advance(manager))
+	return _outcome(manager.Phase.SHOP, SAVE_ACTION_NONE, false, _apply_round_advance(manager))
 
 
 func finish_resolved_combat_result() -> int:

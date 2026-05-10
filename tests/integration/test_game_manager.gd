@@ -42,6 +42,11 @@ func test_phase_map_exists() -> void:
 	assert_true(GameManager.Phase.keys().has("MAP"))
 
 
+func test_phase_shop_replaces_old_shop_phase_name() -> void:
+	assert_true(GameManager.Phase.keys().has("SHOP"))
+	assert_false(GameManager.Phase.keys().has("FL" + "EA_" + "MARKET"))
+
+
 func test_initial_run_state_is_null() -> void:
 	assert_null(_manager.current_run)
 	assert_eq_deep(_manager.last_run_result, {})
@@ -129,17 +134,17 @@ func test_advance_round_updates_reward_target_and_phase() -> void:
 	assert_eq(_manager.current_round, 3)
 	assert_eq(_manager.target_score, 337)
 	assert_eq(_manager.selected_dice.size(), 0)
-	assert_eq_deep(_manager.phase_history, [_manager.Phase.FLEA_MARKET])
+	assert_eq_deep(_manager.phase_history, [_manager.Phase.SHOP])
 
 
-func test_advance_round_outside_run_goes_to_flea_market() -> void:
+func test_advance_round_outside_run_goes_to_shop() -> void:
 	_manager.current_run = null
 	_manager.last_run_result = {}
 	_manager.current_round = 1
 
 	_manager.advance_round()
 
-	assert_eq(_manager.current_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(_manager.current_phase, _manager.Phase.SHOP)
 	assert_eq(_manager.current_round, 2)
 
 
@@ -224,7 +229,7 @@ func test_end_combat_first_run_intro_win_uses_tutorial_continuation() -> void:
 	_manager.end_combat(intro_target, true)
 
 	assert_eq(_manager.total_score, intro_target)
-	assert_eq(_manager.current_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(_manager.current_phase, _manager.Phase.SHOP)
 	assert_ne(_manager.current_phase, _manager.Phase.MAP)
 	assert_eq(_manager.current_round, 1)
 	assert_eq(_manager.target_score, _manager.BASE_TARGET)
@@ -261,7 +266,7 @@ func test_end_combat_outside_run_uses_legacy_advance_or_main_menu() -> void:
 
 	_manager.end_combat(_manager.target_score, true)
 
-	assert_eq(_manager.current_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(_manager.current_phase, _manager.Phase.SHOP)
 	assert_eq(_manager.current_round, 2)
 
 
@@ -290,13 +295,13 @@ func test_complete_current_node_without_current_node_warns_and_does_not_advance(
 
 func test_complete_current_node_outside_run_warns_and_returns() -> void:
 	_manager.current_run = null
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 	_manager.current_round = 2
 
 	_manager.complete_current_node()
 
 	assert_engine_error("Cannot complete a map node without an active run")
-	assert_eq(_manager.current_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(_manager.current_phase, _manager.Phase.SHOP)
 	assert_eq(_manager.current_round, 2)
 	assert_eq_deep(_manager.phase_history, [])
 
@@ -376,37 +381,37 @@ func test_complete_current_node_boss_ends_run_with_victory_without_next_round() 
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.MAIN_MENU])
 
 
-func test_flea_market_continue_outside_run_goes_to_dice_select() -> void:
+func test_shop_continue_outside_run_goes_to_dice_select() -> void:
 	_manager.current_run = null
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 
-	_manager.flea_market_continue()
+	_manager.shop_continue()
 
 	assert_eq(_manager.current_phase, _manager.Phase.DICE_SELECT)
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.DICE_SELECT])
 
 
-func test_flea_market_continue_onboarding_run_start_goes_to_dice_select() -> void:
+func test_shop_continue_onboarding_run_start_goes_to_dice_select() -> void:
 	_manager.current_run = _build_test_run_state()
 	_manager.current_run.current_node_id = -1
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 
-	_manager.flea_market_continue()
+	_manager.shop_continue()
 
-	assert_engine_error("Unexpected Flea Market continue before selecting a map node")
+	assert_engine_error("Unexpected Shop continue before selecting a map node")
 	assert_eq(_manager.current_phase, _manager.Phase.MAP)
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.MAP])
 
 
-func test_flea_market_continue_shop_node_completes_to_map() -> void:
+func test_shop_continue_shop_node_completes_to_map() -> void:
 	_manager.current_run = _build_test_run_state()
 	_manager.current_run.current_node_id = 3
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 	_manager.current_round = 2
 	_manager.coins = 10
 	_manager.target_score = 200
 
-	_manager.flea_market_continue()
+	_manager.shop_continue()
 
 	assert_eq(_manager.current_phase, _manager.Phase.MAP)
 	assert_eq(_manager.current_round, 2)
@@ -415,30 +420,30 @@ func test_flea_market_continue_shop_node_completes_to_map() -> void:
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.MAP])
 
 
-func test_flea_market_continue_combat_node_warns_and_goes_to_map() -> void:
+func test_shop_continue_combat_node_warns_and_goes_to_map() -> void:
 	_manager.current_run = _build_test_run_state()
 	_manager.current_run.current_node_id = 1
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 	_manager.current_round = 2
 
-	_manager.flea_market_continue()
+	_manager.shop_continue()
 
-	assert_engine_error("Unexpected Flea Market continue from non-shop map node")
+	assert_engine_error("Unexpected Shop continue from non-shop map node")
 	assert_eq(_manager.current_phase, _manager.Phase.MAP)
 	assert_eq(_manager.current_round, 2)
 	assert_not_null(_manager.current_run)
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.MAP])
 
 
-func test_flea_market_continue_boss_node_warns_and_goes_to_map() -> void:
+func test_shop_continue_boss_node_warns_and_goes_to_map() -> void:
 	_manager.current_run = _build_test_run_state()
 	_manager.current_run.current_node_id = 4
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 	_manager.current_round = 3
 
-	_manager.flea_market_continue()
+	_manager.shop_continue()
 
-	assert_engine_error("Unexpected Flea Market continue from non-shop map node")
+	assert_engine_error("Unexpected Shop continue from non-shop map node")
 	assert_eq(_manager.current_phase, _manager.Phase.MAP)
 	assert_eq(_manager.current_round, 3)
 	assert_not_null(_manager.current_run)
@@ -536,7 +541,7 @@ func test_enter_map_node_combat_sets_current_node_and_goes_to_dice_select() -> v
 	assert_eq_deep(_manager.phase_history, [_manager.Phase.DICE_SELECT])
 
 
-func test_enter_map_node_shop_goes_to_flea_market() -> void:
+func test_enter_map_node_shop_goes_to_shop() -> void:
 	_manager.current_run = _build_test_run_state()
 	_manager.current_run.enter_node(1)
 	_manager.current_run.complete_current_node()
@@ -544,7 +549,7 @@ func test_enter_map_node_shop_goes_to_flea_market() -> void:
 	_manager.enter_map_node(3)
 
 	assert_eq(_manager.current_run.current_node_id, 3)
-	assert_eq(_manager.current_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(_manager.current_phase, _manager.Phase.SHOP)
 
 
 func test_enter_map_node_boss_scales_target_and_goes_to_dice_select() -> void:
@@ -567,7 +572,7 @@ func test_build_save_data_normalizes_combat_phase() -> void:
 
 	var data: Dictionary = _manager.build_save_data()
 
-	assert_eq(data["phase"], "FLEA_MARKET")
+	assert_eq(data["phase"], "SHOP")
 
 
 func test_build_save_data_keeps_combat_phase_for_active_tutorial_checkpoint() -> void:
@@ -820,7 +825,7 @@ func test_apply_save_data_migrates_legacy_save_without_version() -> void:
 	assert_eq(_manager.build_save_data()["save_version"], GameManager.SAVE_FORMAT_VERSION)
 
 
-func test_apply_save_data_loads_map_save_at_flea_market_without_run_state() -> void:
+func test_apply_save_data_loads_map_save_at_shop_without_run_state() -> void:
 	var map_save := {
 		"save_version": GameManager.SAVE_FORMAT_VERSION,
 		"app_version": _manager.get_app_version(),
@@ -840,9 +845,30 @@ func test_apply_save_data_loads_map_save_at_flea_market_without_run_state() -> v
 
 	var restored_phase: int = _manager.apply_save_data(map_save)
 
-	assert_eq(restored_phase, _manager.Phase.FLEA_MARKET)
+	assert_eq(restored_phase, _manager.Phase.SHOP)
 	assert_null(_manager.current_run)
 	assert_eq_deep(_manager.last_run_result, {})
+
+
+func test_apply_save_data_accepts_previous_shop_phase_name() -> void:
+	var legacy_shop_save := {
+		"save_version": GameManager.SAVE_FORMAT_VERSION,
+		"app_version": _manager.get_app_version(),
+		"phase": "FL" + "EA_" + "MARKET",
+		"coins": 41,
+		"total_score": 240,
+		"target_score": 300,
+		"hands_per_round": 5,
+		"rerolls_per_hand": 2,
+		"current_round": 4,
+		"dice_bag": [],
+		"selected_dice_indices": [],
+		"modifiers": [],
+	}
+
+	var restored_phase: int = _manager.apply_save_data(legacy_shop_save)
+
+	assert_eq(restored_phase, _manager.Phase.SHOP)
 
 
 func test_apply_save_data_rejects_future_save_version_without_mutating_state() -> void:
@@ -863,7 +889,7 @@ func test_save_game_uses_override_path_instead_of_production_save() -> void:
 	_temp_paths.append(default_path)
 	_temp_paths.append(save_path)
 	_manager.save_path = default_path
-	_manager.current_phase = _manager.Phase.FLEA_MARKET
+	_manager.current_phase = _manager.Phase.SHOP
 	_manager.coins = 99
 
 	_manager.save_game(save_path)
@@ -894,7 +920,7 @@ func test_can_load_save_accepts_legacy_save_without_version() -> void:
 				JSON
 				. stringify(
 					{
-						"phase": "FLEA_MARKET",
+						"phase": "SHOP",
 						"coins": 55,
 						"total_score": 10,
 						"target_score": 200,
@@ -927,7 +953,7 @@ func test_can_load_save_returns_false_for_future_save_version() -> void:
 					{
 						"save_version": 99,
 						"app_version": "v9.9.9",
-						"phase": "FLEA_MARKET",
+						"phase": "SHOP",
 						"coins": 55,
 						"total_score": 10,
 						"target_score": 200,
@@ -983,7 +1009,7 @@ func test_can_load_save_accepts_v1_save_version() -> void:
 				. stringify(
 					{
 						"save_version": 1,
-						"phase": "FLEA_MARKET",
+						"phase": "SHOP",
 						"coins": 99,
 						"modifiers":
 						[

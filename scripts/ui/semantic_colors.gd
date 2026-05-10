@@ -29,7 +29,7 @@ const DEFAULT := Color("#ffffff")
 const DEFAULT_HEX := "#ffffff"
 
 # Combo color fallbacks. Used only if combat_probability_panel hasn't built rows
-# yet (e.g. flea market shown before any combat). When the panel exists,
+# yet (e.g. shop shown before any combat). When the panel exists,
 # SemanticMarkup looks up the live column color instead.
 # Mapping mirrors the priority panel column order: high-priority combos
 # (Yahtzee, Four Same, Large Straight) live in the PINK column; mid-tier

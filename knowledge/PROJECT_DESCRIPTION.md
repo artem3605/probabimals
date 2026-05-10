@@ -8,9 +8,9 @@
 
 Each round consists of two phases:
 
-### 1. Preparation Phase — "The Flea Market"
+### 1. Preparation Phase — "The Shop"
 
-- The player visits a **flea market** to buy dice, replacement faces, and modifiers.
+- The player visits a **shop** to buy dice, replacement faces, and modifiers.
 - **Dice** go into the player's bag. Each die has 6 faces (default: numbers 1–6).
 - **Faces** can be swapped onto existing dice to change their odds (Dice Forge style).
 - **Modifiers** are joker-like items that transform scoring rules globally.
@@ -26,7 +26,7 @@ Each round consists of two phases:
 ## Key Concepts
 
 - **Die** — a six-sided die from the player's bag. Base dice are colorless with faces 1–6. Colored dice are rarer and unlock color-based combos.
-- **Face** — a single side of a die. Faces can be swapped at the flea market to change a die's number distribution (e.g. replace a 1-face with a second 6-face).
+- **Face** — a single side of a die. Faces can be swapped at the shop to change a die's number distribution (e.g. replace a 1-face with a second 6-face).
 - **Modifier** — a joker-like item with a global effect on scoring (e.g. "all Full Houses score double", "pairs count as triples"). The primary source of build-defining power.
 - **Combo** — a scoring pattern in the rolled dice. Based on Yahtzee: Pair, Two Pair, Three of a Kind, Full House, Small Straight, Large Straight, Four of a Kind, Yahtzee (five of a kind). Colored dice add Flush (5 dice of the same color).
 - **Reroll** — the player's tactical tool. After rolling, keep favorable dice and reroll the rest. Limited to 2 rerolls per hand by default.

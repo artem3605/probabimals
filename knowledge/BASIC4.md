@@ -7,13 +7,13 @@ The smallest playable version of the game that demonstrates the core loop.
 ### Three Screens
 
 1. **MainMenu** — Start and Exit buttons.
-2. **FleaMarket** — Simplified shop (fixed catalogue) + dice bag management on one screen.
+2. **Shop** — Simplified shop (fixed catalogue) + dice bag management on one screen.
 3. **Combat** — Roll dice, keep/reroll, score combos against a target.
 
 ### What's In
 
 1. **5 colorless dice** — each with default faces (1–6).
-2. **Simplified flea market** — a fixed catalogue of ~10–12 items (extra dice, replacement faces, modifiers) with coin prices.
+2. **Simplified shop** — a fixed catalogue of ~10–12 items (extra dice, replacement faces, modifiers) with coin prices.
 3. **Item taxonomy** — three categories:
    - **Dice** — add to the player's bag.
    - **Faces** — swap onto an existing die to change its number distribution.
@@ -27,7 +27,7 @@ The smallest playable version of the game that demonstrates the core loop.
 ### What's Out
 
 - Colored dice and flush combos.
-- Randomized flea market stock (fixed catalogue for now).
+- Randomized shop stock (fixed catalogue for now).
 - Round progression, difficulty scaling.
 - Visual polish, animations, sound.
 - Meta-progression (unlocks, currency carry-over between games).
@@ -38,4 +38,4 @@ Validate that the core loop — **buy dice → customize faces → roll combos �
 
 ## Deliverable
 
-A single playable session: the player visits the flea market → buys dice and faces → customizes dice → enters combat → rolls combos → sees final result.
+A single playable session: the player visits the shop → buys dice and faces → customizes dice → enters combat → rolls combos → sees final result.

@@ -5,13 +5,13 @@
 
 ## Summary
 
-Add a 4th top-level screen — **Map** — that turns the existing FleaMarket and Combat screens into nodes of a single run. The player's first round stays unchanged (FleaMarket → Combat) for onboarding, then a branching map opens. The player picks a path through ~5–7 nodes (Combat or Shop), ending in a Boss Combat. Victory or defeat returns to MainMenu via a results overlay.
+Add a 4th top-level screen — **Map** — that turns the existing Shop and Combat screens into nodes of a single run. The player's first round stays unchanged (Shop → Combat) for onboarding, then a branching map opens. The player picks a path through ~5–7 nodes (Combat or Shop), ending in a Boss Combat. Victory or defeat returns to MainMenu via a results overlay.
 
 This is the smallest slice that delivers a roguelike meta-loop: route choice, escalating risk, and a defined run boundary.
 
 ## Goals
 
-- Introduce route-choice gameplay on top of the existing FleaMarket/Combat loop.
+- Introduce route-choice gameplay on top of the existing Shop/Combat loop.
 - Reuse existing screens as node types — no new combat or shop logic.
 - Define a clean run lifecycle: `start_run → nodes → end_run`, with results visible to the player.
 - Stay scoped to one well-bounded slice; leave richer roguelike features for later iterations.
@@ -31,7 +31,7 @@ This is the smallest slice that delivers a roguelike meta-loop: route choice, es
 
 ## Architecture (Approach A)
 
-`GameManager` gains a new phase and owns the active run. The map screen and run state are pure additions; FleaMarket and Combat screens are minimally adapted to ask `GameManager` what to do on exit instead of hardcoding their next phase.
+`GameManager` gains a new phase and owns the active run. The map screen and run state are pure additions; Shop and Combat screens are minimally adapted to ask `GameManager` what to do on exit instead of hardcoding their next phase.
 
 ### New Files
 
@@ -56,8 +56,8 @@ scripts/map/
   - Add methods: `start_run()`, `complete_onboarding_shop()`, `enter_map_node(node_id: int)`, `complete_current_node()`, `end_run(victory: bool)`.
 - `scenes/main_menu/main_menu.gd`
   - On `_ready`, if `GameManager.last_run_result != null`, show ResultsOverlay.
-  - Start button calls `GameManager.start_run()` instead of going straight to FleaMarket.
-- `scenes/flea_market/flea_market_screen.gd`
+  - Start button calls `GameManager.start_run()` instead of going straight to Shop.
+- `scenes/shop/shop_screen.gd`
   - Continue/Combat button branches:
     - If `current_run.current_node_id == -1` (onboarding shop): call `complete_onboarding_shop()`.
     - Else (shop node on map): call `complete_current_node()`.
@@ -83,9 +83,9 @@ scripts/map/
 ```
 MainMenu
   └─ [Start] → start_run()
-              → Phase.FLEA_MARKET (onboarding shop, current_node_id = -1)
+              → Phase.SHOP (onboarding shop, current_node_id = -1)
 
-FleaMarket (onboarding)
+Shop (onboarding)
   └─ [Combat] → complete_onboarding_shop()
               → Phase.COMBAT (combats_completed = 0)
 
@@ -97,7 +97,7 @@ Combat (onboarding)
 Map
   └─ click available node → enter_map_node(id)
        ├─ COMBAT / BOSS → Phase.COMBAT
-       └─ SHOP          → Phase.FLEA_MARKET
+       └─ SHOP          → Phase.SHOP
 
 Combat (map node)
   └─ victory:
@@ -105,7 +105,7 @@ Combat (map node)
       └─ else    → Phase.MAP (combats_completed += 1)
   └─ defeat → end_run(false) → ResultsOverlay → MainMenu
 
-FleaMarket (map node)
+Shop (map node)
   └─ [Continue] → complete_current_node() → Phase.MAP
 ```
 
@@ -114,25 +114,25 @@ FleaMarket (map node)
 ```gdscript
 func start_run() -> void:
     # Called from MainMenu Start button.
-    # Generates a new run, resets coins/dice_bag, enters Phase.FLEA_MARKET.
+    # Generates a new run, resets coins/dice_bag, enters Phase.SHOP.
     current_run = MapGenerator.generate(randi(), DataManager.get_map_config())
     coins = STARTING_COINS
     dice_bag = DiceBag.new()
     last_run_result = null
-    _set_phase(Phase.FLEA_MARKET)
+    _set_phase(Phase.SHOP)
 
 func complete_onboarding_shop() -> void:
-    # Called from FleaMarket when current_node_id == -1.
+    # Called from Shop when current_node_id == -1.
     # Transitions to onboarding combat (no node tracking yet).
     _set_phase(Phase.COMBAT)
 
 func enter_map_node(node_id: int) -> void:
     # Called from MapScreen on click.
     # Validates node_id is in current_run.available_node_ids(); warns and returns if not.
-    # Sets current_node_id, transitions to COMBAT or FLEA_MARKET by node type.
+    # Sets current_node_id, transitions to COMBAT or SHOP by node type.
 
 func complete_current_node() -> void:
-    # Called from CombatScreen on victory or FleaMarket on Continue (map shop node).
+    # Called from CombatScreen on victory or Shop on Continue (map shop node).
     # If current node is COMBAT: combats_completed += 1, transition to MAP.
     # If current node is BOSS: combats_completed += 1, end_run(true).
     # If current node is SHOP: transition to MAP.
@@ -302,7 +302,7 @@ After `end_run()`, MainMenu's `_ready()` checks `GameManager.last_run_result`. I
 ### Integration Tests (`tests/integration/`)
 
 - `test_run_flow.gd`:
-  - `start_run()` → phase FLEA_MARKET, `current_run != null`, `combats_completed == 0`, `current_node_id == -1`.
+  - `start_run()` → phase SHOP, `current_run != null`, `combats_completed == 0`, `current_node_id == -1`.
   - `complete_onboarding_shop()` → phase COMBAT.
   - Simulate combat victory via `complete_current_node()` while `current_node_id == -1` → phase MAP, `combats_completed == 1`.
   - `enter_map_node(valid_id)` → correct phase by node type; `current_node_id` updated.
@@ -360,31 +360,31 @@ The original design proposed a new `combats_completed` field. This is replaced b
 Concretely:
 
 - `RunState` does **not** carry a combats counter. Progression is read from `GameManager.current_round`.
-- After a victorious COMBAT or BOSS map node, `complete_current_node()` calls the existing `advance_round()` logic for reward + `target_score` bump. The transition target (Map vs. FleaMarket vs. end_run) is decided by `complete_current_node()`, not by `advance_round()` itself — see "Splitting `advance_round`" below.
+- After a victorious COMBAT or BOSS map node, `complete_current_node()` calls the existing `advance_round()` logic for reward + `target_score` bump. The transition target (Map vs. Shop vs. end_run) is decided by `complete_current_node()`, not by `advance_round()` itself — see "Splitting `advance_round`" below.
 - Boss blind multiplier is applied on top of `target_score` only when entering the BOSS node, by `enter_map_node()`.
 
 ### Splitting `advance_round`
 
-Current `advance_round()` does two things: (a) grant reward and bump `target_score`, (b) transition to `Phase.FLEA_MARKET`. For a run, the destination phase depends on context (next map node, end of run, or — outside any run — keep legacy behavior). The fix:
+Current `advance_round()` does two things: (a) grant reward and bump `target_score`, (b) transition to `Phase.SHOP`. For a run, the destination phase depends on context (next map node, end of run, or — outside any run — keep legacy behavior). The fix:
 
 - Extract the reward + target bump into a private helper, e.g. `_apply_round_advance()`.
-- `advance_round()` keeps its current public signature and behavior for non-run callers (legacy single-round flow / loaded saves with no run): calls `_apply_round_advance()` then `_change_phase(Phase.FLEA_MARKET)`.
+- `advance_round()` keeps its current public signature and behavior for non-run callers (legacy single-round flow / loaded saves with no run): calls `_apply_round_advance()` then `_change_phase(Phase.SHOP)`.
 - `complete_current_node()` (new) calls `_apply_round_advance()` directly, then decides next phase from run state.
 
 ### Onboarding = Existing First Combat
 
-The original spec described an "onboarding shop / onboarding combat" with `current_node_id == -1`. In the actual codebase this is exactly the existing first round (`MainMenu → FleaMarket → Combat`), optionally preceded by the tutorial intro combat. No new "onboarding" methods are introduced. Instead:
+The original spec described an "onboarding shop / onboarding combat" with `current_node_id == -1`. In the actual codebase this is exactly the existing first round (`MainMenu → Shop → Combat`), optionally preceded by the tutorial intro combat. No new "onboarding" methods are introduced. Instead:
 
 - `start_game()` (existing) is the entry point; it now also creates `current_run = MapGenerator.generate(...)` so a run is active from the start. The generated map is not visible until the first real combat completes.
-- The first FleaMarket → Combat cycle stays as it is. `CombatScreen` on victory calls `complete_current_node()`. Because `current_run.current_node_id == -1`, that call routes to `Phase.MAP` (instead of the legacy FleaMarket loop).
-- The earlier `complete_onboarding_shop()` method is **not** added — the existing FleaMarket "Combat" button keeps calling `go_to_combat()` for the first cycle.
+- The first Shop → Combat cycle stays as it is. `CombatScreen` on victory calls `complete_current_node()`. Because `current_run.current_node_id == -1`, that call routes to `Phase.MAP` (instead of the legacy Shop loop).
+- The earlier `complete_onboarding_shop()` method is **not** added — the existing Shop "Combat" button keeps calling `go_to_combat()` for the first cycle.
 
 ### Save / Load: Run Is Not Persisted
 
 The map and run state are explicitly excluded from save/load.
 
 - `build_save_data` / `apply_save_data` are **not** changed to include `current_run`, `last_run_result`, or any map data.
-- On load, `current_run` is `null` and `last_run_result` is `null`. The game resumes in the legacy single-round flow at the saved phase (typically `FLEA_MARKET`).
+- On load, `current_run` is `null` and `last_run_result` is `null`. The game resumes in the legacy single-round flow at the saved phase (typically `SHOP`).
 - This preserves backwards compatibility with v2 saves and matches the "run save/load is future work" non-goal.
 - Closing the game mid-run loses the run. This is acceptable for the first iteration.
 
@@ -412,4 +412,4 @@ The final method additions on `GameManager` for this slice are:
 - `abandon_run() -> void` (new — called from "back to menu" affordances when in a run)
 - `_apply_round_advance() -> void` (private helper extracted from `advance_round`)
 
-`start_game()` is modified (not replaced) to initialize `current_run`. `advance_round()` is refactored to call `_apply_round_advance()` then transition to `FLEA_MARKET`, preserving its public behavior for non-run callers.
+`start_game()` is modified (not replaced) to initialize `current_run`. `advance_round()` is refactored to call `_apply_round_advance()` then transition to `SHOP`, preserving its public behavior for non-run callers.

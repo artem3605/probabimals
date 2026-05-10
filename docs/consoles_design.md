@@ -25,7 +25,7 @@ The original game targets 1280×720 with a colorful Balatro-inspired neon-on-fel
 **Screen layout:** The original game displays dice, score, reroll counters, combo labels, and modifier list simultaneously. On Playdate, use a single-screen focus approach:
 
 - **Combat:** Dice row centered, current score and blind target at the top, reroll count at the bottom. Combo name appears as a brief overlay after scoring.
-- **Flea Market:** Scrollable item list with one item card visible at a time (name, cost, short description). The dice bag is a separate sub-screen.
+- **Shop:** Scrollable item list with one item card visible at a time (name, cost, short description). The dice bag is a separate sub-screen.
 - **Face Swap:** Full-screen view of a single die showing all 6 faces. Highlight the face being replaced and the incoming face side-by-side.
 
 **Modifiers:** Because the original shows modifiers as a visible sidebar list, the Playdate port should move them to a dedicated "check modifiers" screen accessible via B-button, showing a scrollable text list with dither-pattern icons.
@@ -91,7 +91,7 @@ The 3DS's two screens are a natural fit for Probabimals, which already separates
 - **Top screen (400×240):** The dice tray. Show all 5 dice prominently (60×60 px each with spacing), the current combo name, and the score animation. Use the stereoscopic 3D layer to pop dice forward when held and push them back when free — subtle depth cue that replaces the original's color-based hold indicator.
 - **Bottom screen (320×240, touch):** Control panel. Show the blind target, running score, reroll counter, and hand counter as a dashboard. Tap individual dice on the top screen's mirrored layout to hold/release them. "Reroll" and "End Hand" buttons are large touch targets at the bottom.
 
-**Flea Market:**
+**Shop:**
 
 - **Top screen:** Preview panel. Show the currently highlighted item's full artwork, name, rarity, and detailed description.
 - **Bottom screen:** Browsable item grid (3 columns × scrollable rows). Tap to select, tap "Buy" to purchase. Coin balance displayed in the corner. Tabs at the top for Dice / Faces / Modifiers.

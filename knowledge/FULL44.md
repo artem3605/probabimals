@@ -4,16 +4,16 @@ The complete demo experience showcasing all core systems working together across
 
 ## Scope
 
-### Preparation Phase — Flea Market
+### Preparation Phase — Shop
 
-- **Browsable flea market** — a randomized selection of dice, faces, and modifiers presented each round.
+- **Browsable shop** — a randomized selection of dice, faces, and modifiers presented each round.
 - **Item variety** — multiple categories with different rarities and effects.
 - **Budget / currency** — limited resources to spend per round, forcing meaningful choices.
 - **Colored dice** — appear in later rounds, unlocking flush combos.
 
 ### Dice Building
 
-- **Face swapping** — swap faces on any owned die at the flea market.
+- **Face swapping** — swap faces on any owned die at the shop.
 - **Colored dice** — unlock the Flush combo (5 dice of the same color).
 - **Visible die stats** — each die shows its face distribution and expected value.
 - **Modifier synergies** — certain modifier combos unlock bonus effects.
@@ -28,15 +28,15 @@ The complete demo experience showcasing all core systems working together across
 ### Progression
 
 - **Multi-round structure** — 10 map levels with escalating blinds.
-- **Flea market evolution** — later rounds offer rarer faces and more powerful modifiers.
+- **Shop evolution** — later rounds offer rarer faces and more powerful modifiers.
 - **Win/loss conditions** — the player wins the demo by surviving all rounds; losing a round has consequences (e.g. losing dice, reduced budget).
 
 ### Polish
 
 - **Animations** — dice rolling, face swapping, score tallying.
-- **Sound design** — dice sounds, market ambiance, victory/defeat cues.
+- **Sound design** — dice sounds, shop ambiance, victory/defeat cues.
 - **UI/UX** — intuitive dice management, clear information hierarchy.
-- **Tutorial** — a guided first round introducing the flea market and dice customization.
+- **Tutorial** — a guided first round introducing the shop and dice customization.
 
 ## Goal
 
@@ -44,4 +44,4 @@ Deliver a **complete, polished demo** that a player can pick up, understand, and
 
 ## Deliverable
 
-A self-contained demo: multiple rounds of flea market shopping → dice customization → combat with escalating blinds, ending in a win or loss screen.
+A self-contained demo: multiple rounds of shop shopping → dice customization → combat with escalating blinds, ending in a win or loss screen.

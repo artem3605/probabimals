@@ -124,7 +124,7 @@ Each face has: **value** (0–6), **effect** (optional), **element** (optional, 
 
 ## Modifier System
 
-Modifiers are joker-like items bought at the Flea Market. They persist for the entire run and transform scoring.
+Modifiers are joker-like items bought at the Shop. They persist for the entire run and transform scoring.
 
 ### Slots
 - BASIC4: max 3 modifiers

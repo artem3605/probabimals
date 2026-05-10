@@ -40,7 +40,7 @@ func _build_victory(result: Dictionary, context: Dictionary) -> Dictionary:
 	result["tone"] = TONE_WIN
 
 	if tutorial_step_id == intro_win_step_id:
-		result["subtitle"] = "Great start! Now let's head to the Flea Market and upgrade your dice."
+		result["subtitle"] = "Great start! Now let's head to the Shop and upgrade your dice."
 	elif tutorial_active:
 		result["subtitle"] = (
 			"Great job! You improved your dice, held a strong pair, and turned it into a big combo. "
