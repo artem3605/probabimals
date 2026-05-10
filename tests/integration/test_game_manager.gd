@@ -183,18 +183,17 @@ func test_end_combat_completed_tutorial_run_start_goes_to_map() -> void:
 func test_completed_tutorial_without_existing_run_creates_map_run() -> void:
 	_manager.current_phase = _manager.Phase.COMBAT
 	_manager.current_run = null
-	TutorialManager.apply_save_data(
-		{
-			"mode": TutorialManager.MODE_REPLAY,
-			"step_id": TutorialManager.STEP_COMBAT_GOOD_LUCK,
-			"completed": false,
-			"checkpoint_scene": TutorialManager.SCENE_COMBAT,
-			"loaded_die_index": 5,
-			"improved_die_index": 0,
-			"selected_bag_indices": [0, 1, 2, 3, 5],
-			"required_combat_hold_indices": [0, 4],
-		}
-	)
+	var tutorial_save := {
+		"mode": TutorialManager.MODE_REPLAY,
+		"step_id": TutorialManager.STEP_COMBAT_GOOD_LUCK,
+		"completed": false,
+		"checkpoint_scene": TutorialManager.SCENE_COMBAT,
+		"loaded_die_index": 5,
+		"improved_die_index": 0,
+		"selected_bag_indices": [0, 1, 2, 3, 5],
+		"required_combat_hold_indices": [0, 4],
+	}
+	TutorialManager.apply_save_data(tutorial_save)
 
 	TutorialManager.report_action("combat_roll", {"roll_number": 0})
 	_manager._on_tutorial_state_changed()

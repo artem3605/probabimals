@@ -578,9 +578,10 @@ func _build_bag_overlay() -> void:
 	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(close_btn)
 
-	_bag_overlay.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed:
-			_close_bag_overlay()
+	_bag_overlay.gui_input.connect(
+		func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed:
+				_close_bag_overlay()
 	)
 
 
@@ -1045,7 +1046,9 @@ func _on_tutorial_state_changed() -> void:
 	_refresh_tutorial_ui()
 
 
-class _BackpackIcon extends Control:
+class _BackpackIcon:
+	extends Control
+
 	func _draw() -> void:
 		var w := size.x
 		var h := size.y
